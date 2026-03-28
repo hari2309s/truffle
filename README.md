@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="public/icons/truffle-512.png" alt="Truffle" width="80" />
+<img src="apps/web/public/icons/truffle.png" alt="Truffle" width="80" />
 
-# Truffle 🍄
+# Truffle
 
 ### Your finances, unearthed.
 
@@ -15,16 +15,6 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 </div>
-
----
-
-## The problem
-
-Every finance app assumes you're rational about money. You're not. Nobody is.
-
-Revolut shows you a red bar and you close the app. YNAB requires you to sit down and categorise 47 transactions. MoneyDashboard gives you charts you don't want to look at.
-
-Truffle is different. Hold a button and ask *"how am I doing this month?"* — and get a calm, honest answer spoken back to you. No charts. No judgment. Just clarity.
 
 ---
 
