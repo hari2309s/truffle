@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background-color: #0e0d0c;
+    color: #f5ead2;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #0e0d0c;
+    color: #f5ead2;
+    min-height: 100dvh;
+    overscroll-behavior: none;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-truffle-card border border-truffle-border rounded-2xl p-4;
+  }
+
+  .btn-primary {
+    @apply bg-truffle-amber text-truffle-bg font-semibold px-6 py-3 rounded-xl
+           hover:bg-truffle-amber-light active:scale-95 transition-all duration-150;
+  }
+
+  .btn-ghost {
+    @apply text-truffle-text-secondary hover:text-truffle-text px-4 py-2 rounded-xl
+           hover:bg-truffle-surface transition-all duration-150;
+  }
+}
