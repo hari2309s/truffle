@@ -1,0 +1,7 @@
+export { embedText, embedTransaction, cosineSimilarity } from './embeddings'
+export { upsertTransaction, queryTransactions, deleteUserTransactions } from './vectorStore'
+export { routeIntent } from './agents/intentRouter'
+export { analyseSpending } from './agents/spendingAnalyst'
+export { synthesizeResponse } from './agents/synthesizer'
+export { buildTruffleGraph } from './graph'
+export { geminiFlash, google } from './gemini'
