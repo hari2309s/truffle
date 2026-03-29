@@ -83,6 +83,35 @@ export interface Database {
           dismissed?: boolean
         }
       }
+      savings_goals: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          target_amount: number
+          saved_amount: number
+          deadline: string | null
+          emoji: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          target_amount: number
+          saved_amount?: number
+          deadline?: string | null
+          emoji?: string
+          created_at?: string
+        }
+        Update: {
+          name?: string
+          target_amount?: number
+          saved_amount?: number
+          deadline?: string | null
+          emoji?: string
+        }
+      }
       chat_messages: {
         Row: {
           id: string
