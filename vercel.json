@@ -3,6 +3,5 @@
   "buildCommand": "pnpm turbo run build --filter=@truffle/web...",
   "installCommand": "pnpm install",
   "outputDirectory": "apps/web/.next",
-  "framework": "nextjs",
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- apps/web packages"
+  "framework": "nextjs"
 }
