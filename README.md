@@ -38,7 +38,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 - 🧾 **Receipt & statement scanning** — photograph a receipt or upload a PDF bank statement; Groq extracts all transactions
 - 📂 **CSV import** — drag-and-drop with column auto-detection and category guessing
 - 🔄 **Subscription tracker** — automatically detects recurring charges from your history
-- 🎯 **Savings goals** — set goals, log deposits, ask the AI how you're tracking
+- 🎯 **Savings goals** — set goals manually or let Truffle propose one mid-conversation; confirm with one tap, track progress and deposits in Insights
 - 🔊 **Weekly audio summary** — spoken recap of your week, once per week
 - 💱 **Multi-currency** — EUR, GBP, USD converted to EUR for consistent totals
 - 📱 **PWA** — installs on iOS and Android, works offline
@@ -50,7 +50,8 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ```
 You speak → Groq Whisper transcribes → LangGraph routes your intent
 → Groq Llama-3.3-70b reasons over your actual transaction history
-→ Response streams back → Web Speech API reads it aloud
+→ Response streams back (or a goal proposal card appears via AI tool calling)
+→ Web Speech API reads the answer aloud
 ```
 
 Your recent transactions are passed directly as context to the model on every query — grounding every answer in your real data, not generic advice.
