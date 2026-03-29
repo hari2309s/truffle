@@ -73,8 +73,6 @@ Your recent transactions are passed directly as context to the model on every qu
 | Monorepo | pnpm workspaces + Turborepo |
 | Deployment | Vercel |
 
-**Monthly infrastructure cost: $0**
-
 ---
 
 ## Project structure
@@ -163,46 +161,6 @@ Synthesizer           ← formats a calm, spoken response
     ↓
 Spoken + displayed answer
 ```
-
----
-
-## Roadmap
-
-**MVP** ✅
-- [x] Monorepo scaffold (pnpm + Turborepo)
-- [x] Supabase schema + magic link auth
-- [x] Manual transaction entry
-- [x] LangGraph agent graph (intent router + spending analyst + synthesizer)
-- [x] `/api/chat` streaming endpoint (Groq Llama via Vercel AI SDK v4)
-- [x] Voice input via Groq Whisper (`/api/voice`)
-- [x] Voice output via Web Speech API
-- [x] Chat UI with hold-to-speak VoiceButton
-- [x] Monthly summary card + end-of-month forecast
-- [x] PWA manifest + service worker
-- [x] Vercel deployment config
-
-**Phase 2** ✅
-- [x] Statistical anomaly detection (category spend vs. 90-day baseline)
-- [x] Forecaster agent (LangGraph node — projects end-of-month balance with daily spend rate)
-- [x] Affordability checker agent ("can I afford X?" — reasons over balance + trajectory)
-- [x] Anomaly reviewer agent (surfaces anomalies in calm, spoken language)
-- [x] Emotional tone adaptation — responses adapt to tight/good/negative-projected months
-- [x] CSV import — drag-and-drop with column auto-detection and preview
-- [x] Image/PDF upload — photograph a receipt or upload a PDF statement; Groq extracts all transactions
-
-**Phase 3** ✅
-- [x] Subscription tracker — client-side detection of recurring charges from transaction history
-- [x] Savings goals with voice check-ins — set goals, log deposits, ask the AI how you're tracking
-- [x] Weekly audio summary — spoken recap shown once per week, reads aloud via Web Speech API
-- [x] Multi-currency support — EUR, GBP, USD with fixed reference rates; all totals normalised to EUR
-
-> **Note:** Truffle is intentionally bank-link free. All transactions are entered manually — via text, CSV, or uploaded receipts/statements. No third-party data brokers, no OAuth bank flows.
-
----
-
-## Contributing
-
-This is a personal project but PRs are welcome. Open an issue first to discuss what you'd like to change.
 
 ---
 
