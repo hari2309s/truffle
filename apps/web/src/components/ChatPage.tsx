@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useFinancialChat } from '@/hooks/useFinancialChat'
@@ -36,7 +37,7 @@ export function ChatPage({ userId }: ChatPageProps) {
           <BackIcon />
         </Link>
         <div className="flex items-center gap-2">
-          <img src="/icons/truffle.png" alt="Truffle" className="w-6 h-6" />
+          <Image src="/icons/truffle.png" alt="Truffle" width={24} height={24} priority />
           <div>
             <p className="font-semibold text-truffle-text text-sm">Truffle</p>
             <p className="text-xs text-truffle-muted">Ask me anything</p>

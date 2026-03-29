@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 interface ChatBubbleProps {
   role: 'user' | 'assistant'
   content: string
@@ -21,7 +23,7 @@ export function ChatBubble({ role, content, timestamp }: ChatBubbleProps) {
         {!isUser && (
           <div className="flex items-center gap-1.5 mb-1.5">
             <div className="w-4 h-4 rounded-full overflow-hidden flex items-center justify-center">
-              <img src="/icons/truffle.png" alt="Truffle" className="w-4 h-4 object-contain" />
+              <Image src="/icons/truffle.png" alt="Truffle" width={16} height={16} />
             </div>
             <span className="text-xs font-medium text-truffle-amber">Truffle</span>
           </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
 import { FinancialBrief } from './FinancialBrief'
@@ -25,7 +26,7 @@ export function Dashboard({ userId }: DashboardProps) {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-4 border-b border-truffle-border">
         <div className="flex items-center gap-2">
-          <img src="/icons/truffle.png" alt="Truffle" className="w-7 h-7" />
+          <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
           <span className="font-semibold text-truffle-text">Truffle</span>
         </div>
         <div className="flex items-center gap-1">

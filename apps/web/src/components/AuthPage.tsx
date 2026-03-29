@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -35,7 +36,14 @@ export function AuthPage() {
         {/* Logo */}
         <div className="text-center">
           <div className="mb-4">
-            <img src="/icons/truffle.png" alt="Truffle" className="w-24 h-24 mx-auto" />
+            <Image
+              src="/icons/truffle.png"
+              alt="Truffle"
+              width={96}
+              height={96}
+              priority
+              className="mx-auto"
+            />
           </div>
           <h1 className="text-3xl font-bold text-truffle-text">Truffle</h1>
           <p className="text-truffle-text-secondary mt-2">Your finances, unearthed.</p>

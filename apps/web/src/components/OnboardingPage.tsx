@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -28,7 +29,14 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     <div className="min-h-screen bg-truffle-bg flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-2">
-          <img src="/icons/truffle.png" alt="Truffle" className="w-16 h-16 mx-auto" />
+          <Image
+            src="/icons/truffle.png"
+            alt="Truffle"
+            width={64}
+            height={64}
+            priority
+            className="mx-auto"
+          />
           <h1 className="text-2xl font-bold text-truffle-text">Welcome to Truffle</h1>
           <p className="text-truffle-muted text-sm">Let&apos;s get you set up in 30 seconds.</p>
         </div>
