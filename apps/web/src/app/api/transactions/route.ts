@@ -32,7 +32,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { transactions, userId }: { transactions: Omit<Transaction, 'id' | 'embedding'>[]; userId: string } = body
+    const {
+      transactions,
+      userId,
+    }: { transactions: Omit<Transaction, 'id' | 'embedding'>[]; userId: string } = body
 
     if (!transactions?.length || !userId) {
       return NextResponse.json({ error: 'transactions and userId required' }, { status: 400 })
@@ -52,18 +55,22 @@ export async function POST(request: NextRequest) {
       txWithId.embedding = embedding
 
       // Store in Supabase
-      const { data, error } = await db.from('transactions').insert({
-        id: txWithId.id,
-        user_id: userId,
-        amount: tx.amount,
-        currency: tx.currency,
-        description: tx.description,
-        category: tx.category,
-        merchant: tx.merchant,
-        date: tx.date,
-        is_recurring: tx.isRecurring,
-        embedding: embedding,
-      }).select().single()
+      const { data, error } = await db
+        .from('transactions')
+        .insert({
+          id: txWithId.id,
+          user_id: userId,
+          amount: tx.amount,
+          currency: tx.currency,
+          description: tx.description,
+          category: tx.category,
+          merchant: tx.merchant,
+          date: tx.date,
+          is_recurring: tx.isRecurring,
+          embedding: embedding,
+        })
+        .select()
+        .single()
 
       if (error) throw error
 
@@ -164,7 +171,9 @@ async function recomputeSnapshot(userId: string, db: ReturnType<typeof createSer
   const snapshot = {
     month: currentMonth,
     totalIncome: rows.filter((t) => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0),
-    totalExpenses: rows.filter((t) => Number(t.amount) < 0).reduce((s, t) => s + Number(t.amount), 0),
+    totalExpenses: rows
+      .filter((t) => Number(t.amount) < 0)
+      .reduce((s, t) => s + Number(t.amount), 0),
     byCategory: {} as Record<string, number>,
     savingsRate: 0,
     balance: rows.reduce((s, t) => s + Number(t.amount), 0),
@@ -176,7 +185,10 @@ async function recomputeSnapshot(userId: string, db: ReturnType<typeof createSer
   }
 
   if (snapshot.totalIncome > 0) {
-    snapshot.savingsRate = Math.max(0, (snapshot.totalIncome + snapshot.totalExpenses) / snapshot.totalIncome)
+    snapshot.savingsRate = Math.max(
+      0,
+      (snapshot.totalIncome + snapshot.totalExpenses) / snapshot.totalIncome
+    )
   }
 
   await db.from('monthly_snapshots').upsert({

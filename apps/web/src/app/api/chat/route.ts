@@ -72,16 +72,21 @@ export async function POST(request: NextRequest) {
       .eq('month', currentMonth)
       .single()
 
-    const snapshot: MonthlySnapshot = ((snapshotRow as Record<string, unknown> | null)?.data as unknown as MonthlySnapshot) ?? buildEmptySnapshot()
+    const snapshot: MonthlySnapshot =
+      ((snapshotRow as Record<string, unknown> | null)?.data as unknown as MonthlySnapshot) ??
+      buildEmptySnapshot()
 
     // Route intent
     const intent = await routeIntent(message)
 
     // Get RAG context
-    const relevantTransactions = await queryTransactions(userId, message, 20).catch(() => transactions)
+    const relevantTransactions = await queryTransactions(userId, message, 20).catch(
+      () => transactions
+    )
 
     // Build context string
-    const contextTransactions = relevantTransactions.length > 0 ? relevantTransactions : transactions
+    const contextTransactions =
+      relevantTransactions.length > 0 ? relevantTransactions : transactions
     const context = contextTransactions
       .slice(0, 25)
       .map((t) => `${t.date}: ${t.description} (${t.category}) €${t.amount.toFixed(2)}`)

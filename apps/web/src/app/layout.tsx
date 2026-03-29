@@ -7,7 +7,8 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Truffle — Your finances, unearthed.',
-  description: 'Talk to your money. Truffle listens, understands, and surfaces what\'s hiding beneath the surface of your financial life — without the dread.',
+  description:
+    "Talk to your money. Truffle listens, understands, and surfaces what's hiding beneath the surface of your financial life — without the dread.",
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },

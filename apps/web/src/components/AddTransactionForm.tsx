@@ -93,7 +93,9 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
           type="button"
           onClick={() => setForm((f) => ({ ...f, isExpense: true }))}
           className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-            form.isExpense ? 'bg-truffle-amber text-truffle-bg' : 'bg-truffle-surface text-truffle-muted'
+            form.isExpense
+              ? 'bg-truffle-amber text-truffle-bg'
+              : 'bg-truffle-surface text-truffle-muted'
           }`}
         >
           Expense
@@ -102,7 +104,9 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
           type="button"
           onClick={() => setForm((f) => ({ ...f, isExpense: false }))}
           className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-            !form.isExpense ? 'bg-truffle-green text-truffle-bg' : 'bg-truffle-surface text-truffle-muted'
+            !form.isExpense
+              ? 'bg-truffle-green text-truffle-bg'
+              : 'bg-truffle-surface text-truffle-muted'
           }`}
         >
           Income
@@ -120,7 +124,9 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
 
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-muted text-sm">€</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-muted text-sm">
+            €
+          </span>
           <input
             type="number"
             placeholder="0.00"
@@ -142,7 +148,9 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
 
       <select
         value={form.category}
-        onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as TransactionCategory }))}
+        onChange={(e) =>
+          setForm((f) => ({ ...f, category: e.target.value as TransactionCategory }))
+        }
         className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-sm text-truffle-text focus:outline-none focus:border-truffle-amber"
       >
         {CATEGORIES.map((cat) => (

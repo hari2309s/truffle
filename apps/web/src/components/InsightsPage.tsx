@@ -84,7 +84,9 @@ function ForecastCard({ forecast }: { forecast: Forecast }) {
       <div className="flex justify-between items-end">
         <div>
           <p className="text-xs text-truffle-muted mb-1">Projected end of month</p>
-          <p className={`text-2xl font-bold ${isPositive ? 'text-truffle-green' : 'text-truffle-red'}`}>
+          <p
+            className={`text-2xl font-bold ${isPositive ? 'text-truffle-green' : 'text-truffle-red'}`}
+          >
             €{forecast.projectedEndOfMonth.toFixed(0)}
           </p>
         </div>
@@ -93,8 +95,8 @@ function ForecastCard({ forecast }: { forecast: Forecast }) {
             forecast.confidence === 'high'
               ? 'bg-truffle-green/20 text-truffle-green'
               : forecast.confidence === 'medium'
-              ? 'bg-truffle-amber/20 text-truffle-amber'
-              : 'bg-truffle-muted/20 text-truffle-muted'
+                ? 'bg-truffle-amber/20 text-truffle-amber'
+                : 'bg-truffle-muted/20 text-truffle-muted'
           }`}
         >
           {forecast.confidence} confidence
@@ -151,8 +153,17 @@ function AnomalyCard({ anomaly }: { anomaly: Anomaly }) {
 
 function BackIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-      <path fillRule="evenodd" d="M7.72 12.53a.75.75 0 010-1.06l7.5-7.5a.75.75 0 111.06 1.06L9.31 12l6.97 6.97a.75.75 0 11-1.06 1.06l-7.5-7.5z" clipRule="evenodd" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="w-5 h-5"
+    >
+      <path
+        fillRule="evenodd"
+        d="M7.72 12.53a.75.75 0 010-1.06l7.5-7.5a.75.75 0 111.06 1.06L9.31 12l6.97 6.97a.75.75 0 11-1.06 1.06l-7.5-7.5z"
+        clipRule="evenodd"
+      />
     </svg>
   )
 }

@@ -10,10 +10,44 @@ export const INTENT_ROUTER_PROMPT = `You are Truffle's intent classifier. Given 
 Respond with ONLY the intent key, nothing else.`
 
 export const INTENT_KEYWORDS: Record<string, string[]> = {
-  spending_summary: ['how am i doing', 'spending', 'spent', 'expenses', 'outgoings', 'this month', 'last month', 'this week'],
+  spending_summary: [
+    'how am i doing',
+    'spending',
+    'spent',
+    'expenses',
+    'outgoings',
+    'this month',
+    'last month',
+    'this week',
+  ],
   affordability_check: ['can i afford', 'should i buy', 'enough for', 'afford', 'budget for'],
-  anomaly_review: ['unusual', 'weird', 'strange', 'forgotten', 'subscription', 'unexpected', 'charged'],
-  forecast_request: ['end of month', 'how much left', 'payday', 'will i have', 'project', 'forecast', 'predict'],
-  category_breakdown: ['food', 'groceries', 'transport', 'entertainment', 'housing', 'utilities', 'health', 'shopping'],
+  anomaly_review: [
+    'unusual',
+    'weird',
+    'strange',
+    'forgotten',
+    'subscription',
+    'unexpected',
+    'charged',
+  ],
+  forecast_request: [
+    'end of month',
+    'how much left',
+    'payday',
+    'will i have',
+    'project',
+    'forecast',
+    'predict',
+  ],
+  category_breakdown: [
+    'food',
+    'groceries',
+    'transport',
+    'entertainment',
+    'housing',
+    'utilities',
+    'health',
+    'shopping',
+  ],
   general_advice: ['advice', 'tips', 'help', 'suggest', 'recommend', 'what should'],
 }

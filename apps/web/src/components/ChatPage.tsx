@@ -121,11 +121,7 @@ export function ChatPage({ userId }: ChatPageProps) {
             onStop={voice.stopRecording}
           />
 
-          <form
-            id="chat-form"
-            onSubmit={chat.handleSubmit}
-            className="w-full flex gap-2"
-          >
+          <form id="chat-form" onSubmit={chat.handleSubmit} className="w-full flex gap-2">
             <input
               value={chat.input}
               onChange={chat.handleInputChange}
@@ -148,15 +144,29 @@ export function ChatPage({ userId }: ChatPageProps) {
 
 function BackIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-      <path fillRule="evenodd" d="M7.72 12.53a.75.75 0 010-1.06l7.5-7.5a.75.75 0 111.06 1.06L9.31 12l6.97 6.97a.75.75 0 11-1.06 1.06l-7.5-7.5z" clipRule="evenodd" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="w-5 h-5"
+    >
+      <path
+        fillRule="evenodd"
+        d="M7.72 12.53a.75.75 0 010-1.06l7.5-7.5a.75.75 0 111.06 1.06L9.31 12l6.97 6.97a.75.75 0 11-1.06 1.06l-7.5-7.5z"
+        clipRule="evenodd"
+      />
     </svg>
   )
 }
 
 function SendIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="w-4 h-4"
+    >
       <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
     </svg>
   )

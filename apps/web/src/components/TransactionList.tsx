@@ -36,17 +36,18 @@ export function TransactionList({ userId }: TransactionListProps) {
     },
   })
 
-  const transactions: Transaction[] = data?.transactions?.map((row: Record<string, unknown>) => ({
-    id: row.id,
-    userId: row.user_id,
-    amount: Number(row.amount),
-    currency: row.currency,
-    description: row.description,
-    category: row.category,
-    merchant: row.merchant,
-    date: row.date,
-    isRecurring: row.is_recurring,
-  })) ?? []
+  const transactions: Transaction[] =
+    data?.transactions?.map((row: Record<string, unknown>) => ({
+      id: row.id,
+      userId: row.user_id,
+      amount: Number(row.amount),
+      currency: row.currency,
+      description: row.description,
+      category: row.category,
+      merchant: row.merchant,
+      date: row.date,
+      isRecurring: row.is_recurring,
+    })) ?? []
 
   if (isLoading) {
     return (
@@ -84,7 +85,8 @@ export function TransactionList({ userId }: TransactionListProps) {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-truffle-text truncate">{tx.description}</p>
             <p className="text-xs text-truffle-muted">
-              {formatCategory(tx.category)} · {new Date(tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              {formatCategory(tx.category)} ·{' '}
+              {new Date(tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
             </p>
           </div>
           <span

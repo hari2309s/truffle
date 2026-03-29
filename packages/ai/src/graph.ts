@@ -7,9 +7,15 @@ import { queryTransactions } from './vectorStore'
 const GraphAnnotation = Annotation.Root({
   userQuery: Annotation<string>({ reducer: (x, y) => y ?? x, default: () => '' }),
   agentResponse: Annotation<string>({ reducer: (x, y) => y ?? x, default: () => '' }),
-  intent: Annotation<QueryIntent>({ reducer: (x, y) => y ?? x, default: () => 'general_advice' as QueryIntent }),
+  intent: Annotation<QueryIntent>({
+    reducer: (x, y) => y ?? x,
+    default: () => 'general_advice' as QueryIntent,
+  }),
   transactions: Annotation<Transaction[]>({ reducer: (x, y) => y ?? x, default: () => [] }),
-  currentMonth: Annotation<MonthlySnapshot | null>({ reducer: (x, y) => y ?? x, default: () => null }),
+  currentMonth: Annotation<MonthlySnapshot | null>({
+    reducer: (x, y) => y ?? x,
+    default: () => null,
+  }),
 })
 
 type GraphState = typeof GraphAnnotation.State

@@ -17,8 +17,13 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     if (voices.length === 0) return null
 
     // Priority: English natural/neural voices
-    const preferred = voices.find((v) =>
-      v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Samantha') || v.name.includes('Karen'))
+    const preferred = voices.find(
+      (v) =>
+        v.lang.startsWith('en') &&
+        (v.name.includes('Natural') ||
+          v.name.includes('Neural') ||
+          v.name.includes('Samantha') ||
+          v.name.includes('Karen'))
     )
     if (preferred) return preferred
 

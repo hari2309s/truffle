@@ -10,7 +10,13 @@ interface VoiceButtonProps {
   onStop: () => void
 }
 
-export function VoiceButton({ isRecording, isTranscribing, isSpeaking, onStart, onStop }: VoiceButtonProps) {
+export function VoiceButton({
+  isRecording,
+  isTranscribing,
+  isSpeaking,
+  onStart,
+  onStop,
+}: VoiceButtonProps) {
   const handlePointerDown = useCallback(() => {
     if (!isRecording && !isTranscribing) {
       onStart()
@@ -73,8 +79,24 @@ function MicIcon({ isRecording }: { isRecording: boolean }) {
     >
       <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" />
       <path d="M19 10v1a7 7 0 0 1-14 0v-1a1 1 0 0 1 2 0v1a5 5 0 0 0 10 0v-1a1 1 0 0 1 2 0z" />
-      <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <line x1="8" y1="22" x2="16" y2="22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line
+        x1="12"
+        y1="18"
+        x2="12"
+        y2="22"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <line
+        x1="8"
+        y1="22"
+        x2="16"
+        y2="22"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }

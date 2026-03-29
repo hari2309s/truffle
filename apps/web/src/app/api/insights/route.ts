@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
       .eq('month', currentMonth)
       .single()
 
-    const snapshot = ((snapshotRow as Record<string, unknown> | null)?.data ?? null) as unknown as MonthlySnapshot | null
+    const snapshot = ((snapshotRow as Record<string, unknown> | null)?.data ??
+      null) as unknown as MonthlySnapshot | null
 
     // Count this month's transactions to drive confidence + assumptions
     const startOfMonth = `${currentMonth}-01`

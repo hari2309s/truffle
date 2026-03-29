@@ -29,8 +29,10 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
       // Pick best supported MIME type
-      const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
-        .find((type) => MediaRecorder.isTypeSupported(type)) ?? ''
+      const mimeType =
+        ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'].find(
+          (type) => MediaRecorder.isTypeSupported(type)
+        ) ?? ''
 
       const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
       mediaRecorderRef.current = mediaRecorder
@@ -85,5 +87,13 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
     }
   }
 
-  return { isRecording, startRecording, stopRecording, audioBlob, transcript, isTranscribing, error }
+  return {
+    isRecording,
+    startRecording,
+    stopRecording,
+    audioBlob,
+    transcript,
+    isTranscribing,
+    error,
+  }
 }

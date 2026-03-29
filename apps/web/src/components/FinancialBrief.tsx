@@ -53,8 +53,8 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
             forecast.confidence === 'high'
               ? 'bg-truffle-green/20 text-truffle-green'
               : forecast.confidence === 'medium'
-              ? 'bg-truffle-amber/20 text-truffle-amber'
-              : 'bg-truffle-muted/20 text-truffle-muted'
+                ? 'bg-truffle-amber/20 text-truffle-amber'
+                : 'bg-truffle-muted/20 text-truffle-muted'
           }`}
         >
           {forecast.confidence} confidence

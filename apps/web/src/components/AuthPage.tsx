@@ -46,7 +46,8 @@ export function AuthPage() {
             <div className="text-4xl">📬</div>
             <h2 className="font-semibold text-truffle-text">Check your email</h2>
             <p className="text-sm text-truffle-text-secondary">
-              We sent a magic link to <strong>{email}</strong>. Click it to sign in — no password needed.
+              We sent a magic link to <strong>{email}</strong>. Click it to sign in — no password
+              needed.
             </p>
           </div>
         ) : (
@@ -62,9 +63,7 @@ export function AuthPage() {
               />
             </div>
 
-            {error && (
-              <p className="text-sm text-truffle-red text-center">{error}</p>
-            )}
+            {error && <p className="text-sm text-truffle-red text-center">{error}</p>}
 
             <button
               type="submit"

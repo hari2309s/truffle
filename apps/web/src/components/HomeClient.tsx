@@ -13,7 +13,9 @@ export function HomeClient() {
       setUserId(session?.user?.id ?? null)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_, session) => {
       setUserId(session?.user?.id ?? null)
     })
 
