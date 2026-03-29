@@ -5,6 +5,7 @@ export const INTENT_ROUTER_PROMPT = `You are Truffle's intent classifier. Given 
 - anomaly_review: Questions about unusual charges or subscriptions ("weird charge", "unusual", "subscription I forgot")
 - forecast_request: Future balance predictions ("end of month", "how much left", "will I make it to payday")
 - category_breakdown: Specific category deep-dive ("food spending", "how much on transport", "entertainment budget")
+- savings_goal_check: Questions about savings goals, progress, targets ("my Amsterdam goal", "savings goal", "how close am I", "on track for", "saving up for")
 - general_advice: General financial questions or advice
 
 Respond with ONLY the intent key, nothing else.`
@@ -48,6 +49,16 @@ export const INTENT_KEYWORDS: Record<string, string[]> = {
     'utilities',
     'health',
     'shopping',
+  ],
+  savings_goal_check: [
+    'savings goal',
+    'saving up',
+    'on track',
+    'how close',
+    'goal',
+    'saving for',
+    'target',
+    'put aside',
   ],
   general_advice: ['advice', 'tips', 'help', 'suggest', 'recommend', 'what should'],
 }

@@ -5,6 +5,7 @@ import { analyseSpending } from './agents/spendingAnalyst'
 import { forecastSpending } from './agents/forecaster'
 import { checkAffordability } from './agents/affordabilityChecker'
 import { reviewAnomalies } from './agents/anomalyReviewer'
+import { adviseSavingsGoals } from './agents/savingsGoalAdvisor'
 import { queryTransactions } from './vectorStore'
 
 const GraphAnnotation = Annotation.Root({
@@ -16,6 +17,10 @@ const GraphAnnotation = Annotation.Root({
   }),
   transactions: Annotation<Transaction[]>({ reducer: (x, y) => y ?? x, default: () => [] }),
   anomalies: Annotation<Anomaly[]>({ reducer: (x, y) => y ?? x, default: () => [] }),
+  savingsGoals: Annotation<import('@truffle/types').SavingsGoal[]>({
+    reducer: (x, y) => y ?? x,
+    default: () => [],
+  }),
   currentMonth: Annotation<MonthlySnapshot | null>({
     reducer: (x, y) => y ?? x,
     default: () => null,
@@ -84,6 +89,15 @@ async function anomalyReviewerNode(state: GraphState): Promise<Partial<GraphStat
   return { agentResponse: response }
 }
 
+async function savingsGoalAdvisorNode(state: GraphState): Promise<Partial<GraphState>> {
+  const response = await adviseSavingsGoals(
+    state.userQuery,
+    state.savingsGoals,
+    state.currentMonth ?? emptySnapshot()
+  )
+  return { agentResponse: response }
+}
+
 function routeAfterIntent(state: GraphState): string {
   switch (state.intent) {
     case 'spending_summary':
@@ -95,6 +109,8 @@ function routeAfterIntent(state: GraphState): string {
       return 'affordabilityChecker'
     case 'anomaly_review':
       return 'anomalyReviewer'
+    case 'savings_goal_check':
+      return 'savingsGoalAdvisor'
     default:
       return 'spendingAnalyst'
   }
@@ -107,16 +123,19 @@ export function buildTruffleGraph() {
     .addNode('forecaster', forecasterNode)
     .addNode('affordabilityChecker', affordabilityCheckerNode)
     .addNode('anomalyReviewer', anomalyReviewerNode)
+    .addNode('savingsGoalAdvisor', savingsGoalAdvisorNode)
     .addEdge(START, 'intentRouter')
     .addConditionalEdges('intentRouter', routeAfterIntent, {
       spendingAnalyst: 'spendingAnalyst',
       forecaster: 'forecaster',
       affordabilityChecker: 'affordabilityChecker',
       anomalyReviewer: 'anomalyReviewer',
+      savingsGoalAdvisor: 'savingsGoalAdvisor',
     })
     .addEdge('spendingAnalyst', END)
     .addEdge('forecaster', END)
     .addEdge('affordabilityChecker', END)
     .addEdge('anomalyReviewer', END)
+    .addEdge('savingsGoalAdvisor', END)
     .compile()
 }
