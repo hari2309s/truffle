@@ -65,7 +65,10 @@ function getToneGuidance(snapshot: MonthlySnapshot): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, userId } = await request.json()
+    const { messages: clientMessages, userId } = await request.json()
+    const message = Array.isArray(clientMessages)
+      ? [...clientMessages].reverse().find((m: { role: string }) => m.role === 'user')?.content
+      : undefined
 
     if (!message || !userId) {
       return new Response(JSON.stringify({ error: 'message and userId required' }), {
