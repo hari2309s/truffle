@@ -23,10 +23,10 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
 
   const startRecording = useCallback(async () => {
     try {
+      // getUserMedia must be first — Safari revokes the user gesture after any other async op
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       setError(null)
       setTranscript(null)
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
       // Pick best supported MIME type
       const mimeType =
