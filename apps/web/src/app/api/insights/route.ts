@@ -13,7 +13,6 @@ export async function GET(request: NextRequest) {
 
     const db = createServerClient()
     const currentMonth = new Date().toISOString().slice(0, 7)
-    const startOfMonth = `${currentMonth}-01`
 
     // Anomalies — isolated so a missing table never breaks the forecast
     let anomalies: unknown[] = []
@@ -30,16 +29,20 @@ export async function GET(request: NextRequest) {
       console.warn('Anomalies query threw (non-fatal):', e)
     }
 
-    // Compute balance live from this month's transactions
+    // Compute balance live — fetch all and filter in JS to avoid date type issues
     const { data: txsRaw, error: txErr } = await db
       .from('transactions')
-      .select('amount, category')
+      .select('amount, category, date')
       .eq('user_id', userId)
-      .gte('date', startOfMonth)
+      .order('date', { ascending: false })
+      .limit(500)
 
     if (txErr) console.error('Transactions query error:', txErr.message)
 
-    const txs = (txsRaw ?? []) as { amount: number | string; category: string }[]
+    const allTxs = (txsRaw ?? []) as { amount: number | string; category: string; date: string }[]
+
+    // Filter to current month regardless of how the date is stored
+    const txs = allTxs.filter((t) => String(t.date).startsWith(currentMonth))
     const transactionCount = txs.length
 
     console.log(`[insights] userId=${userId} month=${currentMonth} txCount=${transactionCount}`)
