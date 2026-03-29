@@ -238,7 +238,7 @@ Goal tool rules:
             'Propose a savings goal to the user. Call this when the user wants to save for something specific. The user will see a card with Yes / No buttons — do not create the goal yourself.',
           parameters: z.object({
             name: z.string().describe('Short goal name, e.g. "Holiday in Greece"'),
-            targetAmount: z.number().describe('Target amount in EUR'),
+            targetAmount: z.coerce.number().describe('Target amount in EUR'),
             deadline: z.string().optional().describe('Optional target date in YYYY-MM-DD format'),
             emoji: z.string().describe('A single relevant emoji'),
             pitch: z
@@ -251,16 +251,10 @@ Goal tool rules:
       },
     })
 
-    return result.toDataStreamResponse({
-      getErrorMessage: (error) => {
-        console.error('Stream error:', JSON.stringify(error))
-        return error instanceof Error ? error.message : JSON.stringify(error)
-      },
-    })
+    return result.toDataStreamResponse()
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    console.error('Chat error:', message)
-    return new Response(JSON.stringify({ error: message }), {
+    console.error('Chat error:', error)
+    return new Response(JSON.stringify({ error: 'Chat failed' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })
