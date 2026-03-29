@@ -191,9 +191,10 @@ async function recomputeSnapshot(userId: string, db: ReturnType<typeof createSer
     )
   }
 
-  await db.from('monthly_snapshots').upsert({
-    user_id: userId,
-    month: currentMonth,
-    data: snapshot,
-  })
+  await db
+    .from('monthly_snapshots')
+    .upsert(
+      { user_id: userId, month: currentMonth, data: snapshot },
+      { onConflict: 'user_id,month' }
+    )
 }

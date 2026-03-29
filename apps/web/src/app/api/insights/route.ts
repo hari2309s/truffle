@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@truffle/db'
+import type { Forecast } from '@truffle/types'
 
 export const dynamic = 'force-dynamic'
-import { createServerClient } from '@truffle/db'
-import type { Forecast, MonthlySnapshot } from '@truffle/types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
 
     const db = createServerClient()
     const currentMonth = new Date().toISOString().slice(0, 7)
+    const startOfMonth = `${currentMonth}-01`
 
     // Get anomalies
     const { data: anomalies } = await db
@@ -23,42 +24,41 @@ export async function GET(request: NextRequest) {
       .order('detected_at', { ascending: false })
       .limit(10)
 
-    // Get monthly snapshot for forecast
-    const { data: snapshotRow } = await db
-      .from('monthly_snapshots')
-      .select('data')
-      .eq('user_id', userId)
-      .eq('month', currentMonth)
-      .single()
-
-    const snapshot = ((snapshotRow as Record<string, unknown> | null)?.data ??
-      null) as unknown as MonthlySnapshot | null
-
-    // Count this month's transactions to drive confidence + assumptions
-    const startOfMonth = `${currentMonth}-01`
-    const { count: txCount } = await db
+    // Compute balance live from this month's transactions — never trust stale snapshot
+    const { data: txsRaw } = await db
       .from('transactions')
-      .select('*', { count: 'exact', head: true })
+      .select('amount, category')
       .eq('user_id', userId)
       .gte('date', startOfMonth)
 
-    const transactionCount = txCount ?? 0
+    const txs = (txsRaw ?? []) as { amount: number | string; category: string }[]
+    const transactionCount = txs.length
+
+    const totalIncome = txs
+      .filter((t) => Number(t.amount) > 0)
+      .reduce((s, t) => s + Number(t.amount), 0)
+
+    const totalExpenses = txs
+      .filter((t) => Number(t.amount) < 0)
+      .reduce((s, t) => s + Number(t.amount), 0)
+
+    const balance = txs.reduce((s, t) => s + Number(t.amount), 0)
 
     let forecast: Forecast | null = null
-    if (snapshot) {
+    if (transactionCount > 0) {
       const today = new Date()
       const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
       const daysElapsed = today.getDate()
       const daysRemaining = daysInMonth - daysElapsed
 
-      const dailySpendRate = daysElapsed > 0 ? snapshot.totalExpenses / daysElapsed : 0
+      const dailySpendRate = daysElapsed > 0 ? totalExpenses / daysElapsed : 0
       const projectedRemainingSpend = dailySpendRate * daysRemaining
-      const projectedEndOfMonth = snapshot.balance + projectedRemainingSpend
+      const projectedEndOfMonth = balance + projectedRemainingSpend
 
       const monthName = today.toLocaleString('default', { month: 'long' })
 
       forecast = {
-        currentBalance: snapshot.balance,
+        currentBalance: balance,
         projectedEndOfMonth,
         projectedSavings: Math.max(0, projectedEndOfMonth),
         confidence: transactionCount >= 10 ? 'high' : transactionCount >= 3 ? 'medium' : 'low',
@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
           `Based on ${transactionCount} transaction${transactionCount !== 1 ? 's' : ''} in ${monthName}`,
           `Daily spend rate: €${Math.abs(dailySpendRate).toFixed(2)}`,
           `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`,
+          `Income this month: €${totalIncome.toFixed(2)}`,
         ],
         generatedAt: new Date().toISOString(),
       }
