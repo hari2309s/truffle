@@ -53,7 +53,7 @@ function guessCategory(description: string, category?: string): TransactionCateg
 
 function parseCSV(text: string): ParsedRow[] {
   const lines = text.trim().split('\n')
-  if (lines.length < 2) return []
+  if (lines.length < 2 || !lines[0]) return []
 
   // Normalize header names
   const headers = lines[0].split(',').map((h) => h.trim().toLowerCase().replace(/['"]/g, ''))
