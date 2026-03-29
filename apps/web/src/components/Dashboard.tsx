@@ -11,9 +11,16 @@ import { supabase } from '@/lib/supabase'
 
 interface DashboardProps {
   userId: string
+  name: string
 }
 
-export function Dashboard({ userId }: DashboardProps) {
+function greeting(name: string) {
+  const hour = new Date().getHours()
+  const time = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  return `${time}, ${name}`
+}
+
+export function Dashboard({ userId, name }: DashboardProps) {
   const [showAddForm, setShowAddForm] = useState(false)
 
   const handleSignOut = async () => {
@@ -27,7 +34,12 @@ export function Dashboard({ userId }: DashboardProps) {
       <header className="flex items-center justify-between px-4 py-4 border-b border-truffle-border">
         <div className="flex items-center gap-2">
           <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
-          <span className="font-semibold text-truffle-text">Truffle</span>
+          <div>
+            <span className="font-semibold text-truffle-text">Truffle</span>
+            {name && (
+              <p className="text-xs text-truffle-muted leading-none mt-0.5">{greeting(name)}</p>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <ThemeToggle />

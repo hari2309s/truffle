@@ -11,6 +11,7 @@ type AppState = 'loading' | 'unauthenticated' | 'onboarding' | 'dashboard'
 export function HomeClient() {
   const [state, setState] = useState<AppState>('loading')
   const [userId, setUserId] = useState<string | null>(null)
+  const [name, setName] = useState<string>('')
 
   const resolveState = (
     session: { user: { id: string; user_metadata: Record<string, unknown> } } | null
@@ -18,11 +19,13 @@ export function HomeClient() {
     if (!session) {
       setState('unauthenticated')
       setUserId(null)
+      setName('')
       return
     }
     setUserId(session.user.id)
-    const hasName = Boolean(session.user.user_metadata?.name)
-    setState(hasName ? 'dashboard' : 'onboarding')
+    const userName = (session.user.user_metadata?.name as string) ?? ''
+    setName(userName)
+    setState(userName ? 'dashboard' : 'onboarding')
   }
 
   useEffect(() => {
@@ -54,6 +57,6 @@ export function HomeClient() {
       />
     )
   }
-  if (state === 'dashboard' && userId) return <Dashboard userId={userId} />
+  if (state === 'dashboard' && userId) return <Dashboard userId={userId} name={name} />
   return null
 }
