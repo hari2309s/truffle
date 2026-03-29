@@ -91,6 +91,7 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
     )
     if (preferred) utterance.voice = preferred
 
+    utterance.onend = () => setSpoken(false)
     window.speechSynthesis.speak(utterance)
     setSpoken(true)
   }
