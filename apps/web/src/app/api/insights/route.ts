@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+export const dynamic = 'force-dynamic'
 import { createServerClient } from '@truffle/db'
 import type { Forecast, MonthlySnapshot } from '@truffle/types'
 
