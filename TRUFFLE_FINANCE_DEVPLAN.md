@@ -616,12 +616,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ## Phase 3
 
-- [ ] Open Banking API integration (GoCardless/Nordigen — free tier)
-- [ ] Automatic transaction sync
-- [ ] Subscription tracker
-- [ ] Savings goals with voice check-ins
-- [ ] Weekly audio summary (push notification → voice brief)
-- [ ] Multi-currency support (relevant for expats in Germany)
+- [ ] Open Banking API integration (not planned — manual entry + CSV import is the intended flow)
+- [x] Subscription tracker — `lib/subscriptions.ts` client-side detection, shown in InsightsPage
+- [x] Savings goals with voice check-ins — `SavingsGoals.tsx` + `/api/goals` + `savingsGoalAdvisor` agent
+- [x] Weekly audio summary — `WeeklySummary.tsx` (once/week via localStorage, Web Speech API read-aloud)
+- [x] Multi-currency support — `lib/currency.ts` EUR/GBP/USD conversion, `computeForecast` uses `toEur()`
 
 
 The @xenova/transformers model downloads on first run (~25MB for all-MiniLM-L6-v2) and caches locally — tell Claude Code to handle that gracefully with a loading state.

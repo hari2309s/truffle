@@ -1,5 +1,9 @@
 {
   "name": "truffle",
+  "version": "0.3.0",
+  "description": "Your finances, unearthed. A voice-first personal finance assistant that talks with you, not at you.",
+  "author": "Hariharan Selvaraj <hariharan.2309.s@icloud.com> (https://github.com/hari2309s)",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "turbo run dev",

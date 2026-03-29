@@ -34,9 +34,15 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 
 - 🎙️ **Voice first** — hold to speak, get a spoken answer back
 - 🧠 **Conversational reasoning** — ask anything about your finances in plain language
-- 🔍 **Anomaly detection** — spots unusual charges and forgotten subscriptions automatically
-- 📈 **Spending forecast** — tells you where you'll land at end of month
+- 🔍 **Anomaly detection** — spots unusual charges automatically
+- 📈 **Spending forecast** — projects your end-of-month balance with daily spend rate
 - 😌 **Emotionally aware** — calm, warm tone always. Never a lecture
+- 🧾 **Receipt & statement scanning** — photograph a receipt or upload a PDF bank statement; Gemini Vision extracts all transactions
+- 📂 **CSV import** — drag-and-drop with column auto-detection and category guessing
+- 🔄 **Subscription tracker** — automatically detects recurring charges from your history
+- 🎯 **Savings goals** — set goals, log deposits, ask the AI how you're tracking
+- 🔊 **Weekly audio summary** — spoken recap of your week, once per week
+- 💱 **Multi-currency** — EUR, GBP, USD converted to EUR for consistent totals
 - 📱 **PWA** — installs on iOS and Android, works offline
 
 ---
@@ -127,9 +133,11 @@ LANGFUSE_SECRET_KEY=
 
 ### Database setup
 
+Run both migrations in your Supabase project SQL editor in order:
+
 ```bash
-# Run migrations in your Supabase project SQL editor
-# File: packages/db/src/migrations/001_initial.sql
+packages/db/src/migrations/001_initial.sql   # transactions, anomalies, snapshots, chat
+packages/db/src/migrations/002_savings_goals.sql  # savings_goals table + RLS
 ```
 
 ### Run
@@ -151,13 +159,13 @@ User query
     ↓
 Intent Router         ← classifies what you're asking
     ↓
-┌───┬───┬───┬──────┐
-│   │   │   │      │
-▼   ▼   ▼   ▼      ▼
-Spending  Anomaly  Forecaster  Affordability
-Analyst   Detector             Checker
-│   │   │   │      │
-└───┴───┴───┴──────┘
+┌──────┬─────────┬───────────┬───────────────┬──────────────────┐
+│      │         │           │               │                  │
+▼      ▼         ▼           ▼               ▼                  ▼
+Spending  Anomaly  Forecaster  Affordability  Savings Goal
+Analyst   Reviewer             Checker        Advisor
+│      │         │           │               │                  │
+└──────┴─────────┴───────────┴───────────────┴──────────────────┘
     ↓
 Synthesizer           ← formats a calm, spoken response
     ↓
@@ -190,15 +198,15 @@ Spoken + displayed answer
 - [x] Anomaly reviewer agent (surfaces anomalies in calm, spoken language)
 - [x] Emotional tone adaptation — responses adapt to tight/good/negative-projected months
 - [x] CSV import — drag-and-drop with column auto-detection and preview
-- [ ] Image/PDF upload — parse receipts and statements via Gemini Vision
+- [x] Image/PDF upload — photograph a receipt or upload a PDF statement; Gemini Vision extracts all transactions
 
-**Phase 3**
-- [ ] Subscription tracker
-- [ ] Savings goals with voice check-ins
-- [ ] Weekly audio summary (push notification → voice brief)
-- [ ] Multi-currency support
+**Phase 3** ✅
+- [x] Subscription tracker — client-side detection of recurring charges from transaction history
+- [x] Savings goals with voice check-ins — set goals, log deposits, ask the AI how you're tracking
+- [x] Weekly audio summary — spoken recap shown once per week, reads aloud via Web Speech API
+- [x] Multi-currency support — EUR, GBP, USD with fixed reference rates; all totals normalised to EUR
 
-> **Note:** Truffle is intentionally bank-link free. All transactions are entered manually — via text, CSV, or uploaded images/PDFs. No third-party data brokers, no OAuth bank flows.
+> **Note:** Truffle is intentionally bank-link free. All transactions are entered manually — via text, CSV, or uploaded receipts/statements. No third-party data brokers, no OAuth bank flows.
 
 ---
 
