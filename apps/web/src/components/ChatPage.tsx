@@ -158,6 +158,10 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
           <div className="text-center text-xs text-truffle-red py-2">{voice.error}</div>
         )}
 
+        {chat.error && (
+          <div className="text-center text-xs text-truffle-red py-2">{chat.error.message}</div>
+        )}
+
         <div ref={messagesEndRef} />
       </main>
 

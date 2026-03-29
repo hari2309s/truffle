@@ -208,7 +208,16 @@ Goal tool rules:
     const result = await streamText({
       model: chatModel,
       system: systemPrompt,
-      messages: convertToCoreMessages(clientMessages),
+      messages: convertToCoreMessages(
+        // Drop assistant messages that have unresolved tool calls — convertToCoreMessages
+        // throws if a toolInvocation doesn't have a result yet.
+        clientMessages.filter(
+          (m: { role: string; toolInvocations?: { state: string }[] }) =>
+            m.role !== 'assistant' ||
+            !m.toolInvocations?.length ||
+            m.toolInvocations.every((inv) => inv.state === 'result')
+        )
+      ),
       maxTokens: 400,
       tools: {
         proposeGoal: tool({
