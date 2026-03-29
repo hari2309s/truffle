@@ -1,52 +1,18 @@
-import { ChromaClient, Collection } from 'chromadb'
+import { createClient } from '@supabase/supabase-js'
 import type { Transaction } from '@truffle/types'
 import { embedTransaction, embedText } from './embeddings'
 
-const COLLECTION_NAME = 'truffle_transactions'
-
-let clientInstance: ChromaClient | null = null
-let collectionInstance: Collection | null = null
-
-function getClient(): ChromaClient {
-  if (!clientInstance) {
-    clientInstance = new ChromaClient({
-      path: process.env.CHROMA_URL ?? 'http://localhost:8000',
-    })
-  }
-  return clientInstance
-}
-
-async function getCollection(): Promise<Collection> {
-  if (!collectionInstance) {
-    const client = getClient()
-    collectionInstance = await client.getOrCreateCollection({
-      name: COLLECTION_NAME,
-      metadata: { 'hnsw:space': 'cosine' },
-    })
-  }
-  return collectionInstance
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) throw new Error('Supabase env vars not set')
+  return createClient(url, key)
 }
 
 export async function upsertTransaction(transaction: Transaction): Promise<void> {
-  const collection = await getCollection()
   const embedding = transaction.embedding ?? (await embedTransaction(transaction))
-
-  await collection.upsert({
-    ids: [transaction.id],
-    embeddings: [embedding],
-    documents: [
-      `${transaction.description} ${transaction.category} €${Math.abs(transaction.amount)} ${transaction.date}`,
-    ],
-    metadatas: [
-      {
-        userId: transaction.userId,
-        category: transaction.category,
-        amount: transaction.amount,
-        date: transaction.date,
-        isRecurring: String(transaction.isRecurring),
-      },
-    ],
-  })
+  const db = getSupabase()
+  await db.from('transactions').update({ embedding }).eq('id', transaction.id)
 }
 
 export async function queryTransactions(
@@ -54,30 +20,33 @@ export async function queryTransactions(
   query: string,
   nResults = 20
 ): Promise<Transaction[]> {
-  const collection = await getCollection()
   const queryEmbedding = await embedText(query)
+  const db = getSupabase()
 
-  const results = await collection.query({
-    queryEmbeddings: [queryEmbedding],
-    nResults,
-    where: { userId },
+  const { data, error } = await db.rpc('match_transactions', {
+    query_embedding: queryEmbedding,
+    match_user_id: userId,
+    match_count: nResults,
   })
 
-  if (!results.metadatas?.[0]) return []
+  if (error) throw error
+  if (!data?.length) return []
 
-  return results.metadatas[0].map((meta, i) => ({
-    id: results.ids[0]?.[i] ?? '',
-    userId: (meta?.userId as string) ?? userId,
-    amount: Number(meta?.amount ?? 0),
-    currency: 'EUR' as const,
-    description: results.documents?.[0]?.[i] ?? '',
-    category: (meta?.category as Transaction['category']) ?? 'other',
-    date: (meta?.date as string) ?? '',
-    isRecurring: meta?.isRecurring === 'true',
+  return (data as Record<string, unknown>[]).map((row) => ({
+    id: row.id as string,
+    userId: row.user_id as string,
+    amount: Number(row.amount),
+    currency: (row.currency as 'EUR' | 'GBP' | 'USD') ?? 'EUR',
+    description: row.description as string,
+    category: (row.category as Transaction['category']) ?? 'other',
+    merchant: (row.merchant as string | null) ?? undefined,
+    date: row.date as string,
+    isRecurring: Boolean(row.is_recurring),
   }))
 }
 
 export async function deleteUserTransactions(userId: string): Promise<void> {
-  const collection = await getCollection()
-  await collection.delete({ where: { userId } })
+  // Embeddings are stored on the transactions table — cascade handles deletion
+  const db = getSupabase()
+  await db.from('transactions').update({ embedding: null }).eq('user_id', userId)
 }

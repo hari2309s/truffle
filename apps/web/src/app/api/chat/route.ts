@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     // Route intent
     const intent = await routeIntent(message)
 
-    // RAG retrieval
+    // RAG retrieval — falls back to latest 25 if ChromaDB is unavailable
     const relevantTransactions = await queryTransactions(userId, message, 20).catch(
       () => transactions
     )

@@ -1,28 +1,26 @@
 import type { Transaction } from '@truffle/types'
 
-type PipelineFunction = (
-  text: string,
-  options: { pooling: string; normalize: boolean }
-) => Promise<{ data: Float32Array }>
-
-// Lazy singleton — loads once, caches the model
-let embedderPromise: Promise<PipelineFunction> | null = null
-
-async function getEmbedder(): Promise<PipelineFunction> {
-  if (!embedderPromise) {
-    embedderPromise = (async () => {
-      // Dynamic import so the ~25MB model loads on first use and is then cached
-      const { pipeline } = await import('@xenova/transformers')
-      return pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2') as Promise<PipelineFunction>
-    })()
-  }
-  return embedderPromise
-}
-
+// Uses Gemini text-embedding-004 API — works in any serverless environment
 export async function embedText(text: string): Promise<number[]> {
-  const embedder = await getEmbedder()
-  const output = await embedder(text, { pooling: 'mean', normalize: true })
-  return Array.from(output.data)
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: { parts: [{ text }] } }),
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Gemini embed error: ${err}`)
+  }
+
+  const json = await res.json()
+  return json.embedding.values as number[]
 }
 
 export async function embedTransaction(transaction: Transaction): Promise<number[]> {
