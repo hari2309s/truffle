@@ -42,7 +42,20 @@ export function HomeClient() {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (state === 'loading') return null
+  if (state === 'loading')
+    return (
+      <div className="min-h-dvh bg-truffle-bg flex items-center justify-center">
+        <div className="flex gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-2 h-2 rounded-full bg-truffle-amber animate-bounce"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    )
   if (state === 'unauthenticated') return <AuthPage />
   if (state === 'onboarding' && userId) {
     return (

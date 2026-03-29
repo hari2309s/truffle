@@ -16,15 +16,17 @@ export function ChatPage({ userId }: ChatPageProps) {
   const chat = useFinancialChat(userId)
   const voice = useVoiceRecorder(userId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const processedTranscriptRef = useRef<string | null>(null)
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chat.messages])
 
-  // Submit voice transcript once available
+  // Submit voice transcript once — guard against re-firing when chat object reference changes
   useEffect(() => {
-    if (voice.transcript) {
+    if (voice.transcript && voice.transcript !== processedTranscriptRef.current) {
+      processedTranscriptRef.current = voice.transcript
       chat.startVoice(voice.transcript)
     }
   }, [voice.transcript, chat])
