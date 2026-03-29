@@ -14,6 +14,7 @@ export function useFinancialChat(userId: string, initialMessages: Message[]) {
     api: '/api/chat',
     body: { userId },
     initialMessages,
+    onError: (error) => console.error('useChat error:', error, JSON.stringify(error)),
     onFinish: async (message, { finishReason }) => {
       // Speak the response
       if (message.role === 'assistant' && message.content !== lastAssistantMessageRef.current) {
