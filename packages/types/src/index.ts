@@ -53,6 +53,26 @@ export interface Forecast {
   generatedAt: string
 }
 
+export interface SavingsGoal {
+  id: string
+  userId: string
+  name: string
+  targetAmount: number
+  savedAmount: number
+  deadline?: string // ISO date string
+  emoji: string
+  createdAt: string
+}
+
+export interface DetectedSubscription {
+  key: string // normalised merchant/description
+  displayName: string
+  monthlyAmount: number
+  currency: 'EUR' | 'GBP' | 'USD'
+  lastCharged: string // ISO date
+  monthsDetected: number
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
@@ -78,4 +98,5 @@ export type QueryIntent =
   | 'anomaly_review'
   | 'forecast_request'
   | 'category_breakdown'
+  | 'savings_goal_check'
   | 'general_advice'
