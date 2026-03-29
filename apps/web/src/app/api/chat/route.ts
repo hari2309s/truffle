@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server'
 import { streamText } from 'ai'
-import { geminiFlash } from '@truffle/ai'
-import { queryTransactions } from '@truffle/ai'
+import { geminiFlash, queryTransactions, routeIntent } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
-import { routeIntent, analyseSpending } from '@truffle/ai'
-import type { MonthlySnapshot } from '@truffle/types'
+import type { Database } from '@truffle/db'
+import type { MonthlySnapshot, TransactionCategory } from '@truffle/types'
+
+type TxRow = Database['public']['Tables']['transactions']['Row']
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -53,13 +54,13 @@ export async function POST(request: NextRequest) {
       .order('date', { ascending: false })
       .limit(50)
 
-    const transactions = (txRows ?? []).map((row) => ({
+    const transactions = ((txRows ?? []) as TxRow[]).map((row) => ({
       id: row.id,
       userId: row.user_id,
       amount: Number(row.amount),
       currency: row.currency as 'EUR' | 'GBP' | 'USD',
       description: row.description,
-      category: row.category as Parameters<typeof analyseSpending>[1][0]['category'],
+      category: row.category as TransactionCategory,
       merchant: row.merchant ?? undefined,
       date: row.date,
       isRecurring: row.is_recurring,
