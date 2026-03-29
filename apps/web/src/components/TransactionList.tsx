@@ -90,9 +90,9 @@ export function TransactionList({ userId }: TransactionListProps) {
             </p>
           </div>
           <span
-            className={`text-sm font-semibold flex-shrink-0 ${tx.amount > 0 ? 'text-truffle-green' : 'text-truffle-text'}`}
+            className={`text-sm font-semibold flex-shrink-0 ${tx.amount > 0 ? 'text-truffle-green' : 'text-red-400'}`}
           >
-            {tx.amount > 0 ? '+' : ''}€{Math.abs(tx.amount).toFixed(2)}
+            {tx.amount > 0 ? '+' : '-'}€{Math.abs(tx.amount).toFixed(2)}
           </span>
         </div>
       ))}

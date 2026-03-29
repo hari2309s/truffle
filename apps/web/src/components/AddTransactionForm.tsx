@@ -148,9 +148,11 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
 
       <select
         value={form.category}
-        onChange={(e) =>
-          setForm((f) => ({ ...f, category: e.target.value as TransactionCategory }))
-        }
+        onChange={(e) => {
+          const category = e.target.value as TransactionCategory
+          const isIncome = category === 'income' || category === 'savings'
+          setForm((f) => ({ ...f, category, isExpense: !isIncome }))
+        }}
         className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-sm text-truffle-text focus:outline-none focus:border-truffle-amber"
       >
         {CATEGORIES.map((cat) => (
