@@ -49,13 +49,10 @@ Installable on iOS and Android. Works offline. Voice interaction on your commute
 | PWA | `next-pwa` + Web Speech API + MediaRecorder API | Installable, offline-capable, native voice |
 | State | Zustand + TanStack Query | Lightweight, familiar |
 | AI Orchestration | LangGraph.js | Stateful agent graph for multi-step financial reasoning |
-| LLM Calls | Vercel AI SDK + Google Gemini 1.5 Flash | Stable SDK, free tier |
-| Embeddings | `@xenova/transformers` (local, in-browser or Node) | Free, no API, runs anywhere |
-| Voice → Text | Groq API (Whisper) | Free tier, fastest transcription available |
+| LLM Calls | Vercel AI SDK v4 + Groq Llama-3.3-70b-versatile | Free tier, fast inference |
+| Voice → Text | Groq API (Whisper large-v3) | Free tier, fastest transcription available |
 | Text → Speech | Web Speech API (browser native) | Free, no API needed |
-| Vector Store | ChromaDB (local, Node) | Free, no account |
 | Database | Supabase (PostgreSQL + Auth + Storage) | Free tier, familiar |
-| Observability | LangFuse free tier | Agent tracing |
 | Deployment | Vercel (free) | Zero config, PWA support |
 
 **Total monthly cost: $0**
