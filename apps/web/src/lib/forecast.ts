@@ -1,3 +1,5 @@
+import { toEur } from './currency'
+
 export interface Forecast {
   currentBalance: number
   projectedEndOfMonth: number
@@ -6,19 +8,18 @@ export interface Forecast {
 }
 
 export function computeForecast(
-  transactions: { amount: number | string; date: string }[]
+  transactions: { amount: number | string; currency?: string; date: string }[]
 ): Forecast | null {
   const currentMonth = new Date().toISOString().slice(0, 7)
   const txs = transactions.filter((t) => String(t.date).startsWith(currentMonth))
   if (txs.length === 0) return null
 
-  const totalIncome = txs
-    .filter((t) => Number(t.amount) > 0)
-    .reduce((s, t) => s + Number(t.amount), 0)
-  const totalExpenses = txs
-    .filter((t) => Number(t.amount) < 0)
-    .reduce((s, t) => s + Number(t.amount), 0)
-  const balance = txs.reduce((s, t) => s + Number(t.amount), 0)
+  // Convert all amounts to EUR for consistent totals
+  const eurAmounts = txs.map((t) => toEur(Number(t.amount), t.currency ?? 'EUR'))
+
+  const totalIncome = eurAmounts.filter((a) => a > 0).reduce((s, a) => s + a, 0)
+  const totalExpenses = eurAmounts.filter((a) => a < 0).reduce((s, a) => s + a, 0)
+  const balance = eurAmounts.reduce((s, a) => s + a, 0)
 
   const today = new Date()
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
