@@ -44,9 +44,10 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
 
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((track) => track.stop())
-        const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' })
+        const resolvedMime = mimeType || 'audio/webm'
+        const blob = new Blob(chunksRef.current, { type: resolvedMime })
         setAudioBlob(blob)
-        await transcribeAudio(blob)
+        await transcribeAudio(blob, resolvedMime)
       }
 
       mediaRecorder.start(250) // collect data every 250ms
@@ -64,11 +65,12 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
     }
   }, [])
 
-  const transcribeAudio = async (blob: Blob) => {
+  const transcribeAudio = async (blob: Blob, mime: string) => {
     setIsTranscribing(true)
     try {
+      const ext = mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : 'webm'
       const formData = new FormData()
-      formData.append('audio', blob, 'recording.webm')
+      formData.append('audio', blob, `recording.${ext}`)
 
       const response = await fetch('/api/voice', {
         method: 'POST',
