@@ -1,5 +1,5 @@
 import { generateText } from 'ai'
-import { geminiFlash } from '../gemini'
+import { chatModel } from '../llm'
 import { AFFORDABILITY_CHECKER_PROMPT } from '../prompts/affordabilityChecker.prompt'
 import type { Transaction, MonthlySnapshot } from '@truffle/types'
 
@@ -37,7 +37,7 @@ export async function checkAffordability(
     .replace('{question}', query)
 
   const { text } = await generateText({
-    model: geminiFlash,
+    model: chatModel,
     prompt,
     maxTokens: 300,
   })

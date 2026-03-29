@@ -1,5 +1,5 @@
 import { generateText } from 'ai'
-import { geminiFlash } from '../gemini'
+import { chatModel } from '../llm'
 import { INTENT_ROUTER_PROMPT, INTENT_KEYWORDS } from '../prompts/intentRouter.prompt'
 import type { QueryIntent } from '@truffle/types'
 
@@ -21,7 +21,7 @@ export async function routeIntent(query: string): Promise<QueryIntent> {
   // Fall back to LLM classification
   try {
     const { text } = await generateText({
-      model: geminiFlash,
+      model: chatModel,
       system: INTENT_ROUTER_PROMPT,
       prompt: query,
       maxTokens: 20,

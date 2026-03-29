@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { streamText } from 'ai'
-import { geminiFlash, queryTransactions, routeIntent } from '@truffle/ai'
+import { chatModel, queryTransactions, routeIntent } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory } from '@truffle/types'
 
@@ -199,13 +199,13 @@ Response guidelines:
 - Never lecture or shame. Celebrate wins. Reassure when things are tight.`
 
     const result = await streamText({
-      model: geminiFlash,
+      model: chatModel,
       system: systemPrompt,
       messages: [{ role: 'user', content: message }],
       maxTokens: 250,
     })
 
-    return result.toAIStreamResponse()
+    return result.toDataStreamResponse()
   } catch (error) {
     console.error('Chat error:', error)
     return new Response(JSON.stringify({ error: 'Chat failed' }), {

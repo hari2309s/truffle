@@ -1,5 +1,5 @@
 import { generateText } from 'ai'
-import { geminiFlash } from '../gemini'
+import { chatModel } from '../llm'
 import { FORECASTER_PROMPT } from '../prompts/forecaster.prompt'
 import type { Transaction, MonthlySnapshot } from '@truffle/types'
 
@@ -36,7 +36,7 @@ export async function forecastSpending(
     .replace('{context}', context)
 
   const { text } = await generateText({
-    model: geminiFlash,
+    model: chatModel,
     prompt,
     maxTokens: 300,
   })

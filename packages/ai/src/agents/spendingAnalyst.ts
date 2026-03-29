@@ -1,5 +1,5 @@
 import { generateText } from 'ai'
-import { geminiFlash } from '../gemini'
+import { chatModel } from '../llm'
 import { SPENDING_ANALYST_PROMPT } from '../prompts/spendingAnalyst.prompt'
 import type { Transaction, MonthlySnapshot } from '@truffle/types'
 
@@ -20,7 +20,7 @@ export async function analyseSpending(
     .replace('{totalIncome}', snapshot.totalIncome.toFixed(2))
 
   const { text } = await generateText({
-    model: geminiFlash,
+    model: chatModel,
     prompt,
     maxTokens: 300,
   })

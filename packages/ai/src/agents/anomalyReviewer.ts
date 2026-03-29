@@ -1,5 +1,5 @@
 import { generateText } from 'ai'
-import { geminiFlash } from '../gemini'
+import { chatModel } from '../llm'
 import { ANOMALY_REVIEWER_PROMPT } from '../prompts/anomalyReviewer.prompt'
 import type { Transaction, Anomaly } from '@truffle/types'
 
@@ -23,7 +23,7 @@ export async function reviewAnomalies(
     .replace('{question}', query)
 
   const { text } = await generateText({
-    model: geminiFlash,
+    model: chatModel,
     prompt,
     maxTokens: 300,
   })

@@ -11,8 +11,8 @@
     "@langchain/langgraph": "^0.2.0",
     "@langchain/core": "^0.3.0",
     "@supabase/supabase-js": "^2.43.0",
-    "ai": "^3.3.0",
-    "@ai-sdk/google": "^0.0.52",
+    "ai": "^4.0.0",
+    "@ai-sdk/groq": "^1.0.0",
     "@truffle/types": "workspace:*"
   },
   "devDependencies": {

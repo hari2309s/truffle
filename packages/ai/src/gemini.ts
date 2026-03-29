@@ -1,7 +1,8 @@
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { createGroq } from '@ai-sdk/groq'
 
-export const google = createGoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY,
+export const groqClient = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
 })
 
-export const geminiFlash = google('gemini-2.0-flash')
+// Drop-in replacement — same export name so all agents work without changes
+export const geminiFlash = groqClient('llama-3.3-70b-versatile')

@@ -1,5 +1,5 @@
 import { generateText } from 'ai'
-import { geminiFlash } from '../gemini'
+import { chatModel } from '../llm'
 import { SAVINGS_GOAL_ADVISOR_PROMPT } from '../prompts/savingsGoalAdvisor.prompt'
 import type { SavingsGoal, MonthlySnapshot } from '@truffle/types'
 
@@ -27,7 +27,7 @@ export async function adviseSavingsGoals(
     .replace('{question}', query)
 
   const { text } = await generateText({
-    model: geminiFlash,
+    model: chatModel,
     prompt,
     maxTokens: 300,
   })
