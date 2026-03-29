@@ -51,8 +51,13 @@ export async function POST(request: NextRequest) {
         id: crypto.randomUUID(),
         userId,
       }
-      const embedding = await embedTransaction(txWithId)
-      txWithId.embedding = embedding
+      let embedding: number[] = []
+      try {
+        embedding = await embedTransaction(txWithId)
+        txWithId.embedding = embedding
+      } catch (e) {
+        console.warn('Embedding failed (non-fatal):', e)
+      }
 
       // Store in Supabase
       const { data, error } = await db
@@ -67,7 +72,7 @@ export async function POST(request: NextRequest) {
           merchant: tx.merchant,
           date: tx.date,
           is_recurring: tx.isRecurring,
-          embedding: embedding,
+          embedding: embedding.length > 0 ? embedding : null,
         })
         .select()
         .single()
