@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import type { Anomaly } from '@truffle/types'
+import { detectSubscriptions } from '@/lib/subscriptions'
+import { SavingsGoals } from './SavingsGoals'
 
 interface InsightsPageProps {
   userId: string
@@ -77,6 +79,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
   const forecast = txData?.transactions ? computeForecast(txData.transactions) : null
   const anomalies = anomalyData ?? []
+  const subscriptions = txData?.transactions ? detectSubscriptions(txData.transactions) : []
   const isLoading = txLoading
 
   return (
@@ -104,6 +107,39 @@ export function InsightsPage({ userId }: InsightsPageProps) {
             </div>
           )}
         </section>
+
+        {/* Subscriptions */}
+        {subscriptions.length > 0 && (
+          <section>
+            <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide mb-3">
+              Recurring Subscriptions
+            </h2>
+            <div className="space-y-2">
+              {subscriptions.map((sub) => (
+                <div key={sub.key} className="card flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-truffle-text">{sub.displayName}</p>
+                    <p className="text-xs text-truffle-muted">
+                      Last charged{' '}
+                      {new Date(sub.lastCharged).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                      {' · '}detected {sub.monthsDetected} month
+                      {sub.monthsDetected !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-truffle-red">
+                    -€{sub.monthlyAmount.toFixed(2)}/mo
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Savings Goals */}
+        <SavingsGoals userId={userId} />
 
         {/* Anomalies */}
         <section>
