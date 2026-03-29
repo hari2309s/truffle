@@ -251,10 +251,13 @@ Goal tool rules:
       },
     })
 
-    return result.toDataStreamResponse()
+    return result.toDataStreamResponse({
+      getErrorMessage: (error) => (error instanceof Error ? error.message : String(error)),
+    })
   } catch (error) {
-    console.error('Chat error:', error)
-    return new Response(JSON.stringify({ error: 'Chat failed' }), {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('Chat error:', message)
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })
