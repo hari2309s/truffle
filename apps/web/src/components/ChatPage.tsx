@@ -27,7 +27,7 @@ export function ChatPage({ userId }: ChatPageProps) {
     if (voice.transcript) {
       chat.startVoice(voice.transcript)
     }
-  }, [voice.transcript])
+  }, [voice.transcript, chat])
 
   return (
     <div className="min-h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">

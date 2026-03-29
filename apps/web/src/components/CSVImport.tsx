@@ -68,7 +68,7 @@ function parseCSV(text: string): ParsedRow[] {
 
   const rows: ParsedRow[] = []
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim()
+    const line = lines[i]?.trim()
     if (!line) continue
 
     const cols = line.split(',').map((c) => c.trim().replace(/^"|"$/g, ''))
