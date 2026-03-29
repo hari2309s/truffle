@@ -168,25 +168,34 @@ Spoken + displayed answer
 
 ## Roadmap
 
-**MVP**
-- [x] Monorepo scaffold
-- [ ] Manual transaction entry
-- [ ] Voice input + output
-- [ ] Spending summary agent
-- [ ] Monthly dashboard
-- [ ] PWA install
+**MVP** ✅
+- [x] Monorepo scaffold (pnpm + Turborepo)
+- [x] Supabase schema + magic link auth
+- [x] Manual transaction entry
+- [x] `@xenova/transformers` embedding pipeline
+- [x] ChromaDB vector store
+- [x] LangGraph agent graph (intent router + spending analyst + synthesizer)
+- [x] `/api/chat` streaming endpoint (Gemini via Vercel AI SDK)
+- [x] Voice input via Groq Whisper (`/api/voice`)
+- [x] Voice output via Web Speech API
+- [x] Chat UI with hold-to-speak VoiceButton
+- [x] Monthly summary card + end-of-month forecast
+- [x] PWA manifest + service worker
+- [x] Vercel deployment config
 
 **Phase 2**
-- [ ] Anomaly detection
-- [ ] End-of-month forecast
+- [x] Statistical anomaly detection (category spend vs. 90-day baseline)
+- [ ] Forecaster agent (LangGraph node)
 - [ ] Affordability checker ("can I afford X?")
+- [ ] Emotional tone adaptation in responses
 - [ ] CSV import
 
 **Phase 3**
 - [ ] Open Banking via GoCardless/Nordigen (automatic sync, free tier)
 - [ ] Subscription tracker
 - [ ] Savings goals with voice check-ins
-- [ ] Weekly audio summary
+- [ ] Weekly audio summary (push notification → voice brief)
+- [ ] Multi-currency support
 
 ---
 
