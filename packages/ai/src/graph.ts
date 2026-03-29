@@ -1,7 +1,10 @@
 import { StateGraph, END, START, Annotation } from '@langchain/langgraph'
-import type { MonthlySnapshot, Transaction, QueryIntent } from '@truffle/types'
+import type { MonthlySnapshot, Transaction, Anomaly, QueryIntent } from '@truffle/types'
 import { routeIntent } from './agents/intentRouter'
 import { analyseSpending } from './agents/spendingAnalyst'
+import { forecastSpending } from './agents/forecaster'
+import { checkAffordability } from './agents/affordabilityChecker'
+import { reviewAnomalies } from './agents/anomalyReviewer'
 import { queryTransactions } from './vectorStore'
 
 const GraphAnnotation = Annotation.Root({
@@ -12,6 +15,7 @@ const GraphAnnotation = Annotation.Root({
     default: () => 'general_advice' as QueryIntent,
   }),
   transactions: Annotation<Transaction[]>({ reducer: (x, y) => y ?? x, default: () => [] }),
+  anomalies: Annotation<Anomaly[]>({ reducer: (x, y) => y ?? x, default: () => [] }),
   currentMonth: Annotation<MonthlySnapshot | null>({
     reducer: (x, y) => y ?? x,
     default: () => null,
@@ -20,6 +24,17 @@ const GraphAnnotation = Annotation.Root({
 
 type GraphState = typeof GraphAnnotation.State
 
+function emptySnapshot(): MonthlySnapshot {
+  return {
+    month: new Date().toISOString().slice(0, 7),
+    totalIncome: 0,
+    totalExpenses: 0,
+    byCategory: {} as MonthlySnapshot['byCategory'],
+    savingsRate: 0,
+    balance: 0,
+  }
+}
+
 async function intentRouterNode(state: GraphState): Promise<Partial<GraphState>> {
   const intent = await routeIntent(state.userQuery)
   return { intent }
@@ -27,22 +42,46 @@ async function intentRouterNode(state: GraphState): Promise<Partial<GraphState>>
 
 async function spendingAnalystNode(state: GraphState): Promise<Partial<GraphState>> {
   const userId = state.transactions[0]?.userId ?? ''
-  const retrieved = await queryTransactions(userId, state.userQuery, 20)
+  const retrieved = await queryTransactions(userId, state.userQuery, 20).catch(() => [])
   const transactions = retrieved.length > 0 ? retrieved : state.transactions
-
   const analysis = await analyseSpending(
     state.userQuery,
     transactions,
-    state.currentMonth ?? {
-      month: new Date().toISOString().slice(0, 7),
-      totalIncome: 0,
-      totalExpenses: 0,
-      byCategory: {} as MonthlySnapshot['byCategory'],
-      savingsRate: 0,
-      balance: 0,
-    }
+    state.currentMonth ?? emptySnapshot()
   )
   return { agentResponse: analysis }
+}
+
+async function forecasterNode(state: GraphState): Promise<Partial<GraphState>> {
+  const userId = state.transactions[0]?.userId ?? ''
+  const retrieved = await queryTransactions(userId, state.userQuery, 20).catch(() => [])
+  const transactions = retrieved.length > 0 ? retrieved : state.transactions
+  const response = await forecastSpending(
+    state.userQuery,
+    transactions,
+    state.currentMonth ?? emptySnapshot()
+  )
+  return { agentResponse: response }
+}
+
+async function affordabilityCheckerNode(state: GraphState): Promise<Partial<GraphState>> {
+  const userId = state.transactions[0]?.userId ?? ''
+  const retrieved = await queryTransactions(userId, state.userQuery, 20).catch(() => [])
+  const transactions = retrieved.length > 0 ? retrieved : state.transactions
+  const response = await checkAffordability(
+    state.userQuery,
+    transactions,
+    state.currentMonth ?? emptySnapshot()
+  )
+  return { agentResponse: response }
+}
+
+async function anomalyReviewerNode(state: GraphState): Promise<Partial<GraphState>> {
+  const userId = state.transactions[0]?.userId ?? ''
+  const retrieved = await queryTransactions(userId, state.userQuery, 20).catch(() => [])
+  const transactions = retrieved.length > 0 ? retrieved : state.transactions
+  const response = await reviewAnomalies(state.userQuery, transactions, state.anomalies)
+  return { agentResponse: response }
 }
 
 function routeAfterIntent(state: GraphState): string {
@@ -50,6 +89,12 @@ function routeAfterIntent(state: GraphState): string {
     case 'spending_summary':
     case 'category_breakdown':
       return 'spendingAnalyst'
+    case 'forecast_request':
+      return 'forecaster'
+    case 'affordability_check':
+      return 'affordabilityChecker'
+    case 'anomaly_review':
+      return 'anomalyReviewer'
     default:
       return 'spendingAnalyst'
   }
@@ -59,10 +104,19 @@ export function buildTruffleGraph() {
   return new StateGraph(GraphAnnotation)
     .addNode('intentRouter', intentRouterNode)
     .addNode('spendingAnalyst', spendingAnalystNode)
+    .addNode('forecaster', forecasterNode)
+    .addNode('affordabilityChecker', affordabilityCheckerNode)
+    .addNode('anomalyReviewer', anomalyReviewerNode)
     .addEdge(START, 'intentRouter')
     .addConditionalEdges('intentRouter', routeAfterIntent, {
       spendingAnalyst: 'spendingAnalyst',
+      forecaster: 'forecaster',
+      affordabilityChecker: 'affordabilityChecker',
+      anomalyReviewer: 'anomalyReviewer',
     })
     .addEdge('spendingAnalyst', END)
+    .addEdge('forecaster', END)
+    .addEdge('affordabilityChecker', END)
+    .addEdge('anomalyReviewer', END)
     .compile()
 }
