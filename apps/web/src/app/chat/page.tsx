@@ -1,14 +1,25 @@
-import { redirect } from 'next/navigation'
-import { createServerClient } from '@/lib/supabase-server'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import { ChatPage } from '@/components/ChatPage'
 
-export default async function Chat() {
-  const supabase = createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export default function Chat() {
+  const router = useRouter()
+  const [userId, setUserId] = useState<string | null | undefined>(undefined)
 
-  if (!user) {
-    redirect('/')
-  }
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace('/')
+      } else {
+        setUserId(session.user.id)
+      }
+    })
+  }, [router])
 
-  return <ChatPage userId={user.id} />
+  if (!userId) return null
+
+  return <ChatPage userId={userId} />
 }

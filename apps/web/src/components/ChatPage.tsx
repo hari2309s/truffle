@@ -24,10 +24,7 @@ export function ChatPage({ userId }: ChatPageProps) {
   // Submit voice transcript once available
   useEffect(() => {
     if (voice.transcript) {
-      chat.setInput(voice.transcript)
-      // Submit programmatically
-      const form = document.getElementById('chat-form') as HTMLFormElement | null
-      form?.requestSubmit()
+      chat.startVoice(voice.transcript)
     }
   }, [voice.transcript])
 

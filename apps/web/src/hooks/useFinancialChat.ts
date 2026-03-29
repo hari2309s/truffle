@@ -34,8 +34,7 @@ export function useFinancialChat(userId: string) {
 
   const startVoice = async (transcript: string) => {
     if (!transcript.trim()) return
-    chat.setInput(transcript)
-    await chat.handleSubmit(new Event('submit') as unknown as React.FormEvent)
+    await chat.append({ role: 'user', content: transcript })
   }
 
   return {
