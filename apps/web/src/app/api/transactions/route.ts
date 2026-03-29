@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const db = createServerClient()
-    const results = []
+    const results: Record<string, unknown>[] = []
 
     for (const tx of transactions) {
       // Generate embedding
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         console.warn('ChromaDB upsert failed (non-fatal):', e)
       )
 
-      results.push(data)
+      results.push(data as Record<string, unknown>)
     }
 
     // Recompute monthly snapshot
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
 async function detectAnomalies(
   userId: string,
-  newTxs: { id: string; amount: number | string; category: string; description: string; merchant?: string | null }[],
+  newTxs: Record<string, unknown>[],
   db: ReturnType<typeof createServerClient>
 ) {
   // Fetch last 90 days of history for statistical baseline
@@ -109,19 +109,19 @@ async function detectAnomalies(
 
   // Build per-category stats
   const categoryStats: Record<string, { amounts: number[] }> = {}
-  for (const tx of history) {
+  for (const tx of history as Record<string, unknown>[]) {
     const cat = tx.category as string
     if (!categoryStats[cat]) categoryStats[cat] = { amounts: [] }
     categoryStats[cat].amounts.push(Math.abs(Number(tx.amount)))
   }
 
-  const anomaliesToInsert = []
+  const anomaliesToInsert: Record<string, unknown>[] = []
 
   for (const tx of newTxs) {
     const amount = Number(tx.amount)
     if (amount >= 0) continue // skip income
 
-    const cat = tx.category
+    const cat = tx.category as string
     const stats = categoryStats[cat]
     if (!stats || stats.amounts.length < 3) continue
 
@@ -134,7 +134,7 @@ async function detectAnomalies(
     if (stdDev > 0 && absAmount > mean + 2 * stdDev) {
       anomaliesToInsert.push({
         user_id: userId,
-        transaction_id: tx.id,
+        transaction_id: tx.id as string,
         type: 'unusual_amount',
         severity: absAmount > mean + 3 * stdDev ? 'high' : 'medium',
         description: `${tx.description} is unusually high for ${cat.replace(/_/g, ' ')} — €${absAmount.toFixed(2)} vs your usual €${mean.toFixed(2)}`,
@@ -159,19 +159,20 @@ async function recomputeSnapshot(userId: string, db: ReturnType<typeof createSer
 
   if (!txs) return
 
+  const rows = txs as { amount: number | string; category: string }[]
+
   const snapshot = {
     month: currentMonth,
-    totalIncome: txs.filter((t) => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0),
-    totalExpenses: txs.filter((t) => Number(t.amount) < 0).reduce((s, t) => s + Number(t.amount), 0),
+    totalIncome: rows.filter((t) => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0),
+    totalExpenses: rows.filter((t) => Number(t.amount) < 0).reduce((s, t) => s + Number(t.amount), 0),
     byCategory: {} as Record<string, number>,
     savingsRate: 0,
-    balance: txs.reduce((s, t) => s + Number(t.amount), 0),
-    transactionCount: txs.length,
+    balance: rows.reduce((s, t) => s + Number(t.amount), 0),
+    transactionCount: rows.length,
   }
 
-  for (const tx of txs) {
-    const cat = tx.category as string
-    snapshot.byCategory[cat] = (snapshot.byCategory[cat] ?? 0) + Number(tx.amount)
+  for (const tx of rows) {
+    snapshot.byCategory[tx.category] = (snapshot.byCategory[tx.category] ?? 0) + Number(tx.amount)
   }
 
   if (snapshot.totalIncome > 0) {

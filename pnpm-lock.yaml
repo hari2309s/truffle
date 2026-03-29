@@ -113,7 +113,7 @@ importers:
   packages/db:
     dependencies:
       '@supabase/supabase-js':
-        specifier: ^2.43.0
+        specifier: ^2.100.0
         version: 2.100.1
       '@truffle/types':
         specifier: workspace:*

@@ -2,10 +2,7 @@ import { NextRequest } from 'next/server'
 import { streamText } from 'ai'
 import { geminiFlash, queryTransactions, routeIntent } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
-import type { Database } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory } from '@truffle/types'
-
-type TxRow = Database['public']['Tables']['transactions']['Row']
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -54,7 +51,7 @@ export async function POST(request: NextRequest) {
       .order('date', { ascending: false })
       .limit(50)
 
-    const transactions = ((txRows ?? []) as TxRow[]).map((row) => ({
+    const transactions = ((txRows ?? []) as Record<string, unknown>[]).map((row) => ({
       id: row.id,
       userId: row.user_id,
       amount: Number(row.amount),
@@ -75,7 +72,7 @@ export async function POST(request: NextRequest) {
       .eq('month', currentMonth)
       .single()
 
-    const snapshot: MonthlySnapshot = (snapshotRow?.data as MonthlySnapshot) ?? buildEmptySnapshot()
+    const snapshot: MonthlySnapshot = ((snapshotRow as Record<string, unknown> | null)?.data as unknown as MonthlySnapshot) ?? buildEmptySnapshot()
 
     // Route intent
     const intent = await routeIntent(message)

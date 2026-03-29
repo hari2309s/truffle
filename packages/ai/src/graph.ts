@@ -1,36 +1,42 @@
-import { StateGraph, END } from '@langchain/langgraph'
-import type { TruffleState } from '@truffle/types'
+import { StateGraph, END, START, Annotation } from '@langchain/langgraph'
+import type { MonthlySnapshot, Transaction, QueryIntent } from '@truffle/types'
 import { routeIntent } from './agents/intentRouter'
 import { analyseSpending } from './agents/spendingAnalyst'
 import { queryTransactions } from './vectorStore'
 
-// Minimal state type for the graph
-type GraphState = Pick<TruffleState, 'userQuery' | 'agentResponse' | 'intent'> & {
-  transactions: TruffleState['transactions']
-  currentMonth: TruffleState['currentMonth']
-}
+const GraphAnnotation = Annotation.Root({
+  userQuery: Annotation<string>({ reducer: (x, y) => y ?? x, default: () => '' }),
+  agentResponse: Annotation<string>({ reducer: (x, y) => y ?? x, default: () => '' }),
+  intent: Annotation<QueryIntent>({ reducer: (x, y) => y ?? x, default: () => 'general_advice' as QueryIntent }),
+  transactions: Annotation<Transaction[]>({ reducer: (x, y) => y ?? x, default: () => [] }),
+  currentMonth: Annotation<MonthlySnapshot | null>({ reducer: (x, y) => y ?? x, default: () => null }),
+})
+
+type GraphState = typeof GraphAnnotation.State
 
 async function intentRouterNode(state: GraphState): Promise<Partial<GraphState>> {
-  const intent = await routeIntent(state.userQuery ?? '')
+  const intent = await routeIntent(state.userQuery)
   return { intent }
 }
 
 async function spendingAnalystNode(state: GraphState): Promise<Partial<GraphState>> {
   const userId = state.transactions[0]?.userId ?? ''
-  const retrieved = await queryTransactions(userId, state.userQuery ?? '', 20)
+  const retrieved = await queryTransactions(userId, state.userQuery, 20)
   const transactions = retrieved.length > 0 ? retrieved : state.transactions
 
   const analysis = await analyseSpending(
-    state.userQuery ?? '',
+    state.userQuery,
     transactions,
-    state.currentMonth
+    state.currentMonth ?? {
+      month: new Date().toISOString().slice(0, 7),
+      totalIncome: 0,
+      totalExpenses: 0,
+      byCategory: {} as MonthlySnapshot['byCategory'],
+      savingsRate: 0,
+      balance: 0,
+    }
   )
   return { agentResponse: analysis }
-}
-
-async function generalNode(state: GraphState): Promise<Partial<GraphState>> {
-  // For unhandled intents, fall back to spending analyst
-  return spendingAnalystNode(state)
 }
 
 function routeAfterIntent(state: GraphState): string {
@@ -39,32 +45,18 @@ function routeAfterIntent(state: GraphState): string {
     case 'category_breakdown':
       return 'spendingAnalyst'
     default:
-      return 'general'
+      return 'spendingAnalyst'
   }
 }
 
 export function buildTruffleGraph() {
-  const graph = new StateGraph<GraphState>({
-    channels: {
-      userQuery: { value: (x: string, y: string) => y ?? x, default: () => '' },
-      agentResponse: { value: (x: string, y: string) => y ?? x, default: () => '' },
-      intent: { value: (x: string, y: string) => y ?? x, default: () => 'general_advice' },
-      transactions: { value: (x: unknown[], y: unknown[]) => y ?? x, default: () => [] },
-      currentMonth: { value: (x: unknown, y: unknown) => y ?? x, default: () => ({}) },
-    },
-  })
-
-  graph.addNode('intentRouter', intentRouterNode)
-  graph.addNode('spendingAnalyst', spendingAnalystNode)
-  graph.addNode('general', generalNode)
-
-  graph.setEntryPoint('intentRouter')
-  graph.addConditionalEdges('intentRouter', routeAfterIntent, {
-    spendingAnalyst: 'spendingAnalyst',
-    general: 'general',
-  })
-  graph.addEdge('spendingAnalyst', END)
-  graph.addEdge('general', END)
-
-  return graph.compile()
+  return new StateGraph(GraphAnnotation)
+    .addNode('intentRouter', intentRouterNode)
+    .addNode('spendingAnalyst', spendingAnalystNode)
+    .addEdge(START, 'intentRouter')
+    .addConditionalEdges('intentRouter', routeAfterIntent, {
+      spendingAnalyst: 'spendingAnalyst',
+    })
+    .addEdge('spendingAnalyst', END)
+    .compile()
 }

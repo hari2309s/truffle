@@ -66,7 +66,7 @@ export async function queryTransactions(
   if (!results.metadatas?.[0]) return []
 
   return results.metadatas[0].map((meta, i) => ({
-    id: results.ids[0][i],
+    id: results.ids[0]?.[i] ?? '',
     userId: (meta?.userId as string) ?? userId,
     amount: Number(meta?.amount ?? 0),
     currency: 'EUR' as const,
