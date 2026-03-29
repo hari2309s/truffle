@@ -189,13 +189,15 @@ Spoken + displayed answer
 - [ ] Affordability checker ("can I afford X?")
 - [ ] Emotional tone adaptation in responses
 - [ ] CSV import
+- [ ] Image/PDF upload — parse receipts and statements via Gemini Vision
 
 **Phase 3**
-- [ ] Open Banking via GoCardless/Nordigen (automatic sync, free tier)
 - [ ] Subscription tracker
 - [ ] Savings goals with voice check-ins
 - [ ] Weekly audio summary (push notification → voice brief)
 - [ ] Multi-currency support
+
+> **Note:** Truffle is intentionally bank-link free. All transactions are entered manually — via text, CSV, or uploaded images/PDFs. No third-party data brokers, no OAuth bank flows.
 
 ---
 
