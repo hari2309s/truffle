@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { FinancialBrief } from './FinancialBrief'
 import { TransactionList } from './TransactionList'
 import { AddTransactionForm } from './AddTransactionForm'
+import { ThemeToggle } from './ThemeToggle'
 import { supabase } from '@/lib/supabase'
 
 interface DashboardProps {
@@ -27,9 +28,12 @@ export function Dashboard({ userId }: DashboardProps) {
           <img src="/icons/truffle.png" alt="Truffle" className="w-7 h-7" />
           <span className="font-semibold text-truffle-text">Truffle</span>
         </div>
-        <button onClick={handleSignOut} className="btn-ghost text-xs">
-          Sign out
-        </button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <button onClick={handleSignOut} className="btn-ghost text-xs">
+            Sign out
+          </button>
+        </div>
       </header>
 
       {/* Content */}

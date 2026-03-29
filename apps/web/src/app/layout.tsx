@@ -41,6 +41,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full">
+      <head>
+        {/* Prevent theme flash on load */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('truffle-theme')||'dark';if(t!=='system')document.documentElement.classList.add(t)})()`,
+          }}
+        />
+      </head>
       <body className={`${inter.className} h-full`}>
         <Providers>{children}</Providers>
       </body>
