@@ -147,8 +147,8 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       })
       if (!res.ok) throw new Error('Import failed')
 
-      await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
-      await queryClient.invalidateQueries({ queryKey: ['insights', userId] })
+      await queryClient.refetchQueries({ queryKey: ['transactions', userId] })
+      await queryClient.refetchQueries({ queryKey: ['insights', userId] })
       setImported(true)
     } catch {
       setError('Import failed. Please try again.')

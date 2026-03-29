@@ -11,7 +11,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
   const { data, isLoading } = useQuery({
     queryKey: ['insights', userId],
     queryFn: async () => {
-      const res = await fetch(`/api/insights?userId=${userId}`)
+      const res = await fetch(`/api/insights?userId=${userId}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to fetch insights')
       return res.json()
     },

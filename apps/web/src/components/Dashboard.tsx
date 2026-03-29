@@ -31,7 +31,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
   }
 
   return (
-    <div className="min-h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
+    <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-4 border-b border-truffle-border">
         <div className="flex items-center gap-2">
