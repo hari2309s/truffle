@@ -36,7 +36,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
   }, [voice.transcript, chat])
 
   return (
-    <div className="min-h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
+    <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden">
       {/* Header */}
       <header className="flex items-center gap-3 px-4 py-4 border-b border-truffle-border">
         <Link href="/" className="text-truffle-muted hover:text-truffle-text transition-colors">
