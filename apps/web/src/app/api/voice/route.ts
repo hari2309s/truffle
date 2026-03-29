@@ -23,7 +23,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ transcript: transcription.text })
   } catch (error) {
-    console.error('Voice transcription error:', error)
-    return NextResponse.json({ error: 'Transcription failed' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('Voice transcription error:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

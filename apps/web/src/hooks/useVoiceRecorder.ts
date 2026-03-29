@@ -77,12 +77,13 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
         body: formData,
       })
 
-      if (!response.ok) throw new Error('Transcription failed')
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error ?? 'Transcription failed')
 
-      const { transcript: text } = await response.json()
-      setTranscript(text)
+      setTranscript(json.transcript)
     } catch (err) {
-      setError('Could not transcribe audio. Please try again.')
+      const msg = err instanceof Error ? err.message : 'Could not transcribe audio.'
+      setError(msg)
       console.error('Transcription error:', err)
     } finally {
       setIsTranscribing(false)
