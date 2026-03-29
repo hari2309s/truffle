@@ -2,21 +2,82 @@
 
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import type { Anomaly, Forecast } from '@truffle/types'
+import type { Anomaly } from '@truffle/types'
 
 interface InsightsPageProps {
   userId: string
 }
 
+interface Forecast {
+  currentBalance: number
+  projectedEndOfMonth: number
+  confidence: 'high' | 'medium' | 'low'
+  assumptions: string[]
+}
+
+function computeForecast(
+  transactions: { amount: number | string; date: string }[]
+): Forecast | null {
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const txs = transactions.filter((t) => String(t.date).startsWith(currentMonth))
+  if (txs.length === 0) return null
+
+  const totalIncome = txs
+    .filter((t) => Number(t.amount) > 0)
+    .reduce((s, t) => s + Number(t.amount), 0)
+  const totalExpenses = txs
+    .filter((t) => Number(t.amount) < 0)
+    .reduce((s, t) => s + Number(t.amount), 0)
+  const balance = txs.reduce((s, t) => s + Number(t.amount), 0)
+
+  const today = new Date()
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+  const daysElapsed = today.getDate()
+  const daysRemaining = daysInMonth - daysElapsed
+  const dailySpendRate = daysElapsed > 0 && totalExpenses < 0 ? totalExpenses / daysElapsed : 0
+  const projectedEndOfMonth = balance + dailySpendRate * daysRemaining
+
+  const monthName = today.toLocaleString('default', { month: 'long' })
+  const count = txs.length
+
+  return {
+    currentBalance: balance,
+    projectedEndOfMonth,
+    confidence: count >= 10 ? 'high' : count >= 3 ? 'medium' : 'low',
+    assumptions: [
+      `Based on ${count} transaction${count !== 1 ? 's' : ''} in ${monthName}`,
+      `Daily spend rate: €${Math.abs(dailySpendRate).toFixed(2)}`,
+      `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`,
+      `Income this month: €${totalIncome.toFixed(2)}`,
+    ],
+  }
+}
+
 export function InsightsPage({ userId }: InsightsPageProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['insights', userId],
+  // Shared transactions cache — same key as Dashboard/FinancialBrief
+  const { data: txData, isLoading: txLoading } = useQuery({
+    queryKey: ['transactions', userId],
     queryFn: async () => {
-      const res = await fetch(`/api/insights?userId=${userId}`)
-      if (!res.ok) throw new Error('Failed to fetch insights')
-      return res.json() as Promise<{ anomalies: Anomaly[]; forecast: Forecast | null }>
+      const res = await fetch(`/api/transactions?userId=${userId}`)
+      if (!res.ok) throw new Error('Failed to fetch transactions')
+      return res.json()
     },
   })
+
+  // Anomalies are server-computed — separate lightweight query
+  const { data: anomalyData, isLoading: anomalyLoading } = useQuery({
+    queryKey: ['anomalies', userId],
+    queryFn: async () => {
+      const res = await fetch(`/api/insights?userId=${userId}`)
+      if (!res.ok) throw new Error('Failed to fetch anomalies')
+      const json = await res.json()
+      return (json.anomalies ?? []) as Anomaly[]
+    },
+  })
+
+  const forecast = txData?.transactions ? computeForecast(txData.transactions) : null
+  const anomalies = anomalyData ?? []
+  const isLoading = txLoading
 
   return (
     <div className="min-h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
@@ -35,8 +96,8 @@ export function InsightsPage({ userId }: InsightsPageProps) {
           </h2>
           {isLoading ? (
             <div className="card animate-pulse h-24" />
-          ) : data?.forecast ? (
-            <ForecastCard forecast={data.forecast} />
+          ) : forecast ? (
+            <ForecastCard forecast={forecast} />
           ) : (
             <div className="card border-dashed text-center text-truffle-muted text-sm py-6">
               Add transactions to see your forecast
@@ -49,15 +110,15 @@ export function InsightsPage({ userId }: InsightsPageProps) {
           <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide mb-3">
             Things to Review
           </h2>
-          {isLoading ? (
+          {anomalyLoading ? (
             <div className="space-y-2">
               {[1, 2].map((i) => (
                 <div key={i} className="card animate-pulse h-16" />
               ))}
             </div>
-          ) : data?.anomalies.length ? (
+          ) : anomalies.length ? (
             <div className="space-y-2">
-              {data.anomalies.map((a) => (
+              {anomalies.map((a) => (
                 <AnomalyCard key={a.id} anomaly={a} />
               ))}
             </div>
@@ -76,7 +137,12 @@ function ForecastCard({ forecast }: { forecast: Forecast }) {
   const isPositive = forecast.projectedEndOfMonth >= 0
   const progress = Math.min(
     100,
-    Math.max(0, (forecast.currentBalance / (forecast.projectedEndOfMonth || 1)) * 100)
+    Math.max(
+      0,
+      forecast.projectedEndOfMonth > 0 && forecast.currentBalance > 0
+        ? (forecast.currentBalance / forecast.projectedEndOfMonth) * 100
+        : 0
+    )
   )
 
   return (
@@ -113,7 +179,7 @@ function ForecastCard({ forecast }: { forecast: Forecast }) {
       <ul className="space-y-1">
         {forecast.assumptions.map((assumption, i) => (
           <li key={i} className="text-xs text-truffle-muted flex items-center gap-1">
-            <span className="w-1 h-1 rounded-full bg-truffle-muted inline-block" />
+            <span className="w-1 h-1 rounded-full bg-truffle-muted inline-block flex-shrink-0" />
             {assumption}
           </li>
         ))}
