@@ -252,7 +252,10 @@ Goal tool rules:
     })
 
     return result.toDataStreamResponse({
-      getErrorMessage: (error) => (error instanceof Error ? error.message : String(error)),
+      getErrorMessage: (error) => {
+        console.error('Stream error:', JSON.stringify(error))
+        return error instanceof Error ? error.message : JSON.stringify(error)
+      },
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

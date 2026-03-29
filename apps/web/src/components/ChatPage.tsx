@@ -173,7 +173,14 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
         )}
 
         {chat.error && (
-          <div className="text-center text-xs text-truffle-red py-2">{chat.error.message}</div>
+          <div
+            className="text-center text-xs text-truffle-red py-2"
+            onClick={() => console.error('Chat error full:', chat.error)}
+          >
+            {typeof chat.error.message === 'string'
+              ? chat.error.message
+              : JSON.stringify(chat.error)}
+          </div>
         )}
 
         <div ref={messagesEndRef} />
