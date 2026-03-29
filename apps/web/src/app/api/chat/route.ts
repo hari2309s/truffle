@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { streamText, tool } from 'ai'
+import { streamText, tool, convertToCoreMessages } from 'ai'
 import { z } from 'zod'
 import { chatModel, queryTransactions, routeIntent } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
@@ -208,7 +208,7 @@ Goal tool rules:
     const result = await streamText({
       model: chatModel,
       system: systemPrompt,
-      messages: clientMessages,
+      messages: convertToCoreMessages(clientMessages),
       maxTokens: 400,
       tools: {
         proposeGoal: tool({

@@ -86,41 +86,57 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
           </div>
         )}
 
-        {chat.messages.map((message) => (
-          <div key={message.id}>
-            {/* Render goal proposal cards from tool invocations */}
-            {message.toolInvocations?.map((inv) => {
-              if (inv.toolName === 'proposeGoal' && inv.state === 'call') {
-                const args = inv.args as {
-                  name: string
-                  targetAmount: number
-                  deadline?: string
-                  emoji: string
-                  pitch: string
+        {chat.messages.map((message, idx) => {
+          const isLastMessage = idx === chat.messages.length - 1
+          const showError = isLastMessage && !!chat.error && message.role === 'user'
+          return (
+            <div key={message.id}>
+              {/* Render goal proposal cards from tool invocations */}
+              {message.toolInvocations?.map((inv) => {
+                if (inv.toolName === 'proposeGoal' && inv.state === 'call') {
+                  const args = inv.args as {
+                    name: string
+                    targetAmount: number
+                    deadline?: string
+                    emoji: string
+                    pitch: string
+                  }
+                  return (
+                    <GoalProposalCard
+                      key={inv.toolCallId}
+                      proposal={args}
+                      userId={userId}
+                      onResult={(confirmed) =>
+                        chat.addToolResult({ toolCallId: inv.toolCallId, result: { confirmed } })
+                      }
+                    />
+                  )
                 }
-                return (
-                  <GoalProposalCard
-                    key={inv.toolCallId}
-                    proposal={args}
-                    userId={userId}
-                    onResult={(confirmed) =>
-                      chat.addToolResult({ toolCallId: inv.toolCallId, result: { confirmed } })
-                    }
-                  />
-                )
-              }
-              return null
-            })}
-            {/* Only render bubble if there is text content */}
-            {message.content && (
-              <ChatBubble
-                role={message.role as 'user' | 'assistant'}
-                content={message.content}
-                name={name}
-              />
-            )}
-          </div>
-        ))}
+                return null
+              })}
+              {/* Only render bubble if there is text content */}
+              {message.content && (
+                <ChatBubble
+                  role={message.role as 'user' | 'assistant'}
+                  content={message.content}
+                  name={name}
+                />
+              )}
+              {/* Inline error + resend on the last user message */}
+              {showError && (
+                <div className="flex justify-end items-center gap-2 mb-3 pr-1">
+                  <span className="text-xs text-truffle-red">Failed to send</span>
+                  <button
+                    onClick={() => chat.reload()}
+                    className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+                  >
+                    Resend
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        })}
 
         {chat.isLoading && (
           <div className="flex justify-start mb-3">
@@ -140,10 +156,6 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
 
         {voice.error && (
           <div className="text-center text-xs text-truffle-red py-2">{voice.error}</div>
-        )}
-
-        {chat.error && (
-          <div className="text-center text-xs text-truffle-red py-2">{chat.error.message}</div>
         )}
 
         <div ref={messagesEndRef} />
