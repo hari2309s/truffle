@@ -603,15 +603,16 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] PWA manifest + service worker
 - [ ] Deploy to Vercel
 
-## Phase 2
+## Phase 2 ✅
 
-- [ ] Anomaly detection (embedding similarity + statistical baseline)
-- [ ] Forecaster agent
-- [ ] Affordability Checker agent ("can I afford X?")
-- [ ] Anomaly cards in insights view
-- [ ] Forecast bar on dashboard
-- [ ] Emotional tone adaptation in responses
-- [ ] Transaction import via CSV
+- [x] Anomaly detection (statistical baseline — category spend vs. 90-day mean + 2σ)
+- [x] Forecaster agent — `packages/ai/src/agents/forecaster.ts`, routed via `forecast_request` intent
+- [x] Affordability Checker agent — `packages/ai/src/agents/affordabilityChecker.ts`, routed via `affordability_check` intent
+- [x] Anomaly Reviewer agent — `packages/ai/src/agents/anomalyReviewer.ts`, routed via `anomaly_review` intent
+- [x] Anomaly cards in insights view — `InsightsPage.tsx` `AnomalyCard` component
+- [x] Forecast bar on dashboard — `FinancialBrief.tsx` + `InsightsPage.tsx` `ForecastCard`
+- [x] Emotional tone adaptation — `getToneGuidance()` in `/api/chat` adapts system prompt based on savings rate + projected balance
+- [x] Transaction import via CSV — `CSVImport.tsx` with column auto-detection, category guessing, and preview
 
 ## Phase 3
 

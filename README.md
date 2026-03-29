@@ -183,12 +183,13 @@ Spoken + displayed answer
 - [x] PWA manifest + service worker
 - [x] Vercel deployment config
 
-**Phase 2**
+**Phase 2** ✅
 - [x] Statistical anomaly detection (category spend vs. 90-day baseline)
-- [ ] Forecaster agent (LangGraph node)
-- [ ] Affordability checker ("can I afford X?")
-- [ ] Emotional tone adaptation in responses
-- [ ] CSV import
+- [x] Forecaster agent (LangGraph node — projects end-of-month balance with daily spend rate)
+- [x] Affordability checker agent ("can I afford X?" — reasons over balance + trajectory)
+- [x] Anomaly reviewer agent (surfaces anomalies in calm, spoken language)
+- [x] Emotional tone adaptation — responses adapt to tight/good/negative-projected months
+- [x] CSV import — drag-and-drop with column auto-detection and preview
 - [ ] Image/PDF upload — parse receipts and statements via Gemini Vision
 
 **Phase 3**
