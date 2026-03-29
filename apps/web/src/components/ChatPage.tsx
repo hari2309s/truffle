@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
+import type { Message } from 'ai/react'
 import { useFinancialChat } from '@/hooks/useFinancialChat'
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { ChatBubble } from './ChatBubble'
@@ -11,10 +12,11 @@ import { VoiceButton } from './VoiceButton'
 interface ChatPageProps {
   userId: string
   name: string
+  initialMessages: Message[]
 }
 
-export function ChatPage({ userId, name }: ChatPageProps) {
-  const chat = useFinancialChat(userId)
+export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
+  const chat = useFinancialChat(userId, initialMessages)
   const voice = useVoiceRecorder(userId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const processedTranscriptRef = useRef<string | null>(null)

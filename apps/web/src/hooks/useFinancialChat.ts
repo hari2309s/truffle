@@ -1,37 +1,14 @@
 'use client'
 
 import { useChat } from 'ai/react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import type { Message } from 'ai/react'
 import { useTextToSpeech } from './useTextToSpeech'
 import { supabase } from '@/lib/supabase'
 
-export function useFinancialChat(userId: string) {
+export function useFinancialChat(userId: string, initialMessages: Message[]) {
   const { speak, isSpeaking, cancel } = useTextToSpeech()
   const lastAssistantMessageRef = useRef<string>('')
-  const [initialMessages, setInitialMessages] = useState<Message[] | undefined>(undefined)
-
-  useEffect(() => {
-    supabase
-      .from('chat_messages')
-      .select('id, role, content, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-      .limit(20)
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setInitialMessages(
-            data.map((row) => ({
-              id: row.id as string,
-              role: row.role as 'user' | 'assistant',
-              content: row.content as string,
-            }))
-          )
-        } else {
-          setInitialMessages([])
-        }
-      })
-  }, [userId])
 
   const chat = useChat({
     api: '/api/chat',
