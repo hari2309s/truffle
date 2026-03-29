@@ -31,6 +31,38 @@ function buildEmptySnapshot(): MonthlySnapshot {
   }
 }
 
+function getToneGuidance(snapshot: MonthlySnapshot): string {
+  const { totalIncome, totalExpenses, balance } = snapshot
+
+  if (totalIncome === 0 && totalExpenses === 0) {
+    return 'The user is just getting started — be encouraging and welcoming.'
+  }
+
+  const savingsRate = totalIncome > 0 ? (totalIncome + totalExpenses) / totalIncome : 0
+
+  const today = new Date()
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+  const daysElapsed = today.getDate()
+  const daysRemaining = daysInMonth - daysElapsed
+  const dailySpend =
+    daysElapsed > 0 && totalExpenses < 0 ? Math.abs(totalExpenses) / daysElapsed : 0
+  const projectedBalance = balance - dailySpend * daysRemaining
+
+  if (projectedBalance < 0) {
+    return 'The user is projected to go negative this month — be very reassuring, non-judgmental, and focus on one small practical step they can take. Do not alarm them.'
+  }
+
+  if (savingsRate < 0.1) {
+    return 'It is a tight month for the user — be warm and reassuring. Acknowledge the difficulty without dwelling on it. Find something positive to mention.'
+  }
+
+  if (savingsRate > 0.4) {
+    return 'The user is doing really well financially this month — celebrate it genuinely! Be enthusiastic but not over the top.'
+  }
+
+  return 'The user is in a solid financial position this month — be calm, informative, and encouraging.'
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { message, userId } = await request.json()
@@ -42,8 +74,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Get transactions from Supabase for context
     const db = createDbClient()
+
+    // Fetch transactions
     const { data: txRows } = await db
       .from('transactions')
       .select('*')
@@ -52,18 +85,18 @@ export async function POST(request: NextRequest) {
       .limit(50)
 
     const transactions = ((txRows ?? []) as Record<string, unknown>[]).map((row) => ({
-      id: row.id,
-      userId: row.user_id,
+      id: row.id as string,
+      userId: row.user_id as string,
       amount: Number(row.amount),
       currency: row.currency as 'EUR' | 'GBP' | 'USD',
-      description: row.description,
+      description: row.description as string,
       category: row.category as TransactionCategory,
-      merchant: row.merchant ?? undefined,
-      date: row.date,
-      isRecurring: row.is_recurring,
+      merchant: (row.merchant as string | null) ?? undefined,
+      date: row.date as string,
+      isRecurring: row.is_recurring as boolean,
     }))
 
-    // Get or build monthly snapshot
+    // Fetch monthly snapshot
     const currentMonth = new Date().toISOString().slice(0, 7)
     const { data: snapshotRow } = await db
       .from('monthly_snapshots')
@@ -76,40 +109,70 @@ export async function POST(request: NextRequest) {
       ((snapshotRow as Record<string, unknown> | null)?.data as unknown as MonthlySnapshot) ??
       buildEmptySnapshot()
 
+    // Fetch recent anomalies for context
+    const { data: anomalyRows } = await db
+      .from('anomalies')
+      .select('description, severity, type')
+      .eq('user_id', userId)
+      .order('detected_at', { ascending: false })
+      .limit(5)
+
+    const anomalyContext =
+      anomalyRows && anomalyRows.length > 0
+        ? '\nRecent anomalies detected:\n' +
+          anomalyRows
+            .map((a: Record<string, unknown>) => `- [${a.severity}] ${a.description}`)
+            .join('\n')
+        : ''
+
     // Route intent
     const intent = await routeIntent(message)
 
-    // Get RAG context
+    // RAG retrieval
     const relevantTransactions = await queryTransactions(userId, message, 20).catch(
       () => transactions
     )
-
-    // Build context string
     const contextTransactions =
       relevantTransactions.length > 0 ? relevantTransactions : transactions
+
     const context = contextTransactions
       .slice(0, 25)
       .map((t) => `${t.date}: ${t.description} (${t.category}) €${t.amount.toFixed(2)}`)
       .join('\n')
 
-    const systemPrompt = `You are Truffle — a warm, calm, non-judgmental personal finance companion.
+    // Compute forecast numbers for affordability / forecast intents
+    const today = new Date()
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+    const daysElapsed = today.getDate()
+    const daysRemaining = daysInMonth - daysElapsed
+    const dailySpend =
+      daysElapsed > 0 && snapshot.totalExpenses < 0
+        ? Math.abs(snapshot.totalExpenses) / daysElapsed
+        : 0
+    const projectedBalance = snapshot.balance - dailySpend * daysRemaining
+
+    const toneGuidance = getToneGuidance(snapshot)
+
+    const systemPrompt = `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.
+
+Tone guidance for this conversation: ${toneGuidance}
 
 The user's recent transactions:
-${context}
+${context}${anomalyContext}
 
 Monthly summary (${snapshot.month}):
 - Income: €${snapshot.totalIncome.toFixed(2)}
 - Expenses: €${Math.abs(snapshot.totalExpenses).toFixed(2)}
 - Balance: €${snapshot.balance.toFixed(2)}
+- Projected end of month: €${projectedBalance.toFixed(2)} (${daysRemaining} days remaining, spending ~€${dailySpend.toFixed(2)}/day)
 
 Intent detected: ${intent}
 
-Guidelines:
+Response guidelines:
 - Be concise (2-4 sentences) — your response will be read aloud
 - Use actual numbers from the transaction data
-- Warm, friendly tone — like a knowledgeable friend, not a banker
-- Never lecture or shame. Celebrate wins. Reassure when needed.
-- No bullet points or lists — use natural spoken language`
+- No bullet points or lists — use natural spoken language
+- Never lecture or shame. Celebrate wins. Reassure when things are tight.`
 
     const result = await streamText({
       model: geminiFlash,

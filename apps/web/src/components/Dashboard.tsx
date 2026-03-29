@@ -7,6 +7,7 @@ import { FinancialBrief } from './FinancialBrief'
 import { TransactionList } from './TransactionList'
 import { AddTransactionForm } from './AddTransactionForm'
 import { ThemeToggle } from './ThemeToggle'
+import { CSVImport } from './CSVImport'
 import { supabase } from '@/lib/supabase'
 
 interface DashboardProps {
@@ -22,6 +23,7 @@ function greeting(name: string) {
 
 export function Dashboard({ userId, name }: DashboardProps) {
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showCSVImport, setShowCSVImport] = useState(false)
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -57,15 +59,31 @@ export function Dashboard({ userId, name }: DashboardProps) {
           <AddTransactionForm userId={userId} onClose={() => setShowAddForm(false)} />
         )}
 
+        {showCSVImport && <CSVImport userId={userId} onClose={() => setShowCSVImport(false)} />}
+
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-truffle-text">Recent</h2>
-            <button
-              onClick={() => setShowAddForm((v) => !v)}
-              className="text-sm text-truffle-amber hover:text-truffle-amber-light transition-colors"
-            >
-              {showAddForm ? 'Cancel' : '+ Add'}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowCSVImport((v) => !v)
+                  setShowAddForm(false)
+                }}
+                className="text-sm text-truffle-muted hover:text-truffle-text transition-colors"
+              >
+                {showCSVImport ? 'Cancel' : 'Import CSV'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddForm((v) => !v)
+                  setShowCSVImport(false)
+                }}
+                className="text-sm text-truffle-amber hover:text-truffle-amber-light transition-colors"
+              >
+                {showAddForm ? 'Cancel' : '+ Add'}
+              </button>
+            </div>
           </div>
           <TransactionList userId={userId} />
         </div>
