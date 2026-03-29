@@ -78,10 +78,72 @@ export async function POST(request: NextRequest) {
     // Recompute monthly snapshot
     await recomputeSnapshot(userId, db)
 
+    // Run anomaly detection (non-fatal)
+    await detectAnomalies(userId, results, db).catch((e) =>
+      console.warn('Anomaly detection failed (non-fatal):', e)
+    )
+
     return NextResponse.json({ transactions: results })
   } catch (error) {
     console.error('POST transactions error:', error)
     return NextResponse.json({ error: 'Failed to save transactions' }, { status: 500 })
+  }
+}
+
+async function detectAnomalies(
+  userId: string,
+  newTxs: { id: string; amount: number | string; category: string; description: string; merchant?: string | null }[],
+  db: ReturnType<typeof createServerClient>
+) {
+  // Fetch last 90 days of history for statistical baseline
+  const since = new Date()
+  since.setDate(since.getDate() - 90)
+  const { data: history } = await db
+    .from('transactions')
+    .select('amount, category, merchant, description')
+    .eq('user_id', userId)
+    .gte('date', since.toISOString().slice(0, 10))
+    .lt('amount', '0') // expenses only
+
+  if (!history || history.length < 5) return // not enough history
+
+  // Build per-category stats
+  const categoryStats: Record<string, { amounts: number[] }> = {}
+  for (const tx of history) {
+    const cat = tx.category as string
+    if (!categoryStats[cat]) categoryStats[cat] = { amounts: [] }
+    categoryStats[cat].amounts.push(Math.abs(Number(tx.amount)))
+  }
+
+  const anomaliesToInsert = []
+
+  for (const tx of newTxs) {
+    const amount = Number(tx.amount)
+    if (amount >= 0) continue // skip income
+
+    const cat = tx.category
+    const stats = categoryStats[cat]
+    if (!stats || stats.amounts.length < 3) continue
+
+    const mean = stats.amounts.reduce((s, v) => s + v, 0) / stats.amounts.length
+    const variance = stats.amounts.reduce((s, v) => s + (v - mean) ** 2, 0) / stats.amounts.length
+    const stdDev = Math.sqrt(variance)
+    const absAmount = Math.abs(amount)
+
+    // Flag if > mean + 2σ
+    if (stdDev > 0 && absAmount > mean + 2 * stdDev) {
+      anomaliesToInsert.push({
+        user_id: userId,
+        transaction_id: tx.id,
+        type: 'unusual_amount',
+        severity: absAmount > mean + 3 * stdDev ? 'high' : 'medium',
+        description: `${tx.description} is unusually high for ${cat.replace(/_/g, ' ')} — €${absAmount.toFixed(2)} vs your usual €${mean.toFixed(2)}`,
+      })
+    }
+  }
+
+  if (anomaliesToInsert.length > 0) {
+    await db.from('anomalies').insert(anomaliesToInsert)
   }
 }
 
@@ -104,6 +166,7 @@ async function recomputeSnapshot(userId: string, db: ReturnType<typeof createSer
     byCategory: {} as Record<string, number>,
     savingsRate: 0,
     balance: txs.reduce((s, t) => s + Number(t.amount), 0),
+    transactionCount: txs.length,
   }
 
   for (const tx of txs) {

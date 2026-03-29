@@ -31,6 +31,16 @@ export async function GET(request: NextRequest) {
 
     const snapshot = snapshotRow?.data as MonthlySnapshot | null
 
+    // Count this month's transactions to drive confidence + assumptions
+    const startOfMonth = `${currentMonth}-01`
+    const { count: txCount } = await db
+      .from('transactions')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('date', startOfMonth)
+
+    const transactionCount = txCount ?? 0
+
     let forecast: Forecast | null = null
     if (snapshot) {
       const today = new Date()
@@ -42,15 +52,17 @@ export async function GET(request: NextRequest) {
       const projectedRemainingSpend = dailySpendRate * daysRemaining
       const projectedEndOfMonth = snapshot.balance + projectedRemainingSpend
 
+      const monthName = today.toLocaleString('default', { month: 'long' })
+
       forecast = {
         currentBalance: snapshot.balance,
         projectedEndOfMonth,
         projectedSavings: Math.max(0, projectedEndOfMonth),
-        confidence: daysElapsed > 10 ? 'high' : daysElapsed > 5 ? 'medium' : 'low',
+        confidence: transactionCount >= 10 ? 'high' : transactionCount >= 3 ? 'medium' : 'low',
         assumptions: [
-          `Based on ${daysElapsed} days of data`,
+          `Based on ${transactionCount} transaction${transactionCount !== 1 ? 's' : ''} in ${monthName}`,
           `Daily spend rate: €${Math.abs(dailySpendRate).toFixed(2)}`,
-          `${daysRemaining} days remaining in month`,
+          `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`,
         ],
         generatedAt: new Date().toISOString(),
       }
