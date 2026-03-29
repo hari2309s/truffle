@@ -31,9 +31,9 @@ export function Dashboard({ userId, name }: DashboardProps) {
   }
 
   return (
-    <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden">
+    <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-4 border-b border-truffle-border">
+      <header className="flex items-center justify-between px-4 py-4 border-b border-truffle-border flex-shrink-0">
         <div className="flex items-center gap-2">
           <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
           <div>
@@ -51,10 +51,10 @@ export function Dashboard({ userId, name }: DashboardProps) {
         </div>
       </header>
 
-      {/* Content */}
-      <main className="flex-1 flex flex-col min-h-0 px-4 pt-6">
-        {/* Always-visible top section */}
-        <div className="space-y-4 flex-shrink-0">
+      {/* Content — single scroll container so items flow behind the translucent nav */}
+      <main className="flex-1 overflow-y-auto min-h-0">
+        {/* Sticky top section — stays visible as transactions scroll underneath */}
+        <div className="sticky top-0 z-10 bg-truffle-bg px-4 pt-6 pb-4 space-y-4">
           <FinancialBrief userId={userId} />
 
           {showAddForm && (
@@ -64,9 +64,9 @@ export function Dashboard({ userId, name }: DashboardProps) {
           {showCSVImport && <CSVImport userId={userId} onClose={() => setShowCSVImport(false)} />}
         </div>
 
-        {/* Scrollable transactions section */}
-        <div className="flex flex-col min-h-0 flex-1 mt-6 pb-24">
-          <div className="flex items-center justify-between mb-3 flex-shrink-0">
+        {/* Transactions — scroll naturally, last item clears the nav bar */}
+        <div className="px-4 pb-24">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-truffle-text">Recent</h2>
             <div className="flex items-center gap-3">
               <button
@@ -89,9 +89,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
               </button>
             </div>
           </div>
-          <div className="overflow-y-auto flex-1">
-            <TransactionList userId={userId} />
-          </div>
+          <TransactionList userId={userId} />
         </div>
       </main>
 
