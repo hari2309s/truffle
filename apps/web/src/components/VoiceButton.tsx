@@ -58,7 +58,7 @@ export function VoiceButton({
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        className={`w-20 h-20 rounded-full transition-all duration-200 flex items-center justify-center touch-none ${buttonClasses}`}
+        className={`w-14 h-14 rounded-full transition-all duration-200 flex items-center justify-center touch-none ${buttonClasses}`}
         aria-label={label}
         disabled={isTranscribing}
       >
@@ -75,7 +75,7 @@ function MicIcon({ isRecording }: { isRecording: boolean }) {
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill="currentColor"
-      className={`w-8 h-8 text-truffle-bg transition-transform duration-200 ${isRecording ? 'scale-90' : ''}`}
+      className={`w-6 h-6 text-truffle-bg transition-transform duration-200 ${isRecording ? 'scale-90' : ''}`}
     >
       <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" />
       <path d="M19 10v1a7 7 0 0 1-14 0v-1a1 1 0 0 1 2 0v1a5 5 0 0 0 10 0v-1a1 1 0 0 1 2 0z" />
