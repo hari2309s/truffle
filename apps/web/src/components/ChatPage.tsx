@@ -93,7 +93,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
             <div key={message.id}>
               {/* Render goal proposal cards from tool invocations */}
               {message.toolInvocations?.map((inv) => {
-                if (inv.toolName === 'proposeGoal' && inv.state === 'call') {
+                if (inv.toolName === 'proposeGoal') {
                   const args = inv.args as {
                     name: string
                     targetAmount: number
@@ -101,16 +101,30 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                     emoji: string
                     pitch: string
                   }
-                  return (
-                    <GoalProposalCard
-                      key={inv.toolCallId}
-                      proposal={args}
-                      userId={userId}
-                      onResult={(confirmed) =>
-                        chat.addToolResult({ toolCallId: inv.toolCallId, result: { confirmed } })
-                      }
-                    />
-                  )
+                  if (inv.state === 'call') {
+                    return (
+                      <GoalProposalCard
+                        key={inv.toolCallId}
+                        proposal={args}
+                        userId={userId}
+                        onResult={(confirmed) =>
+                          chat.addToolResult({ toolCallId: inv.toolCallId, result: { confirmed } })
+                        }
+                      />
+                    )
+                  }
+                  if (inv.state === 'result' && (inv.result as { confirmed: boolean })?.confirmed) {
+                    return (
+                      <div key={inv.toolCallId} className="flex justify-start mb-3">
+                        <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
+                          <p className="text-sm text-truffle-text">
+                            {args.emoji} <span className="font-medium">{args.name}</span> added to
+                            your goals — find it in Insights.
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  }
                 }
                 return null
               })}

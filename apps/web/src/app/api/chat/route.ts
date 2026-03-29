@@ -205,19 +205,32 @@ Goal tool rules:
 - NEVER describe a goal in plain text without calling proposeGoal — always let the user confirm
 - After a confirmed goal, respond with one warm sentence acknowledging it`
 
+    type ClientMessage = {
+      role: string
+      toolInvocations?: { toolCallId: string; state: string; result?: unknown }[]
+    }
+    // Resolve any tool invocations that are still in 'call' or 'partial-call' state —
+    // convertToCoreMessages throws if a toolInvocation doesn't have a result yet.
+    const normalizedMessages = clientMessages.map((m: ClientMessage) => {
+      if (
+        m.role !== 'assistant' ||
+        !m.toolInvocations?.length ||
+        m.toolInvocations.every((inv) => inv.state === 'result')
+      ) {
+        return m
+      }
+      return {
+        ...m,
+        toolInvocations: m.toolInvocations.map((inv) =>
+          inv.state === 'result' ? inv : { ...inv, state: 'result', result: { confirmed: false } }
+        ),
+      }
+    })
+
     const result = await streamText({
       model: chatModel,
       system: systemPrompt,
-      messages: convertToCoreMessages(
-        // Drop assistant messages that have unresolved tool calls — convertToCoreMessages
-        // throws if a toolInvocation doesn't have a result yet.
-        clientMessages.filter(
-          (m: { role: string; toolInvocations?: { state: string }[] }) =>
-            m.role !== 'assistant' ||
-            !m.toolInvocations?.length ||
-            m.toolInvocations.every((inv) => inv.state === 'result')
-        )
-      ),
+      messages: convertToCoreMessages(normalizedMessages),
       maxTokens: 400,
       tools: {
         proposeGoal: tool({
