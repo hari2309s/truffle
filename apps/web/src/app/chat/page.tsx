@@ -8,6 +8,7 @@ import { ChatPage } from '@/components/ChatPage'
 export default function Chat() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null | undefined>(undefined)
+  const [name, setName] = useState<string>('')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -15,11 +16,12 @@ export default function Chat() {
         router.replace('/')
       } else {
         setUserId(session.user.id)
+        setName((session.user.user_metadata?.name as string) ?? '')
       }
     })
   }, [router])
 
   if (!userId) return null
 
-  return <ChatPage userId={userId} />
+  return <ChatPage userId={userId} name={name} />
 }

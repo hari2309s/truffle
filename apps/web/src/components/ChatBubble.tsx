@@ -5,10 +5,11 @@ import Image from 'next/image'
 interface ChatBubbleProps {
   role: 'user' | 'assistant'
   content: string
+  name?: string
   timestamp?: string
 }
 
-export function ChatBubble({ role, content, timestamp }: ChatBubbleProps) {
+export function ChatBubble({ role, content, name, timestamp }: ChatBubbleProps) {
   const isUser = role === 'user'
 
   return (
@@ -26,6 +27,11 @@ export function ChatBubble({ role, content, timestamp }: ChatBubbleProps) {
               <Image src="/icons/truffle.png" alt="Truffle" width={16} height={16} />
             </div>
             <span className="text-xs font-medium text-truffle-amber">Truffle</span>
+          </div>
+        )}
+        {isUser && name && (
+          <div className="flex items-center justify-end mb-1.5">
+            <span className="text-xs font-medium text-truffle-bg/70">{name}</span>
           </div>
         )}
         <p className={`text-sm leading-relaxed ${isUser ? 'font-medium' : ''}`}>{content}</p>

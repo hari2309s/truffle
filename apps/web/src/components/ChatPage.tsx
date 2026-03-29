@@ -10,9 +10,10 @@ import { VoiceButton } from './VoiceButton'
 
 interface ChatPageProps {
   userId: string
+  name: string
 }
 
-export function ChatPage({ userId }: ChatPageProps) {
+export function ChatPage({ userId, name }: ChatPageProps) {
   const chat = useFinancialChat(userId)
   const voice = useVoiceRecorder(userId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -87,6 +88,7 @@ export function ChatPage({ userId }: ChatPageProps) {
             key={message.id}
             role={message.role as 'user' | 'assistant'}
             content={message.content}
+            name={name}
           />
         ))}
 
