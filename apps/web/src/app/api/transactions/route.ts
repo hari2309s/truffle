@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
-import { embedTransaction, upsertTransaction } from '@truffle/ai'
 import type { Transaction } from '@truffle/types'
 
 export const runtime = 'nodejs'
@@ -53,6 +52,7 @@ export async function POST(request: NextRequest) {
       }
       let embedding: number[] = []
       try {
+        const { embedTransaction } = await import('@truffle/ai')
         embedding = await embedTransaction(txWithId)
         txWithId.embedding = embedding
       } catch (e) {
@@ -79,10 +79,13 @@ export async function POST(request: NextRequest) {
 
       if (error) throw error
 
-      // Store in ChromaDB
-      await upsertTransaction(txWithId).catch((e) =>
+      // Store in ChromaDB (non-fatal)
+      try {
+        const { upsertTransaction } = await import('@truffle/ai')
+        await upsertTransaction(txWithId)
+      } catch (e) {
         console.warn('ChromaDB upsert failed (non-fatal):', e)
-      )
+      }
 
       results.push(data as Record<string, unknown>)
     }
