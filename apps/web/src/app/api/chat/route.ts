@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
-import { streamText } from 'ai'
+import { streamText, tool } from 'ai'
+import { z } from 'zod'
 import { chatModel, queryTransactions, routeIntent } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory } from '@truffle/types'
@@ -196,13 +197,36 @@ Response guidelines:
 - Be concise (2-4 sentences) — your response will be read aloud
 - Use actual numbers from the transaction data
 - No bullet points or lists — use natural spoken language
-- Never lecture or shame. Celebrate wins. Reassure when things are tight.`
+- Never lecture or shame. Celebrate wins. Reassure when things are tight.
+
+Goal tool rules:
+- When the user expresses a desire to save for something specific, use the proposeGoal tool
+- Gather name and target amount from the conversation before calling the tool
+- NEVER describe a goal in plain text without calling proposeGoal — always let the user confirm
+- After a confirmed goal, respond with one warm sentence acknowledging it`
 
     const result = await streamText({
       model: chatModel,
       system: systemPrompt,
-      messages: [{ role: 'user', content: message }],
-      maxTokens: 250,
+      messages: clientMessages,
+      maxTokens: 400,
+      tools: {
+        proposeGoal: tool({
+          description:
+            'Propose a savings goal to the user. Call this when the user wants to save for something specific. The user will see a card with Yes / No buttons — do not create the goal yourself.',
+          parameters: z.object({
+            name: z.string().describe('Short goal name, e.g. "Holiday in Greece"'),
+            targetAmount: z.number().describe('Target amount in EUR'),
+            deadline: z.string().optional().describe('Optional target date in YYYY-MM-DD format'),
+            emoji: z.string().describe('A single relevant emoji'),
+            pitch: z
+              .string()
+              .describe(
+                'One warm sentence explaining why this goal is achievable based on their finances'
+              ),
+          }),
+        }),
+      },
     })
 
     return result.toDataStreamResponse()

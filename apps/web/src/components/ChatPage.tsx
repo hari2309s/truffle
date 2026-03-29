@@ -7,6 +7,7 @@ import type { Message } from 'ai/react'
 import { useFinancialChat } from '@/hooks/useFinancialChat'
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { ChatBubble } from './ChatBubble'
+import { GoalProposalCard } from './GoalProposalCard'
 import { VoiceButton } from './VoiceButton'
 
 interface ChatPageProps {
@@ -86,12 +87,39 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
         )}
 
         {chat.messages.map((message) => (
-          <ChatBubble
-            key={message.id}
-            role={message.role as 'user' | 'assistant'}
-            content={message.content}
-            name={name}
-          />
+          <div key={message.id}>
+            {/* Render goal proposal cards from tool invocations */}
+            {message.toolInvocations?.map((inv) => {
+              if (inv.toolName === 'proposeGoal' && inv.state === 'call') {
+                const args = inv.args as {
+                  name: string
+                  targetAmount: number
+                  deadline?: string
+                  emoji: string
+                  pitch: string
+                }
+                return (
+                  <GoalProposalCard
+                    key={inv.toolCallId}
+                    proposal={args}
+                    userId={userId}
+                    onResult={(confirmed) =>
+                      chat.addToolResult({ toolCallId: inv.toolCallId, result: { confirmed } })
+                    }
+                  />
+                )
+              }
+              return null
+            })}
+            {/* Only render bubble if there is text content */}
+            {message.content && (
+              <ChatBubble
+                role={message.role as 'user' | 'assistant'}
+                content={message.content}
+                name={name}
+              />
+            )}
+          </div>
         ))}
 
         {chat.isLoading && (
