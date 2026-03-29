@@ -48,7 +48,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `(function(){var t=localStorage.getItem('truffle-theme')||'dark';if(t!=='system')document.documentElement.classList.add(t)})()`,
           }}
         />
-        <link rel="preload" href="/icons/truffle.png" as="image" />
       </head>
       <body className={`${inter.className} h-full`}>
         <Providers>{children}</Providers>
