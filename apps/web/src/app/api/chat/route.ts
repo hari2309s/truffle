@@ -125,6 +125,27 @@ export async function POST(request: NextRequest) {
             .join('\n')
         : ''
 
+    // Fetch savings goals for context
+    const { data: goalRows } = await db
+      .from('savings_goals')
+      .select('name, target_amount, saved_amount, deadline, emoji')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+
+    const goalsContext =
+      goalRows && goalRows.length > 0
+        ? '\nSavings goals:\n' +
+          goalRows
+            .map((g: Record<string, unknown>) => {
+              const pct = (
+                ((g.saved_amount as number) / (g.target_amount as number)) *
+                100
+              ).toFixed(0)
+              return `- ${g.emoji} ${g.name}: €${g.saved_amount} / €${g.target_amount} (${pct}%)${g.deadline ? ` by ${g.deadline}` : ''}`
+            })
+            .join('\n')
+        : ''
+
     // Route intent
     const intent = await routeIntent(message)
 
@@ -158,7 +179,7 @@ export async function POST(request: NextRequest) {
 Tone guidance for this conversation: ${toneGuidance}
 
 The user's recent transactions:
-${context}${anomalyContext}
+${context}${anomalyContext}${goalsContext}
 
 Monthly summary (${snapshot.month}):
 - Income: €${snapshot.totalIncome.toFixed(2)}
