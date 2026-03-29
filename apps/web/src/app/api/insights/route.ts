@@ -15,24 +15,34 @@ export async function GET(request: NextRequest) {
     const currentMonth = new Date().toISOString().slice(0, 7)
     const startOfMonth = `${currentMonth}-01`
 
-    // Get anomalies
-    const { data: anomalies } = await db
-      .from('anomalies')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('dismissed', false)
-      .order('detected_at', { ascending: false })
-      .limit(10)
+    // Anomalies — isolated so a missing table never breaks the forecast
+    let anomalies: unknown[] = []
+    try {
+      const { data, error } = await db
+        .from('anomalies')
+        .select('*')
+        .eq('user_id', userId)
+        .order('detected_at', { ascending: false })
+        .limit(10)
+      if (error) console.warn('Anomalies query error (non-fatal):', error.message)
+      else anomalies = data ?? []
+    } catch (e) {
+      console.warn('Anomalies query threw (non-fatal):', e)
+    }
 
-    // Compute balance live from this month's transactions — never trust stale snapshot
-    const { data: txsRaw } = await db
+    // Compute balance live from this month's transactions
+    const { data: txsRaw, error: txErr } = await db
       .from('transactions')
       .select('amount, category')
       .eq('user_id', userId)
       .gte('date', startOfMonth)
 
+    if (txErr) console.error('Transactions query error:', txErr.message)
+
     const txs = (txsRaw ?? []) as { amount: number | string; category: string }[]
     const transactionCount = txs.length
+
+    console.log(`[insights] userId=${userId} month=${currentMonth} txCount=${transactionCount}`)
 
     const totalIncome = txs
       .filter((t) => Number(t.amount) > 0)
@@ -72,10 +82,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      anomalies: anomalies ?? [],
-      forecast,
-    })
+    return NextResponse.json({ anomalies, forecast })
   } catch (error) {
     console.error('Insights error:', error)
     return NextResponse.json({ error: 'Failed to get insights' }, { status: 500 })
