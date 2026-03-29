@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Groq from 'groq-sdk'
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-})
+function getGroq() {
+  return new Groq({ apiKey: process.env.GROQ_API_KEY })
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No audio file provided' }, { status: 400 })
     }
 
-    const transcription = await groq.audio.transcriptions.create({
+    const transcription = await getGroq().audio.transcriptions.create({
       file: audio,
       model: 'whisper-large-v3',
       language: 'en',
