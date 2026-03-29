@@ -52,17 +52,21 @@ export function Dashboard({ userId, name }: DashboardProps) {
       </header>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto px-4 py-6 space-y-6 pb-24">
-        <FinancialBrief userId={userId} />
+      <main className="flex-1 flex flex-col min-h-0 px-4 pt-6">
+        {/* Always-visible top section */}
+        <div className="space-y-4 flex-shrink-0">
+          <FinancialBrief userId={userId} />
 
-        {showAddForm && (
-          <AddTransactionForm userId={userId} onClose={() => setShowAddForm(false)} />
-        )}
+          {showAddForm && (
+            <AddTransactionForm userId={userId} onClose={() => setShowAddForm(false)} />
+          )}
 
-        {showCSVImport && <CSVImport userId={userId} onClose={() => setShowCSVImport(false)} />}
+          {showCSVImport && <CSVImport userId={userId} onClose={() => setShowCSVImport(false)} />}
+        </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-3">
+        {/* Scrollable transactions section */}
+        <div className="flex flex-col min-h-0 flex-1 mt-6 pb-24">
+          <div className="flex items-center justify-between mb-3 flex-shrink-0">
             <h2 className="font-semibold text-truffle-text">Recent</h2>
             <div className="flex items-center gap-3">
               <button
@@ -85,7 +89,9 @@ export function Dashboard({ userId, name }: DashboardProps) {
               </button>
             </div>
           </div>
-          <TransactionList userId={userId} />
+          <div className="overflow-y-auto flex-1">
+            <TransactionList userId={userId} />
+          </div>
         </div>
       </main>
 
