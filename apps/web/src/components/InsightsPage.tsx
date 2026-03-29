@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import type { Anomaly } from '@truffle/types'
@@ -88,6 +89,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
         <Link href="/" className="text-truffle-muted hover:text-truffle-text transition-colors">
           <BackIcon />
         </Link>
+        <Image src="/icons/truffle.png" alt="Truffle" width={24} height={24} />
         <h1 className="font-semibold text-truffle-text">Insights</h1>
       </header>
 
