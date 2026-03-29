@@ -59,7 +59,8 @@
     font-family: 'Inter', system-ui, sans-serif;
     background-color: var(--t-bg);
     color: var(--t-text);
-    min-height: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
     overscroll-behavior: none;
     transition:
       background-color 0.2s ease,
