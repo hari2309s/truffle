@@ -10,13 +10,14 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/hari2309s/truffle)
 
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?logo=pwa&logoColor=white)
 
 ![LangGraph](https://img.shields.io/badge/LangGraph.js-agent_orchestration-1C3C3C?logo=langchain&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-Llama_3.3_70B_%2B_Whisper-F55036?logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-text--embedding--004-4285F4?logo=google&logoColor=white)
 ![Web Speech API](https://img.shields.io/badge/Web_Speech_API-TTS-orange?logo=googlechrome&logoColor=white)
 
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_%2B_Auth-3ECF8E?logo=supabase&logoColor=white)
@@ -67,6 +68,7 @@ Your recent transactions are passed directly as context to the model on every qu
 | PWA | `next-pwa` + Web Speech API + MediaRecorder API |
 | AI Orchestration | LangGraph.js |
 | LLM | Vercel AI SDK v4 + Groq Llama-3.3-70b-versatile |
+| Embeddings | Gemini text-embedding-004 (Google AI Studio) |
 | Voice → Text | Groq API (Whisper large-v3) |
 | Text → Voice | Web Speech API (browser native) |
 | Database | Supabase (PostgreSQL + Auth + Storage) |
@@ -98,6 +100,7 @@ truffle/
 - pnpm >= 8
 - Supabase account (free)
 - Groq account — used for both Whisper STT and Llama chat (free tier)
+- Google AI Studio account (free) — used for Gemini text-embedding-004
 
 ### Installation
 
@@ -117,6 +120,7 @@ Fill in your keys:
 
 ```bash
 GROQ_API_KEY=                    # Groq — free tier (Whisper STT + Llama chat)
+GEMINI_API_KEY=                  # Google AI Studio — free tier (text-embedding-004)
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
