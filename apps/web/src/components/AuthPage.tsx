@@ -4,11 +4,11 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-export function AuthPage() {
+export function AuthPage({ error: initialError = null }: { error?: string | null }) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(initialError)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,7 +18,7 @@ export function AuthPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
 

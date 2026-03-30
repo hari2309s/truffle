@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Dashboard } from './Dashboard'
 import { AuthPage } from './AuthPage'
@@ -12,6 +13,8 @@ export function HomeClient() {
   const [state, setState] = useState<AppState>('loading')
   const [userId, setUserId] = useState<string | null>(null)
   const [name, setName] = useState<string>('')
+  const searchParams = useSearchParams()
+  const authError = searchParams.get('error')
 
   const resolveState = (
     session: { user: { id: string; user_metadata: Record<string, unknown> } } | null
@@ -56,7 +59,16 @@ export function HomeClient() {
         </div>
       </div>
     )
-  if (state === 'unauthenticated') return <AuthPage />
+  if (state === 'unauthenticated')
+    return (
+      <AuthPage
+        error={
+          authError === 'auth_failed'
+            ? 'Sign-in link expired or already used. Please request a new one.'
+            : null
+        }
+      />
+    )
   if (state === 'onboarding' && userId) {
     return (
       <OnboardingPage
