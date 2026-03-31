@@ -53,7 +53,6 @@ export default function Chat() {
     return (
       <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden">
         <header className="flex items-center gap-3 px-4 py-4 border-b border-truffle-border">
-          <div className="w-5 h-5" />
           <div className="flex items-center gap-2">
             <Image src="/icons/truffle.png" alt="Truffle" width={24} height={24} priority />
             <div>
