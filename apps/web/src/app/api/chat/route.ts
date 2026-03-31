@@ -200,10 +200,12 @@ Response guidelines:
 - Never lecture or shame. Celebrate wins. Reassure when things are tight.
 
 Goal tool rules:
-- When the user expresses a desire to save for something specific, use the proposeGoal tool
+- Only use proposeGoal when the user clearly intends to save real money for a realistic, achievable purchase or experience (e.g. holiday, laptop, wedding fund)
+- Do NOT trigger proposeGoal for: hyperbole, jokes, physically impossible scenarios, vague wishes, or things that are clearly not financial goals
 - Gather name and target amount from the conversation before calling the tool
 - NEVER describe a goal in plain text without calling proposeGoal — always let the user confirm
-- After a confirmed goal, respond with one warm sentence acknowledging it`
+- After a confirmed goal, respond with one warm sentence acknowledging it
+- If the user declined a goal proposal, respond naturally and warmly — do not re-propose the same goal`
 
     type ClientMessage = {
       role: string
@@ -227,33 +229,58 @@ Goal tool rules:
       }
     })
 
-    const result = await streamText({
+    // If the last assistant message already has a completed tool result we're in a
+    // follow-up turn — disable tools so the LLM just gives a text acknowledgment
+    // instead of proposing the same goal again.
+    const lastAssistant = [...normalizedMessages]
+      .reverse()
+      .find((m: ClientMessage) => m.role === 'assistant')
+    const isFollowUpAfterTool =
+      !!lastAssistant?.toolInvocations?.length &&
+      lastAssistant.toolInvocations.every(
+        (inv: { toolCallId: string; state: string; result?: unknown }) => inv.state === 'result'
+      )
+
+    const proposeGoalTool = {
+      proposeGoal: tool({
+        description:
+          'Propose a savings goal to the user. Call this when the user wants to save for something specific. The user will see a card with Yes / No buttons — do not create the goal yourself.',
+        parameters: z.object({
+          name: z.string().describe('Short goal name, e.g. "Holiday in Greece"'),
+          targetAmount: z
+            .union([z.number(), z.string().transform((s) => parseFloat(s))])
+            .describe('Target amount in EUR as a number'),
+          deadline: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/)
+            .optional()
+            .describe('Optional target date in YYYY-MM-DD format. Omit if no deadline.'),
+          emoji: z.string().describe('A single relevant emoji'),
+          pitch: z
+            .string()
+            .describe(
+              'One warm sentence explaining why this goal is achievable based on their finances'
+            ),
+        }),
+      }),
+    }
+
+    const result = streamText({
       model: chatModel,
       system: systemPrompt,
       messages: convertToCoreMessages(normalizedMessages),
       maxTokens: 400,
-      tools: {
-        proposeGoal: tool({
-          description:
-            'Propose a savings goal to the user. Call this when the user wants to save for something specific. The user will see a card with Yes / No buttons — do not create the goal yourself.',
-          parameters: z.object({
-            name: z.string().describe('Short goal name, e.g. "Holiday in Greece"'),
-            targetAmount: z.coerce.number().describe('Target amount in EUR'),
-            deadline: z.string().optional().describe('Optional target date in YYYY-MM-DD format'),
-            emoji: z.string().describe('A single relevant emoji'),
-            pitch: z
-              .string()
-              .describe(
-                'One warm sentence explaining why this goal is achievable based on their finances'
-              ),
-          }),
-        }),
-      },
+      tools: isFollowUpAfterTool || intent !== 'goal_setting' ? undefined : proposeGoalTool,
     })
 
-    return result.toDataStreamResponse()
+    return result.toDataStreamResponse({
+      getErrorMessage: (error: unknown) => {
+        console.error('[chat/stream error]', error)
+        return error instanceof Error ? error.message : 'An error occurred.'
+      },
+    })
   } catch (error) {
-    console.error('Chat error:', error)
+    console.error('[chat/route error]', error)
     return new Response(JSON.stringify({ error: 'Chat failed' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

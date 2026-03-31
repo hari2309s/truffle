@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
         name,
         target_amount: targetAmount,
         saved_amount: 0,
-        deadline: deadline ?? null,
+        deadline: deadline || null,
         emoji: emoji ?? '🎯',
       })
       .select()
