@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { streamText, tool, convertToCoreMessages } from 'ai'
 import { z } from 'zod'
-import { chatModel, queryTransactions, routeIntent } from '@truffle/ai'
+import { chatModel, queryTransactions, routeIntent, langfuse } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory } from '@truffle/types'
 
@@ -150,8 +150,18 @@ export async function POST(request: NextRequest) {
             .join('\n')
         : ''
 
+    // Langfuse trace for the full request
+    const trace = langfuse.trace({
+      name: 'chat',
+      userId,
+      input: message,
+      metadata: { month: currentMonth },
+    })
+
     // Route intent
+    const intentSpan = trace.span({ name: 'routeIntent', input: message })
     const intent = await routeIntent(message)
+    intentSpan.end({ output: intent })
 
     // RAG retrieval — falls back to latest 25 if ChromaDB is unavailable
     const relevantTransactions = await queryTransactions(userId, message, 20).catch(
@@ -263,12 +273,25 @@ Goal tool rules:
       }),
     }
 
+    const generation = trace.generation({
+      name: 'streamText',
+      model: 'llama-3.3-70b-versatile',
+      input: [{ role: 'system', content: systemPrompt }],
+    })
+
     const result = streamText({
       model: chatModel,
       system: systemPrompt,
       messages: convertToCoreMessages(normalizedMessages),
       maxTokens: 400,
       tools: isFollowUpAfterTool || intent !== 'goal_setting' ? undefined : proposeGoalTool,
+      onFinish: async ({ text, usage }) => {
+        generation.end({
+          output: text,
+          usage: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
+        })
+        await langfuse.flushAsync()
+      },
     })
 
     return result.toDataStreamResponse({
