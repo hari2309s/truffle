@@ -21,6 +21,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ![Web Speech API](https://img.shields.io/badge/Web_Speech_API-TTS-orange?logo=googlechrome&logoColor=white)
 
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_%2B_Auth-3ECF8E?logo=supabase&logoColor=white)
+![Langfuse](https://img.shields.io/badge/Langfuse-observability-000000?logo=langfuse&logoColor=white)
 ![pnpm](https://img.shields.io/badge/pnpm-workspaces-F69220?logo=pnpm&logoColor=white)
 ![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-EF4444?logo=turborepo&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -72,6 +73,7 @@ Your recent transactions are passed directly as context to the model on every qu
 | Voice → Text | Groq API (Whisper large-v3) |
 | Text → Voice | Web Speech API (browser native) |
 | Database | Supabase (PostgreSQL + Auth + Storage) |
+| Observability | Langfuse (traces, generations, token usage) |
 | State | Zustand + TanStack Query |
 | Monorepo | pnpm workspaces + Turborepo |
 | Deployment | Vercel |
@@ -124,6 +126,9 @@ GEMINI_API_KEY=                  # Google AI Studio — free tier (text-embeddin
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+LANGFUSE_SECRET_KEY=                 # Langfuse — free tier (observability)
+LANGFUSE_PUBLIC_KEY=
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
 ```
 
 ### Database setup
