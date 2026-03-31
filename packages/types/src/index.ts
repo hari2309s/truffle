@@ -99,4 +99,5 @@ export type QueryIntent =
   | 'forecast_request'
   | 'category_breakdown'
   | 'savings_goal_check'
+  | 'goal_setting'
   | 'general_advice'
