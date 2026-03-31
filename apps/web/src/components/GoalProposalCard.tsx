@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 
 interface GoalProposal {
   name: string
@@ -31,11 +32,17 @@ export function GoalProposalCard({ proposal, userId, onResult }: GoalProposalCar
         name: proposal.name,
         targetAmount: proposal.targetAmount,
         savedAmount: 0,
-        deadline: proposal.deadline ?? null,
+        deadline: proposal.deadline || null,
         emoji: proposal.emoji,
       }),
     })
     await queryClient.refetchQueries({ queryKey: ['goals', userId] })
+    // Persist confirmation so it survives a page reload
+    await supabase.from('chat_messages').insert({
+      user_id: userId,
+      role: 'assistant',
+      content: `${proposal.emoji} ${proposal.name} added to your goals — find it in Insights.`,
+    })
     setStatus('done')
     onResult(true)
   }
