@@ -84,7 +84,7 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
         )}
 
         <p className="text-xs text-truffle-muted text-center">
-          No account needed · Free forever · Your data stays yours
+          No password needed · Free forever · Your data stays yours
         </p>
       </div>
     </div>

@@ -29,12 +29,13 @@ export default function Chat() {
       .from('chat_messages')
       .select('id, role, content, created_at')
       .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-      .limit(20)
+      .order('created_at', { ascending: false })
+      .limit(50)
       .then(({ data }) => {
+        const rows = (data ?? []).reverse()
         setInitialMessages(
-          data && data.length > 0
-            ? data.map((row) => ({
+          rows.length > 0
+            ? rows.map((row) => ({
                 id: row.id as string,
                 role: row.role as 'user' | 'assistant',
                 content: row.content as string,
