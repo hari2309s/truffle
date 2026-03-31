@@ -13,7 +13,8 @@
     "@supabase/supabase-js": "^2.43.0",
     "ai": "^4.0.0",
     "@ai-sdk/groq": "^1.0.0",
-    "@truffle/types": "workspace:*"
+    "@truffle/types": "workspace:*",
+    "langfuse": "^3.0.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

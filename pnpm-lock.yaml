@@ -120,6 +120,9 @@ importers:
       ai:
         specifier: ^4.0.0
         version: 4.3.19(react@18.3.1)(zod@3.25.76)
+      langfuse:
+        specifier: ^3.0.0
+        version: 3.38.6
     devDependencies:
       typescript:
         specifier: ^5.4.0
@@ -2391,6 +2394,14 @@ packages:
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
+
+  langfuse-core@3.38.6:
+    resolution: {integrity: sha512-EcZXa+DK9FJdi1I30+u19eKjuBJ04du6j2Nybk19KKCuraLczg/ppkTQcGvc4QOk//OAi3qUHrajUuV74RXsBQ==}
+    engines: {node: '>=18'}
+
+  langfuse@3.38.6:
+    resolution: {integrity: sha512-mtwfsNGIYvObRh+NYNGlJQJDiBN+Wr3Hnr++wN25mxuOpSTdXX+JQqVCyAqGL5GD2TAXRZ7COsN42Vmp9krYmg==}
+    engines: {node: '>=18'}
 
   langsmith@0.3.87:
     resolution: {integrity: sha512-XXR1+9INH8YX96FKWc5tie0QixWz6tOqAsAKfcJyPkE0xPep+NDz0IQLR32q4bn10QK3LqD2HN6T3n6z1YLW7Q==}
@@ -6108,6 +6119,14 @@ snapshots:
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
+
+  langfuse-core@3.38.6:
+    dependencies:
+      mustache: 4.2.0
+
+  langfuse@3.38.6:
+    dependencies:
+      langfuse-core: 3.38.6
 
   langsmith@0.3.87(@opentelemetry/api@1.9.0):
     dependencies:
