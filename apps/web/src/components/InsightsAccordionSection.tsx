@@ -1,10 +1,16 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { useEffect, useId, useRef, useState } from 'react'
+
+const panelTransition = {
+  duration: 0.32,
+  ease: [0.4, 0, 0.2, 1] as [number, number, number, number],
+}
 
 interface InsightsAccordionSectionProps {
   title: string
-  /** Incremented by parent when the user scrolls up — forces all sections closed. */
+  /** Incremented by parent when the user scrolls up enough — forces all sections closed. */
   collapsibleKey: number
   children: React.ReactNode
   defaultOpen?: boolean
@@ -59,20 +65,32 @@ export function InsightsAccordionSection({
           aria-expanded={open}
           aria-controls={panelId}
         >
-          <span
-            className={`inline-flex transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          <motion.span
+            className="inline-flex"
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={panelTransition}
           >
             <ChevronIcon />
-          </span>
+          </motion.span>
           <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide truncate">
             {title}
           </h2>
         </button>
         {headerRight ? <div className="flex-shrink-0">{headerRight}</div> : null}
       </div>
-      <div id={panelId} hidden={!open}>
-        {children}
-      </div>
+      <motion.div
+        id={panelId}
+        initial={false}
+        animate={{
+          height: open ? 'auto' : 0,
+          opacity: open ? 1 : 0,
+        }}
+        transition={panelTransition}
+        style={{ overflow: 'hidden' }}
+        aria-hidden={!open}
+      >
+        <div className="pb-1">{children}</div>
+      </motion.div>
     </section>
   )
 }

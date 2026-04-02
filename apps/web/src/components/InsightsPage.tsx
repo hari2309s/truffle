@@ -58,9 +58,14 @@ function computeForecast(
   }
 }
 
+/** Only collapse sections after this much net scroll-up in one gesture; reset when user scrolls down. */
+const SCROLL_UP_COLLAPSE_PX = 56
+
 export function InsightsPage({ userId }: InsightsPageProps) {
   const mainRef = useRef<HTMLElement>(null)
   const lastScrollTop = useRef(0)
+  /** Accumulates upward scroll distance; cleared on any downward movement. */
+  const scrollUpAccumPx = useRef(0)
   const [collapseTick, setCollapseTick] = useState(0)
   const [addGoalOpen, setAddGoalOpen] = useState(false)
 
@@ -68,10 +73,18 @@ export function InsightsPage({ userId }: InsightsPageProps) {
     const el = mainRef.current
     if (!el) return
     const st = el.scrollTop
-    if (st < lastScrollTop.current - 2) {
-      setCollapseTick((t) => t + 1)
-    }
+    const delta = st - lastScrollTop.current
     lastScrollTop.current = st
+
+    if (delta < 0) {
+      scrollUpAccumPx.current += -delta
+      if (scrollUpAccumPx.current >= SCROLL_UP_COLLAPSE_PX) {
+        setCollapseTick((t) => t + 1)
+        scrollUpAccumPx.current = 0
+      }
+    } else if (delta > 0) {
+      scrollUpAccumPx.current = 0
+    }
   }
 
   const skipFirstCollapseTick = useRef(true)
