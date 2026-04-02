@@ -8,11 +8,26 @@ const GOAL_EMOJIS = ['🎯', '✈️', '🏠', '🚗', '💻', '🎓', '💍', '
 
 interface SavingsGoalsProps {
   userId: string
+  /** When true, omits the section header (use accordion header + `addGoalOpen` / `onAddGoalOpenChange`). */
+  embedded?: boolean
+  addGoalOpen?: boolean
+  onAddGoalOpenChange?: (open: boolean) => void
 }
 
-export function SavingsGoals({ userId }: SavingsGoalsProps) {
+export function SavingsGoals({
+  userId,
+  embedded = false,
+  addGoalOpen,
+  onAddGoalOpenChange,
+}: SavingsGoalsProps) {
   const queryClient = useQueryClient()
-  const [showAdd, setShowAdd] = useState(false)
+  const [internalShowAdd, setInternalShowAdd] = useState(false)
+
+  const showAdd = embedded ? Boolean(addGoalOpen) : internalShowAdd
+  const setShowAdd = (open: boolean) => {
+    if (embedded) onAddGoalOpenChange?.(open)
+    else setInternalShowAdd(open)
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['goals', userId],
@@ -49,19 +64,22 @@ export function SavingsGoals({ userId }: SavingsGoalsProps) {
     await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
   }
 
-  return (
-    <section>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide">
-          Savings Goals
-        </h2>
-        <button
-          onClick={() => setShowAdd((v) => !v)}
-          className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-        >
-          {showAdd ? 'Cancel' : '+ New goal'}
-        </button>
-      </div>
+  const body = (
+    <>
+      {!embedded && (
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide">
+            Savings Goals
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowAdd(!showAdd)}
+            className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+          >
+            {showAdd ? 'Cancel' : '+ New goal'}
+          </button>
+        </div>
+      )}
 
       {showAdd && (
         <AddGoalForm
@@ -95,8 +113,10 @@ export function SavingsGoals({ userId }: SavingsGoalsProps) {
           ))}
         </div>
       )}
-    </section>
+    </>
   )
+
+  return embedded ? body : <section>{body}</section>
 }
 
 function GoalCard({

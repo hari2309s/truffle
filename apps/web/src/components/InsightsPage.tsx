@@ -1,8 +1,10 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Anomaly } from '@truffle/types'
 import { detectSubscriptions } from '@/lib/subscriptions'
+import { InsightsAccordionSection } from './InsightsAccordionSection'
 import { SavingsGoals } from './SavingsGoals'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
@@ -57,6 +59,30 @@ function computeForecast(
 }
 
 export function InsightsPage({ userId }: InsightsPageProps) {
+  const mainRef = useRef<HTMLElement>(null)
+  const lastScrollTop = useRef(0)
+  const [collapseTick, setCollapseTick] = useState(0)
+  const [addGoalOpen, setAddGoalOpen] = useState(false)
+
+  const handleMainScroll = () => {
+    const el = mainRef.current
+    if (!el) return
+    const st = el.scrollTop
+    if (st < lastScrollTop.current - 2) {
+      setCollapseTick((t) => t + 1)
+    }
+    lastScrollTop.current = st
+  }
+
+  const skipFirstCollapseTick = useRef(true)
+  useEffect(() => {
+    if (skipFirstCollapseTick.current) {
+      skipFirstCollapseTick.current = false
+      return
+    }
+    setAddGoalOpen(false)
+  }, [collapseTick])
+
   // Shared transactions cache — same key as Dashboard/FinancialBrief
   const { data: txData, isLoading: txLoading } = useQuery({
     queryKey: ['transactions', userId],
@@ -87,29 +113,30 @@ export function InsightsPage({ userId }: InsightsPageProps) {
     <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
       <TopBar title="Insights" subtitle="" />
 
-      <main className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6">
-        {/* Forecast */}
-        <section>
-          <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide mb-3">
-            Month Forecast
-          </h2>
-          {isLoading ? (
-            <div className="card animate-pulse h-24" />
-          ) : forecast ? (
-            <ForecastCard forecast={forecast} />
-          ) : (
-            <div className="card border-dashed text-center text-truffle-muted text-sm py-6">
-              Add transactions to see your forecast
-            </div>
-          )}
-        </section>
+      {/* Forecast stays above the scroll region so it never scrolls away */}
+      <div className="flex-shrink-0 px-4 pt-4 pb-2 bg-truffle-bg">
+        <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide mb-3">
+          Month Forecast
+        </h2>
+        {isLoading ? (
+          <div className="card animate-pulse h-24" />
+        ) : forecast ? (
+          <ForecastCard forecast={forecast} />
+        ) : (
+          <div className="card border-dashed text-center text-truffle-muted text-sm py-6">
+            Add transactions to see your forecast
+          </div>
+        )}
+      </div>
 
+      <main
+        ref={mainRef}
+        onScroll={handleMainScroll}
+        className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6 min-h-0"
+      >
         {/* Subscriptions */}
         {subscriptions.length > 0 && (
-          <section>
-            <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide mb-3">
-              Recurring Subscriptions
-            </h2>
+          <InsightsAccordionSection title="Recurring Subscriptions" collapsibleKey={collapseTick}>
             <div className="space-y-2">
               {subscriptions.map((sub) => (
                 <div key={sub.key} className="card flex items-center justify-between">
@@ -131,17 +158,31 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                 </div>
               ))}
             </div>
-          </section>
+          </InsightsAccordionSection>
         )}
 
-        {/* Savings Goals */}
-        <SavingsGoals userId={userId} />
+        <InsightsAccordionSection
+          title="Savings Goals"
+          collapsibleKey={collapseTick}
+          headerRight={
+            <button
+              type="button"
+              onClick={() => setAddGoalOpen((v) => !v)}
+              className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+            >
+              {addGoalOpen ? 'Cancel' : '+ New goal'}
+            </button>
+          }
+        >
+          <SavingsGoals
+            userId={userId}
+            embedded
+            addGoalOpen={addGoalOpen}
+            onAddGoalOpenChange={setAddGoalOpen}
+          />
+        </InsightsAccordionSection>
 
-        {/* Anomalies */}
-        <section>
-          <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide mb-3">
-            Things to Review
-          </h2>
+        <InsightsAccordionSection title="Things to Review" collapsibleKey={collapseTick}>
           {anomalyLoading ? (
             <div className="space-y-2">
               {[1, 2].map((i) => (
@@ -159,7 +200,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               No unusual activity detected
             </div>
           )}
-        </section>
+        </InsightsAccordionSection>
       </main>
 
       <BottomNav active="insights" />
