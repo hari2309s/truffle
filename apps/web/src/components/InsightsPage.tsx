@@ -84,7 +84,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   const isLoading = txLoading
 
   return (
-    <div className="min-h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
+    <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
       <TopBar title="Insights" subtitle="" />
 
       <main className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6">

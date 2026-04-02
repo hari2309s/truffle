@@ -84,7 +84,7 @@ export function SavingsGoals({ userId }: SavingsGoalsProps) {
           No goals yet — set one to start saving towards something
         </div>
       ) : (
-        <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+        <div className="space-y-3">
           {goals.map((goal) => (
             <GoalCard
               key={goal.id}
