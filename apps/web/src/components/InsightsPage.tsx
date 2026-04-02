@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Anomaly } from '@truffle/types'
 import { detectSubscriptions } from '@/lib/subscriptions'
@@ -58,49 +58,13 @@ function computeForecast(
   }
 }
 
-/**
- * Collapse only after enough *distinct* upward scroll steps — not one wheel/trackpad tick.
- * A single `scroll` event often jumps 50–120px (wheel), which used to fire collapse immediately.
- */
-const SCROLL_UP_COLLAPSE_PX = 100
-/** Max px counted per scroll event toward collapse (rest of the jump is ignored). */
-const SCROLL_UP_MAX_PER_EVENT_PX = 20
-
 export function InsightsPage({ userId }: InsightsPageProps) {
   const mainRef = useRef<HTMLElement>(null)
-  const lastScrollTop = useRef(0)
-  /** Accumulates capped upward scroll; cleared on any downward movement. */
-  const scrollUpAccumPx = useRef(0)
-  const [collapseTick, setCollapseTick] = useState(0)
   const [addGoalOpen, setAddGoalOpen] = useState(false)
 
-  const handleMainScroll = () => {
-    const el = mainRef.current
-    if (!el) return
-    const st = el.scrollTop
-    const delta = st - lastScrollTop.current
-    lastScrollTop.current = st
-
-    if (delta < 0) {
-      const upward = -delta
-      scrollUpAccumPx.current += Math.min(upward, SCROLL_UP_MAX_PER_EVENT_PX)
-      if (scrollUpAccumPx.current >= SCROLL_UP_COLLAPSE_PX) {
-        setCollapseTick((t) => t + 1)
-        scrollUpAccumPx.current = 0
-      }
-    } else if (delta > 0) {
-      scrollUpAccumPx.current = 0
-    }
-  }
-
-  const skipFirstCollapseTick = useRef(true)
-  useEffect(() => {
-    if (skipFirstCollapseTick.current) {
-      skipFirstCollapseTick.current = false
-      return
-    }
+  const handleSavingsGoalsLeaveViewport = useCallback(() => {
     setAddGoalOpen(false)
-  }, [collapseTick])
+  }, [])
 
   // Shared transactions cache — same key as Dashboard/FinancialBrief
   const { data: txData, isLoading: txLoading } = useQuery({
@@ -148,14 +112,10 @@ export function InsightsPage({ userId }: InsightsPageProps) {
         )}
       </div>
 
-      <main
-        ref={mainRef}
-        onScroll={handleMainScroll}
-        className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6 min-h-0"
-      >
+      <main ref={mainRef} className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6 min-h-0">
         {/* Subscriptions */}
         {subscriptions.length > 0 && (
-          <InsightsAccordionSection title="Recurring Subscriptions" collapsibleKey={collapseTick}>
+          <InsightsAccordionSection title="Recurring Subscriptions" scrollRootRef={mainRef}>
             <div className="space-y-2">
               {subscriptions.map((sub) => (
                 <div key={sub.key} className="card flex items-center justify-between">
@@ -182,7 +142,8 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
         <InsightsAccordionSection
           title="Savings Goals"
-          collapsibleKey={collapseTick}
+          scrollRootRef={mainRef}
+          onLeaveViewport={handleSavingsGoalsLeaveViewport}
           headerRight={
             <button
               type="button"
@@ -201,7 +162,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
           />
         </InsightsAccordionSection>
 
-        <InsightsAccordionSection title="Things to Review" collapsibleKey={collapseTick}>
+        <InsightsAccordionSection title="Things to Review" scrollRootRef={mainRef}>
           {anomalyLoading ? (
             <div className="space-y-2">
               {[1, 2].map((i) => (

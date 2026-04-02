@@ -10,11 +10,13 @@ const panelTransition = {
 
 interface InsightsAccordionSectionProps {
   title: string
-  /** Incremented by parent when the user scrolls up enough — forces all sections closed. */
-  collapsibleKey: number
+  /** Scrollable `<main>` (or any ancestor with overflow) — intersection is vs this box, not the window. */
+  scrollRootRef: React.RefObject<HTMLElement | null>
   children: React.ReactNode
   defaultOpen?: boolean
   headerRight?: React.ReactNode
+  /** Called when this section auto-collapses after leaving the scroll root viewport. */
+  onLeaveViewport?: () => void
 }
 
 function ChevronIcon() {
@@ -38,25 +40,51 @@ function ChevronIcon() {
 
 export function InsightsAccordionSection({
   title,
-  collapsibleKey,
+  scrollRootRef,
   children,
   defaultOpen = true,
   headerRight,
+  onLeaveViewport,
 }: InsightsAccordionSectionProps) {
   const [open, setOpen] = useState(defaultOpen)
   const panelId = useId()
-  const skipFirstCollapseKey = useRef(true)
+  const sectionRef = useRef<HTMLElement>(null)
+  const wasIntersectingRef = useRef<boolean | null>(null)
+  const onLeaveRef = useRef(onLeaveViewport)
+  onLeaveRef.current = onLeaveViewport
 
   useEffect(() => {
-    if (skipFirstCollapseKey.current) {
-      skipFirstCollapseKey.current = false
-      return
-    }
-    setOpen(false)
-  }, [collapsibleKey])
+    const root = scrollRootRef.current
+    const section = sectionRef.current
+    if (!root || !section) return
+
+    wasIntersectingRef.current = null
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (!entry) return
+        const now = entry.isIntersecting
+        const prev = wasIntersectingRef.current
+        if (prev === null) {
+          wasIntersectingRef.current = now
+          return
+        }
+        if (prev && !now) {
+          setOpen(false)
+          onLeaveRef.current?.()
+        }
+        wasIntersectingRef.current = now
+      },
+      { root, threshold: 0 }
+    )
+
+    observer.observe(section)
+    return () => observer.disconnect()
+  }, [scrollRootRef])
 
   return (
-    <section>
+    <section ref={sectionRef}>
       <div className="flex items-center gap-2 mb-3 min-w-0">
         <button
           type="button"
