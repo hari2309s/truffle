@@ -20,7 +20,6 @@ function computeAllTimeSummary(
     .filter((t) => Number(t.amount) < 0)
     .reduce((s, t) => s + Number(t.amount), 0)
 
-  // Find the most recent transaction month to label the period
   const sorted = [...transactions].sort((a, b) => (a.date > b.date ? -1 : 1))
   const latestMonth = sorted[0]?.date?.slice(0, 7) ?? ''
   const label = latestMonth
@@ -64,7 +63,6 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
     )
   }
 
-  // Show current-month forecast if available
   if (forecast) {
     const isPositive = forecast.projectedEndOfMonth > 0
     const balanceColor = isPositive ? 'text-truffle-green' : 'text-truffle-red'
@@ -109,7 +107,6 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
     )
   }
 
-  // Fall back to showing the most recent month's summary
   const isPositive = (allTime?.balance ?? 0) >= 0
   const balanceColor = isPositive ? 'text-truffle-green' : 'text-truffle-red'
 
