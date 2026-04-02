@@ -58,13 +58,18 @@ function computeForecast(
   }
 }
 
-/** Only collapse sections after this much net scroll-up in one gesture; reset when user scrolls down. */
-const SCROLL_UP_COLLAPSE_PX = 56
+/**
+ * Collapse only after enough *distinct* upward scroll steps — not one wheel/trackpad tick.
+ * A single `scroll` event often jumps 50–120px (wheel), which used to fire collapse immediately.
+ */
+const SCROLL_UP_COLLAPSE_PX = 100
+/** Max px counted per scroll event toward collapse (rest of the jump is ignored). */
+const SCROLL_UP_MAX_PER_EVENT_PX = 20
 
 export function InsightsPage({ userId }: InsightsPageProps) {
   const mainRef = useRef<HTMLElement>(null)
   const lastScrollTop = useRef(0)
-  /** Accumulates upward scroll distance; cleared on any downward movement. */
+  /** Accumulates capped upward scroll; cleared on any downward movement. */
   const scrollUpAccumPx = useRef(0)
   const [collapseTick, setCollapseTick] = useState(0)
   const [addGoalOpen, setAddGoalOpen] = useState(false)
@@ -77,7 +82,8 @@ export function InsightsPage({ userId }: InsightsPageProps) {
     lastScrollTop.current = st
 
     if (delta < 0) {
-      scrollUpAccumPx.current += -delta
+      const upward = -delta
+      scrollUpAccumPx.current += Math.min(upward, SCROLL_UP_MAX_PER_EVENT_PX)
       if (scrollUpAccumPx.current >= SCROLL_UP_COLLAPSE_PX) {
         setCollapseTick((t) => t + 1)
         scrollUpAccumPx.current = 0
