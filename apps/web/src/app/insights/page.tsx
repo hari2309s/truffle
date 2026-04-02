@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { LoadingDots } from '@/components/PageMotion'
 import { InsightsPage } from '@/components/InsightsPage'
 
 export default function Insights() {
@@ -19,7 +20,12 @@ export default function Insights() {
     })
   }, [router])
 
-  if (!userId) return null
+  if (!userId)
+    return (
+      <div className="min-h-dvh bg-truffle-bg flex items-center justify-center">
+        <LoadingDots />
+      </div>
+    )
 
   return <InsightsPage userId={userId} />
 }
