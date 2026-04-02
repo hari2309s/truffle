@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { SkeletonPulse } from './PageMotion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { SavingsGoal } from '@truffle/types'
 
@@ -94,7 +95,7 @@ export function SavingsGoals({
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2].map((i) => (
-            <div key={i} className="card animate-pulse h-20" />
+            <SkeletonPulse key={i} className="card h-20" />
           ))}
         </div>
       ) : goals.length === 0 && !showAdd ? (

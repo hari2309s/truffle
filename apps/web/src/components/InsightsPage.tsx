@@ -1,10 +1,13 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { useCallback, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Anomaly } from '@truffle/types'
 import { detectSubscriptions } from '@/lib/subscriptions'
+import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
 import { InsightsAccordionSection } from './InsightsAccordionSection'
+import { PageEnter, SkeletonPulse } from './PageMotion'
 import { SavingsGoals } from './SavingsGoals'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
@@ -96,92 +99,111 @@ export function InsightsPage({ userId }: InsightsPageProps) {
     <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
       <TopBar title="Insights" subtitle="" />
 
-      {/* Forecast stays above the scroll region so it never scrolls away */}
-      <div className="flex-shrink-0 px-4 pt-4 pb-2 bg-truffle-bg">
-        <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide mb-3">
-          Month Forecast
-        </h2>
-        {isLoading ? (
-          <div className="card animate-pulse h-24" />
-        ) : forecast ? (
-          <ForecastCard forecast={forecast} />
-        ) : (
-          <div className="card border-dashed text-center text-truffle-muted text-sm py-6">
-            Add transactions to see your forecast
-          </div>
-        )}
-      </div>
-
-      <main ref={mainRef} className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6 min-h-0">
-        {/* Subscriptions */}
-        {subscriptions.length > 0 && (
-          <InsightsAccordionSection title="Recurring Subscriptions" scrollRootRef={mainRef}>
-            <div className="space-y-2">
-              {subscriptions.map((sub) => (
-                <div key={sub.key} className="card flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-truffle-text">{sub.displayName}</p>
-                    <p className="text-xs text-truffle-muted">
-                      Last charged{' '}
-                      {new Date(sub.lastCharged).toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'short',
-                      })}
-                      {' · '}detected {sub.monthsDetected} month
-                      {sub.monthsDetected !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold text-truffle-red">
-                    -€{sub.monthlyAmount.toFixed(2)}/mo
-                  </span>
-                </div>
-              ))}
-            </div>
-          </InsightsAccordionSection>
-        )}
-
-        <InsightsAccordionSection
-          title="Savings Goals"
-          scrollRootRef={mainRef}
-          onLeaveViewport={handleSavingsGoalsLeaveViewport}
-          headerRight={
-            <button
-              type="button"
-              onClick={() => setAddGoalOpen((v) => !v)}
-              className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-            >
-              {addGoalOpen ? 'Cancel' : '+ New goal'}
-            </button>
-          }
-        >
-          <SavingsGoals
-            userId={userId}
-            embedded
-            addGoalOpen={addGoalOpen}
-            onAddGoalOpenChange={setAddGoalOpen}
-          />
-        </InsightsAccordionSection>
-
-        <InsightsAccordionSection title="Things to Review" scrollRootRef={mainRef}>
-          {anomalyLoading ? (
-            <div className="space-y-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="card animate-pulse h-16" />
-              ))}
-            </div>
-          ) : anomalies.length ? (
-            <div className="space-y-2">
-              {anomalies.map((a) => (
-                <AnomalyCard key={a.id} anomaly={a} />
-              ))}
-            </div>
+      <PageEnter className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        {/* Forecast stays above the scroll region so it never scrolls away */}
+        <div className="flex-shrink-0 px-4 pt-4 pb-2 bg-truffle-bg">
+          <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide mb-3">
+            Month Forecast
+          </h2>
+          {isLoading ? (
+            <SkeletonPulse className="card h-24" />
+          ) : forecast ? (
+            <ForecastCard forecast={forecast} />
           ) : (
-            <div className="card border-dashed text-center text-truffle-muted text-sm py-6">
-              No unusual activity detected
-            </div>
+            <motion.div
+              className="card border-dashed text-center text-truffle-muted text-sm py-6"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.36, ease: truffleEase }}
+            >
+              Add transactions to see your forecast
+            </motion.div>
           )}
-        </InsightsAccordionSection>
-      </main>
+        </div>
+
+        <main ref={mainRef} className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6 min-h-0">
+          {/* Subscriptions */}
+          {subscriptions.length > 0 && (
+            <InsightsAccordionSection title="Recurring Subscriptions" scrollRootRef={mainRef}>
+              <div className="space-y-2">
+                {subscriptions.map((sub) => (
+                  <div key={sub.key} className="card flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-truffle-text">{sub.displayName}</p>
+                      <p className="text-xs text-truffle-muted">
+                        Last charged{' '}
+                        {new Date(sub.lastCharged).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                        {' · '}detected {sub.monthsDetected} month
+                        {sub.monthsDetected !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold text-truffle-red">
+                      -€{sub.monthlyAmount.toFixed(2)}/mo
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </InsightsAccordionSection>
+          )}
+
+          <InsightsAccordionSection
+            title="Savings Goals"
+            scrollRootRef={mainRef}
+            onLeaveViewport={handleSavingsGoalsLeaveViewport}
+            headerRight={
+              <button
+                type="button"
+                onClick={() => setAddGoalOpen((v) => !v)}
+                className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+              >
+                {addGoalOpen ? 'Cancel' : '+ New goal'}
+              </button>
+            }
+          >
+            <SavingsGoals
+              userId={userId}
+              embedded
+              addGoalOpen={addGoalOpen}
+              onAddGoalOpenChange={setAddGoalOpen}
+            />
+          </InsightsAccordionSection>
+
+          <InsightsAccordionSection title="Things to Review" scrollRootRef={mainRef}>
+            {anomalyLoading ? (
+              <div className="space-y-2">
+                {[1, 2].map((i) => (
+                  <SkeletonPulse key={i} className="card h-16" />
+                ))}
+              </div>
+            ) : anomalies.length ? (
+              <motion.div
+                className="space-y-2"
+                initial="hidden"
+                animate="show"
+                variants={staggerListVariants}
+              >
+                {anomalies.map((a) => (
+                  <motion.div key={a.id} variants={staggerItemVariants}>
+                    <AnomalyCard anomaly={a} />
+                  </motion.div>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                className="card border-dashed text-center text-truffle-muted text-sm py-6"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.34, ease: truffleEase }}
+              >
+                No unusual activity detected
+              </motion.div>
+            )}
+          </InsightsAccordionSection>
+        </main>
+      </PageEnter>
 
       <BottomNav active="insights" />
     </div>
@@ -201,7 +223,12 @@ function ForecastCard({ forecast }: { forecast: Forecast }) {
   )
 
   return (
-    <div className="card space-y-4">
+    <motion.div
+      className="card space-y-4"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.38, ease: truffleEase }}
+    >
       <div className="flex justify-between items-end">
         <div>
           <p className="text-xs text-truffle-muted mb-1">Projected end of month</p>
@@ -239,7 +266,7 @@ function ForecastCard({ forecast }: { forecast: Forecast }) {
           </li>
         ))}
       </ul>
-    </div>
+    </motion.div>
   )
 }
 

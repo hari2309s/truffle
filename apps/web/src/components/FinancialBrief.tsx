@@ -1,7 +1,10 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { computeForecast } from '@/lib/forecast'
+import { truffleEase } from '@/lib/motion'
+import { SkeletonPulse } from './PageMotion'
 
 interface FinancialBriefProps {
   userId: string
@@ -45,21 +48,26 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
 
   if (isLoading) {
     return (
-      <div className="card animate-pulse">
-        <div className="h-4 bg-truffle-border rounded w-1/3 mb-3" />
-        <div className="h-8 bg-truffle-border rounded w-1/2 mb-2" />
+      <SkeletonPulse className="card space-y-3">
+        <div className="h-4 bg-truffle-border rounded w-1/3" />
+        <div className="h-8 bg-truffle-border rounded w-1/2" />
         <div className="h-3 bg-truffle-border rounded w-2/3" />
-      </div>
+      </SkeletonPulse>
     )
   }
 
   if (!forecast && !allTime) {
     return (
-      <div className="card border-dashed">
+      <motion.div
+        className="card border-dashed"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.36, ease: truffleEase }}
+      >
         <p className="text-sm text-truffle-muted text-center py-2">
           Add some transactions to see your financial brief
         </p>
-      </div>
+      </motion.div>
     )
   }
 
@@ -68,7 +76,12 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
     const balanceColor = isPositive ? 'text-truffle-green' : 'text-truffle-red'
 
     return (
-      <div className="card">
+      <motion.div
+        className="card"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.38, ease: truffleEase }}
+      >
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide">
             End of Month
@@ -103,7 +116,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
             {a}
           </p>
         ))}
-      </div>
+      </motion.div>
     )
   }
 
@@ -111,7 +124,12 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
   const balanceColor = isPositive ? 'text-truffle-green' : 'text-truffle-red'
 
   return (
-    <div className="card">
+    <motion.div
+      className="card"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.38, ease: truffleEase }}
+    >
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide">
           {allTime?.label ?? 'Overview'}
@@ -140,6 +158,6 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
       <p className="text-xs text-truffle-muted mt-3">
         Add a transaction for this month to see your forecast
       </p>
-    </div>
+    </motion.div>
   )
 }

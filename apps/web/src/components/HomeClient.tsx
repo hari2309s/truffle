@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { LoadingDots } from './PageMotion'
 import { Dashboard } from './Dashboard'
 import { AuthPage } from './AuthPage'
 import { OnboardingPage } from './OnboardingPage'
@@ -48,15 +49,7 @@ export function HomeClient() {
   if (state === 'loading')
     return (
       <div className="min-h-dvh bg-truffle-bg flex items-center justify-center">
-        <div className="flex gap-1.5">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="w-2 h-2 rounded-full bg-truffle-amber animate-bounce"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </div>
+        <LoadingDots />
       </div>
     )
   if (state === 'unauthenticated')

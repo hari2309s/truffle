@@ -11,6 +11,7 @@ import { ReceiptUpload } from './ReceiptUpload'
 import { WeeklySummary } from './WeeklySummary'
 import { BottomNav } from './BottomNav'
 import { supabase } from '@/lib/supabase'
+import { PageEnter } from './PageMotion'
 
 interface DashboardProps {
   userId: string
@@ -55,63 +56,65 @@ export function Dashboard({ userId, name }: DashboardProps) {
       </header>
 
       {/* Content — single scroll container so items flow behind the translucent nav */}
-      <main className="flex-1 overflow-y-auto min-h-0">
-        {/* Sticky top section — stays visible as transactions scroll underneath */}
-        <div className="sticky top-0 z-10 bg-truffle-bg px-4 pt-6 pb-4 space-y-4">
-          <WeeklySummary userId={userId} />
-          <FinancialBrief userId={userId} />
+      <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <main className="flex-1 overflow-y-auto min-h-0">
+          {/* Sticky top section — stays visible as transactions scroll underneath */}
+          <div className="sticky top-0 z-10 bg-truffle-bg px-4 pt-6 pb-4 space-y-4">
+            <WeeklySummary userId={userId} />
+            <FinancialBrief userId={userId} />
 
-          {showAddForm && (
-            <AddTransactionForm userId={userId} onClose={() => setShowAddForm(false)} />
-          )}
+            {showAddForm && (
+              <AddTransactionForm userId={userId} onClose={() => setShowAddForm(false)} />
+            )}
 
-          {showCSVImport && <CSVImport userId={userId} onClose={() => setShowCSVImport(false)} />}
+            {showCSVImport && <CSVImport userId={userId} onClose={() => setShowCSVImport(false)} />}
 
-          {showReceiptUpload && (
-            <ReceiptUpload userId={userId} onClose={() => setShowReceiptUpload(false)} />
-          )}
-        </div>
-
-        {/* Transactions — scroll naturally, last item clears the nav bar */}
-        <div className="px-4 pb-24">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-truffle-text">Recent</h2>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  setShowReceiptUpload((v) => !v)
-                  setShowCSVImport(false)
-                  setShowAddForm(false)
-                }}
-                className="text-sm text-truffle-muted hover:text-truffle-text transition-colors"
-              >
-                {showReceiptUpload ? 'Cancel' : 'Scan'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowCSVImport((v) => !v)
-                  setShowReceiptUpload(false)
-                  setShowAddForm(false)
-                }}
-                className="text-sm text-truffle-muted hover:text-truffle-text transition-colors"
-              >
-                {showCSVImport ? 'Cancel' : 'CSV'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowAddForm((v) => !v)
-                  setShowCSVImport(false)
-                  setShowReceiptUpload(false)
-                }}
-                className="text-sm text-truffle-amber hover:text-truffle-amber-light transition-colors"
-              >
-                {showAddForm ? 'Cancel' : '+ Add'}
-              </button>
-            </div>
+            {showReceiptUpload && (
+              <ReceiptUpload userId={userId} onClose={() => setShowReceiptUpload(false)} />
+            )}
           </div>
-          <TransactionList userId={userId} />
-        </div>
-      </main>
+
+          {/* Transactions — scroll naturally, last item clears the nav bar */}
+          <div className="px-4 pb-24">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-truffle-text">Recent</h2>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setShowReceiptUpload((v) => !v)
+                    setShowCSVImport(false)
+                    setShowAddForm(false)
+                  }}
+                  className="text-sm text-truffle-muted hover:text-truffle-text transition-colors"
+                >
+                  {showReceiptUpload ? 'Cancel' : 'Scan'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCSVImport((v) => !v)
+                    setShowReceiptUpload(false)
+                    setShowAddForm(false)
+                  }}
+                  className="text-sm text-truffle-muted hover:text-truffle-text transition-colors"
+                >
+                  {showCSVImport ? 'Cancel' : 'CSV'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddForm((v) => !v)
+                    setShowCSVImport(false)
+                    setShowReceiptUpload(false)
+                  }}
+                  className="text-sm text-truffle-amber hover:text-truffle-amber-light transition-colors"
+                >
+                  {showAddForm ? 'Cancel' : '+ Add'}
+                </button>
+              </div>
+            </div>
+            <TransactionList userId={userId} />
+          </div>
+        </main>
+      </PageEnter>
 
       <BottomNav active="home" />
     </div>

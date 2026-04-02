@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
+import { PageEnter } from './PageMotion'
 import { supabase } from '@/lib/supabase'
 
 interface OnboardingPageProps {
@@ -27,7 +28,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
   return (
     <div className="min-h-screen bg-truffle-bg flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm space-y-8">
+      <PageEnter className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-2">
           <Image
             src="/icons/truffle.png"
@@ -87,7 +88,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             {isLoading ? 'Saving...' : "Let's go →"}
           </button>
         </form>
-      </div>
+      </PageEnter>
     </div>
   )
 }

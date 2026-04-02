@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
+import { PageEnter } from './PageMotion'
 import { supabase } from '@/lib/supabase'
 
 export function AuthPage({ error: initialError = null }: { error?: string | null }) {
@@ -32,7 +33,7 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
 
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-truffle-bg">
-      <div className="w-full max-w-sm space-y-8">
+      <PageEnter className="w-full max-w-sm space-y-8">
         {/* Logo */}
         <div className="text-center">
           <div className="mb-4">
@@ -86,7 +87,7 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
         <p className="text-xs text-truffle-muted text-center">
           No password needed · Free forever · Your data stays yours
         </p>
-      </div>
+      </PageEnter>
     </div>
   )
 }

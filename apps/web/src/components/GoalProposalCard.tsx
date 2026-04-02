@@ -1,6 +1,8 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { useState } from 'react'
+import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
@@ -54,21 +56,31 @@ export function GoalProposalCard({ proposal, userId, onResult }: GoalProposalCar
 
   if (status === 'done') {
     return (
-      <div className="flex justify-start mb-3">
+      <motion.div
+        className="flex justify-start mb-3"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.32, ease: truffleEase }}
+      >
         <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
           <p className="text-sm text-truffle-text">
             {proposal.emoji} <span className="font-medium">{proposal.name}</span> added to your
             goals — find it in Insights.
           </p>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   if (status === 'declined') return null
 
   return (
-    <div className="flex justify-start mb-3">
+    <motion.div
+      className="flex justify-start mb-3"
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.36, ease: truffleEase }}
+    >
       <div className="max-w-[85%] bg-truffle-card border border-truffle-amber/40 rounded-2xl rounded-bl-sm px-4 py-4 space-y-3">
         {/* Goal summary */}
         <div className="flex items-center gap-3">
@@ -108,6 +120,6 @@ export function GoalProposalCard({ proposal, userId, onResult }: GoalProposalCar
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

@@ -1,6 +1,8 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { useEffect, useRef } from 'react'
+import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
 import type { Message } from 'ai/react'
 import { useFinancialChat } from '@/hooks/useFinancialChat'
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
@@ -9,6 +11,7 @@ import { GoalProposalCard } from './GoalProposalCard'
 import { VoiceButton } from './VoiceButton'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
+import { PageEnter, TypingDots } from './PageMotion'
 
 interface ChatPageProps {
   userId: string
@@ -36,7 +39,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
   }, [voice.transcript, chat])
 
   return (
-    <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden">
+    <PageEnter className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden">
       <TopBar>
         {chat.isSpeaking && (
           <button
@@ -52,15 +55,29 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
       <main className="flex-1 overflow-y-auto px-4 py-4 pb-72">
         {chat.messages.length === 0 && (
           <div className="text-center py-12 space-y-3">
-            <p className="text-truffle-muted text-sm">Hold the button and ask anything.</p>
-            <div className="flex flex-wrap gap-2 justify-center mt-6">
+            <motion.p
+              className="text-truffle-muted text-sm"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.36, ease: truffleEase }}
+            >
+              Hold the button and ask anything.
+            </motion.p>
+            <motion.div
+              className="flex flex-wrap gap-2 justify-center mt-6"
+              initial="hidden"
+              animate="show"
+              variants={staggerListVariants}
+            >
               {[
                 'How am I doing this month?',
                 'What did I spend on food?',
                 'Can I afford a weekend trip?',
               ].map((suggestion) => (
-                <button
+                <motion.button
                   key={suggestion}
+                  type="button"
+                  variants={staggerItemVariants}
                   onClick={() => {
                     chat.setInput(suggestion)
                     const form = document.getElementById('chat-form') as HTMLFormElement | null
@@ -69,9 +86,9 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                   className="text-xs bg-truffle-surface border border-truffle-border rounded-full px-3 py-1.5 text-truffle-text-secondary hover:border-truffle-amber hover:text-truffle-text transition-all"
                 >
                   {suggestion}
-                </button>
+                </motion.button>
               ))}
-            </div>
+            </motion.div>
           </div>
         )}
 
@@ -142,19 +159,16 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
         })}
 
         {chat.isLoading && (
-          <div className="flex justify-start mb-3">
+          <motion.div
+            className="flex justify-start mb-3"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: truffleEase }}
+          >
             <div className="bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
-              <div className="flex gap-1">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="w-2 h-2 rounded-full bg-truffle-amber animate-bounce"
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  />
-                ))}
-              </div>
+              <TypingDots />
             </div>
-          </div>
+          </motion.div>
         )}
 
         {voice.error && (
@@ -198,7 +212,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
       </div>
 
       <BottomNav active="chat" />
-    </div>
+    </PageEnter>
   )
 }
 

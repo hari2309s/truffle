@@ -73,6 +73,8 @@ export function InsightsAccordionSection({
         if (prev && !now) {
           setOpen(false)
           onLeaveRef.current?.()
+        } else if (!prev && now) {
+          setOpen(true)
         }
         wasIntersectingRef.current = now
       },

@@ -1,6 +1,8 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import { truffleEase } from '@/lib/motion'
 import { useQuery } from '@tanstack/react-query'
 
 interface WeeklySummaryProps {
@@ -99,7 +101,12 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
   if (!visible || !summaryText) return null
 
   return (
-    <div className="card border border-truffle-amber/30 bg-truffle-amber/5 space-y-3">
+    <motion.div
+      className="card border border-truffle-amber/30 bg-truffle-amber/5 space-y-3"
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.42, ease: truffleEase }}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium text-truffle-amber uppercase tracking-wide mb-1">
@@ -122,6 +129,6 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
         <span>{spoken ? '🔊' : '▶'}</span>
         {spoken ? 'Playing…' : 'Read aloud'}
       </button>
-    </div>
+    </motion.div>
   )
 }

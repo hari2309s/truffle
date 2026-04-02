@@ -1,6 +1,8 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import Image from 'next/image'
+import { truffleEase } from '@/lib/motion'
 
 interface ChatBubbleProps {
   role: 'user' | 'assistant'
@@ -13,7 +15,12 @@ export function ChatBubble({ role, content, name, timestamp }: ChatBubbleProps) 
   const isUser = role === 'user'
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
+    <motion.div
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.32, ease: truffleEase }}
+    >
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-3 ${
           isUser
@@ -41,6 +48,6 @@ export function ChatBubble({ role, content, name, timestamp }: ChatBubbleProps) 
           </p>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
