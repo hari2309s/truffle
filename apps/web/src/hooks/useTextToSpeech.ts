@@ -86,10 +86,22 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     setIsSpeaking(false)
   }, [])
 
-  const speak = useCallback((text: string, options?: SpeakOptions) => {
+  const speak = useCallback(async (text: string, options?: SpeakOptions) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
 
     window.speechSynthesis.cancel()
+
+    // On Chrome, getVoices() returns [] until onvoiceschanged fires.
+    // Wait for voices before creating the utterance so we can assign the
+    // correct voice before speak() is called — not after.
+    if (window.speechSynthesis.getVoices().length === 0) {
+      await new Promise<void>((resolve) => {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.onvoiceschanged = null
+          resolve()
+        }
+      })
+    }
 
     const clean = preprocessText(text)
     const { rate, pitch } = getProsody(options?.tone ?? 'neutral')
@@ -97,23 +109,12 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     const utterance = new SpeechSynthesisUtterance(clean)
     utteranceRef.current = utterance
 
+    const voice = getBestVoice()
+    if (voice) utterance.voice = voice
+
     utterance.rate = rate
     utterance.pitch = pitch
     utterance.volume = 1.0
-
-    // Assign voice — voices may not be loaded on first call
-    const setVoice = () => {
-      const voice = getBestVoice()
-      if (voice) utterance.voice = voice
-    }
-
-    setVoice()
-    if (window.speechSynthesis.getVoices().length === 0) {
-      window.speechSynthesis.onvoiceschanged = () => {
-        setVoice()
-        window.speechSynthesis.onvoiceschanged = null
-      }
-    }
 
     utterance.onstart = () => setIsSpeaking(true)
     utterance.onend = () => setIsSpeaking(false)
