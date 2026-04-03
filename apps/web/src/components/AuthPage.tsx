@@ -83,6 +83,10 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
             </button>
           </form>
         )}
+
+        <p className="text-xs text-truffle-muted text-center">
+          Sign in with a magic link · No password needed
+        </p>
       </PageEnter>
     </div>
   )
