@@ -14,9 +14,11 @@ interface UseTextToSpeechReturn {
   cancel: () => void
 }
 
-// Strip markdown and normalize punctuation for natural TTS flow
-function preprocessText(raw: string): string[] {
-  const clean = raw
+// Strip markdown and normalize punctuation for natural TTS flow.
+// Returns a single clean string — no splitting, so the browser synthesises
+// the whole response in one continuous breath (better prosody than chaining).
+function preprocessText(raw: string): string {
+  return raw
     .replace(/\*\*(.*?)\*\*/g, '$1') // bold
     .replace(/\*(.*?)\*/g, '$1') // italic
     .replace(/_(.*?)_/g, '$1') // underscore italic
@@ -24,14 +26,10 @@ function preprocessText(raw: string): string[] {
     .replace(/^#{1,6}\s+/gm, '') // headings
     .replace(/^[-*•]\s+/gm, '') // list markers
     .replace(/—/g, ', ') // em-dash → natural pause
+    .replace(/ - /g, ', ') // spaced hyphen used as em-dash
     .replace(/;/g, ',') // semicolons → lighter pause
     .replace(/\s{2,}/g, ' ')
     .trim()
-
-  // Split on sentence boundaries. Require whitespace or end-of-string after the
-  // terminal punctuation to avoid splitting on decimal numbers like €12.50.
-  const sentences = clean.match(/[^.!?]+[.!?]+["']?(?=\s|$)/g) ?? [clean]
-  return sentences.map((s) => s.trim()).filter(Boolean)
 }
 
 // Heuristic tone detection from response text
@@ -89,13 +87,13 @@ function detectTone(text: string): SpeechTone {
 function getProsody(tone: SpeechTone): { rate: number; pitch: number } {
   switch (tone) {
     case 'celebratory':
-      return { rate: 1.08, pitch: 1.1 }
+      return { rate: 1.05, pitch: 1.08 }
     case 'reassuring':
-      return { rate: 0.88, pitch: 0.95 }
+      return { rate: 0.92, pitch: 0.97 }
     case 'concerned':
-      return { rate: 0.9, pitch: 0.92 }
+      return { rate: 0.93, pitch: 0.95 }
     default:
-      return { rate: 1.0, pitch: 1.0 }
+      return { rate: 0.95, pitch: 1.0 }
   }
 }
 
@@ -124,13 +122,11 @@ function getBestVoice(): SpeechSynthesisVoice | null {
 
 export function useTextToSpeech(): UseTextToSpeechReturn {
   const [isSpeaking, setIsSpeaking] = useState(false)
-  const queueRef = useRef<SpeechSynthesisUtterance[]>([])
-  const activeRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const cancel = useCallback(() => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-    queueRef.current = []
-    activeRef.current = null
+    utteranceRef.current = null
     window.speechSynthesis.cancel()
     setIsSpeaking(false)
   }, [])
@@ -139,64 +135,42 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
 
     window.speechSynthesis.cancel()
-    queueRef.current = []
-    activeRef.current = null
 
-    const sentences = preprocessText(text)
+    const clean = preprocessText(text)
     const tone = options?.tone ?? detectTone(text)
     const { rate, pitch } = getProsody(tone)
 
-    // Resolve voice (may need onvoiceschanged if not loaded yet)
-    let voice = getBestVoice()
-    const voicesLoaded = window.speechSynthesis.getVoices().length > 0
+    const utterance = new SpeechSynthesisUtterance(clean)
+    utteranceRef.current = utterance
 
-    const speakNext = () => {
-      const utterance = queueRef.current.shift()
-      if (!utterance) {
-        setIsSpeaking(false)
-        activeRef.current = null
-        return
-      }
-      activeRef.current = utterance
-      window.speechSynthesis.speak(utterance)
+    utterance.rate = rate
+    utterance.pitch = pitch
+    utterance.volume = 1.0
+
+    // Assign voice — voices may not be loaded on first call
+    const setVoice = () => {
+      const voice = getBestVoice()
+      if (voice) utterance.voice = voice
     }
 
-    const utterances = sentences.map((sentence, i) => {
-      const u = new SpeechSynthesisUtterance(sentence)
-      u.rate = rate
-      u.pitch = pitch
-      u.volume = 0.92
-
-      if (voice) u.voice = voice
-
-      u.onstart = i === 0 ? () => setIsSpeaking(true) : null
-      u.onend = () => speakNext()
-      u.onerror = (e) => {
-        // Ignore 'interrupted' — that's just us calling cancel()
-        if (e.error !== 'interrupted') {
-          console.warn('[TTS error]', e.error, sentence)
-        }
-        speakNext()
-      }
-      return u
-    })
-
-    if (!voicesLoaded) {
+    setVoice()
+    if (window.speechSynthesis.getVoices().length === 0) {
       window.speechSynthesis.onvoiceschanged = () => {
-        voice = getBestVoice()
-        utterances.forEach((u) => {
-          if (voice) u.voice = voice
-        })
+        setVoice()
         window.speechSynthesis.onvoiceschanged = null
       }
     }
 
-    queueRef.current = utterances.slice(1) // first is spoken immediately
-    const first = utterances[0]
-    if (!first) return
-    activeRef.current = first
-    setIsSpeaking(true)
-    window.speechSynthesis.speak(first)
+    utterance.onstart = () => setIsSpeaking(true)
+    utterance.onend = () => setIsSpeaking(false)
+    utterance.onerror = (e) => {
+      if (e.error !== 'interrupted') {
+        console.warn('[TTS error]', e.error)
+      }
+      setIsSpeaking(false)
+    }
+
+    window.speechSynthesis.speak(utterance)
   }, [])
 
   return { speak, isSpeaking, cancel }
