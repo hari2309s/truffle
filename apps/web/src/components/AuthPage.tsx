@@ -83,10 +83,6 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
             </button>
           </form>
         )}
-
-        <p className="text-xs text-truffle-muted text-center">
-          No password needed · Free forever · Your data stays yours
-        </p>
       </PageEnter>
     </div>
   )
