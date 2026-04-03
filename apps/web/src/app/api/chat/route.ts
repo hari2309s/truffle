@@ -332,12 +332,23 @@ Goal tool rules:
       input: [{ role: 'system', content: systemPrompt }],
     })
 
+    // If any prior message has a completed tool invocation, the converted history will
+    // contain a { role: 'tool' } message. Groq/LLaMA rejects requests that include tool
+    // result messages in history when no tools are defined in the current request.
+    // Always pass proposeGoalTool when tool history exists so the model can resolve
+    // the context — the system prompt and isFollowUpAfterTool guard prevent re-calling it.
+    const historyHasToolResults = normalizedMessages.some(
+      (m: ClientMessage) =>
+        m.role === 'assistant' && m.toolInvocations?.some((inv) => inv.state === 'result')
+    )
+    const enableTools = historyHasToolResults || (!isFollowUpAfterTool && intent === 'goal_setting')
+
     const result = streamText({
       model: chatModel,
       system: systemPrompt,
       messages: convertToCoreMessages(normalizedMessages),
       maxTokens: 400,
-      tools: isFollowUpAfterTool || intent !== 'goal_setting' ? undefined : proposeGoalTool,
+      tools: enableTools ? proposeGoalTool : undefined,
       onFinish: async ({ text, usage }) => {
         try {
           generation.end({
