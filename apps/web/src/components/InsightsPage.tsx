@@ -122,6 +122,28 @@ export function InsightsPage({ userId }: InsightsPageProps) {
         </div>
 
         <main ref={mainRef} className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6 min-h-0">
+          <InsightsAccordionSection
+            title="Savings Goals"
+            scrollRootRef={mainRef}
+            onLeaveViewport={handleSavingsGoalsLeaveViewport}
+            headerRight={
+              <button
+                type="button"
+                onClick={() => setAddGoalOpen((v) => !v)}
+                className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+              >
+                {addGoalOpen ? 'Cancel' : '+ New goal'}
+              </button>
+            }
+          >
+            <SavingsGoals
+              userId={userId}
+              embedded
+              addGoalOpen={addGoalOpen}
+              onAddGoalOpenChange={setAddGoalOpen}
+            />
+          </InsightsAccordionSection>
+
           {/* Subscriptions */}
           {subscriptions.length > 0 && (
             <InsightsAccordionSection title="Recurring Subscriptions" scrollRootRef={mainRef}>
@@ -148,28 +170,6 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               </div>
             </InsightsAccordionSection>
           )}
-
-          <InsightsAccordionSection
-            title="Savings Goals"
-            scrollRootRef={mainRef}
-            onLeaveViewport={handleSavingsGoalsLeaveViewport}
-            headerRight={
-              <button
-                type="button"
-                onClick={() => setAddGoalOpen((v) => !v)}
-                className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-              >
-                {addGoalOpen ? 'Cancel' : '+ New goal'}
-              </button>
-            }
-          >
-            <SavingsGoals
-              userId={userId}
-              embedded
-              addGoalOpen={addGoalOpen}
-              onAddGoalOpenChange={setAddGoalOpen}
-            />
-          </InsightsAccordionSection>
 
           <InsightsAccordionSection title="Things to Review" scrollRootRef={mainRef}>
             {anomalyLoading ? (
