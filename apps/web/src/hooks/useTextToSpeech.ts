@@ -39,22 +39,24 @@ function getProsody(_tone: SpeechTone): { rate: number; pitch: number } {
   return { rate: 0.95, pitch: 1.0 }
 }
 
-// Known female English voice name fragments, ordered by quality preference
+// Google/Microsoft voices come first — macOS system voices (Samantha etc.) appear
+// in Chrome's getVoices() list but Chrome cannot synthesise with them and fails
+// silently. Safari has no Google voices so it naturally falls through to Samantha.
 const FEMALE_VOICE_NAMES = [
-  'Samantha', // macOS/iOS — best quality
-  'Karen', // macOS Australian
-  'Moira', // macOS Irish
-  'Fiona', // macOS Scottish
-  'Tessa', // macOS South African
-  'Victoria', // macOS
-  'Ava', // macOS
-  'Allison', // macOS
-  'Susan', // macOS
-  'Zoe', // macOS
   'Google UK English Female', // Chrome desktop
-  'Microsoft Zira', // Windows
+  'Microsoft Zira', // Windows Chrome/Edge
   'Microsoft Eva', // Windows
   'Microsoft Jenny', // Windows
+  'Samantha', // macOS Safari / iOS
+  'Karen', // macOS Safari Australian
+  'Moira', // macOS Safari Irish
+  'Fiona', // macOS Safari Scottish
+  'Tessa', // macOS Safari South African
+  'Victoria', // macOS Safari
+  'Ava', // macOS Safari
+  'Allison', // macOS Safari
+  'Susan', // macOS Safari
+  'Zoe', // macOS Safari
 ]
 
 function pickFemaleVoice(): SpeechSynthesisVoice | null {
