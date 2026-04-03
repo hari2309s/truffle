@@ -181,5 +181,5 @@ MIT
 ---
 
 <div align="center">
-  <sub>Built in Berlin 🇩🇪 by <a href="https://github.com/hari2309s">Hariharan Selvaraj</a></sub>
+  <sub>Built by <a href="https://github.com/hari2309s">Hariharan Selvaraj</a></sub>
 </div>
