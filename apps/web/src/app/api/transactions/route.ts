@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('user_id', userId)
       .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(100)
 
     if (error) throw error
