@@ -22,7 +22,7 @@ export const pageEnterVariants = {
 export const staggerListVariants = {
   hidden: {},
   show: {
-    transition: { staggerChildren: 0.045, delayChildren: 0.02 },
+    transition: { staggerChildren: 0.03, delayChildren: 0.02 },
   },
 }
 

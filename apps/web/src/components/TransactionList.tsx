@@ -85,6 +85,7 @@ export function TransactionList({ userId }: TransactionListProps) {
 
   return (
     <motion.div
+      key={transactions.length}
       className="space-y-2"
       initial="hidden"
       animate="show"
