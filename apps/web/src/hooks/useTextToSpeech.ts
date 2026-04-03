@@ -39,27 +39,40 @@ function getProsody(_tone: SpeechTone): { rate: number; pitch: number } {
   return { rate: 0.95, pitch: 1.0 }
 }
 
+// Known female English voice name fragments, ordered by quality preference
+const FEMALE_VOICE_NAMES = [
+  'Samantha', // macOS/iOS — best quality
+  'Karen', // macOS Australian
+  'Moira', // macOS Irish
+  'Fiona', // macOS Scottish
+  'Tessa', // macOS South African
+  'Victoria', // macOS
+  'Ava', // macOS
+  'Allison', // macOS
+  'Susan', // macOS
+  'Zoe', // macOS
+  'Google UK English Female', // Chrome desktop
+  'Microsoft Zira', // Windows
+  'Microsoft Eva', // Windows
+  'Microsoft Jenny', // Windows
+]
+
 function getBestVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices()
   if (voices.length === 0) return null
 
-  // Ordered preference list — natural/neural quality first
-  const preferred = [
-    'Samantha', // macOS/iOS — best quality
-    'Karen', // macOS Australian
-    'Moira', // macOS Irish
-    'Google UK English Female',
-    'Google US English',
-    'Natural', // any OS with Neural/Natural voices
-    'Neural',
-  ]
-
-  for (const name of preferred) {
+  for (const name of FEMALE_VOICE_NAMES) {
     const match = voices.find((v) => v.lang.startsWith('en') && v.name.includes(name))
     if (match) return match
   }
 
-  return voices.find((v) => v.lang.startsWith('en')) ?? voices[0] ?? null
+  // Fallback: any English voice whose name hints at female
+  const femaleKeywords = ['female', 'woman', 'zira', 'eva', 'jenny', 'aria']
+  return (
+    voices.find(
+      (v) => v.lang.startsWith('en') && femaleKeywords.some((k) => v.name.toLowerCase().includes(k))
+    ) ?? null
+  )
 }
 
 export function useTextToSpeech(): UseTextToSpeechReturn {
