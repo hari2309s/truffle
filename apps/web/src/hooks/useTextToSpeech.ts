@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 
 export type SpeechTone = 'celebratory' | 'reassuring' | 'concerned' | 'neutral'
 
@@ -57,7 +57,7 @@ const FEMALE_VOICE_NAMES = [
   'Microsoft Jenny', // Windows
 ]
 
-function getBestVoice(): SpeechSynthesisVoice | null {
+function pickFemaleVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices()
   if (voices.length === 0) return null
 
@@ -78,6 +78,27 @@ function getBestVoice(): SpeechSynthesisVoice | null {
 export function useTextToSpeech(): UseTextToSpeechReturn {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+  // Cache the selected voice so speak() can assign it synchronously
+  const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
+
+  // Pre-load voices on mount. Chrome returns [] from getVoices() until
+  // onvoiceschanged fires — doing this here keeps speak() synchronous so
+  // Chrome's user-gesture requirement for speechSynthesis.speak() is met.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+
+    const load = () => {
+      voiceRef.current = pickFemaleVoice()
+    }
+
+    load()
+    if (!voiceRef.current) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        load()
+        window.speechSynthesis.onvoiceschanged = null
+      }
+    }
+  }, [])
 
   const cancel = useCallback(() => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
@@ -86,22 +107,10 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     setIsSpeaking(false)
   }, [])
 
-  const speak = useCallback(async (text: string, options?: SpeakOptions) => {
+  const speak = useCallback((text: string, options?: SpeakOptions) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
 
     window.speechSynthesis.cancel()
-
-    // On Chrome, getVoices() returns [] until onvoiceschanged fires.
-    // Wait for voices before creating the utterance so we can assign the
-    // correct voice before speak() is called — not after.
-    if (window.speechSynthesis.getVoices().length === 0) {
-      await new Promise<void>((resolve) => {
-        window.speechSynthesis.onvoiceschanged = () => {
-          window.speechSynthesis.onvoiceschanged = null
-          resolve()
-        }
-      })
-    }
 
     const clean = preprocessText(text)
     const { rate, pitch } = getProsody(options?.tone ?? 'neutral')
@@ -109,7 +118,8 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     const utterance = new SpeechSynthesisUtterance(clean)
     utteranceRef.current = utterance
 
-    const voice = getBestVoice()
+    // Use pre-loaded voice; fall back to a fresh lookup if the ref is still null
+    const voice = voiceRef.current ?? pickFemaleVoice()
     if (voice) utterance.voice = voice
 
     utterance.rate = rate
@@ -119,9 +129,7 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     utterance.onstart = () => setIsSpeaking(true)
     utterance.onend = () => setIsSpeaking(false)
     utterance.onerror = (e) => {
-      if (e.error !== 'interrupted') {
-        console.warn('[TTS error]', e.error)
-      }
+      if (e.error !== 'interrupted') console.warn('[TTS error]', e.error)
       setIsSpeaking(false)
     }
 
