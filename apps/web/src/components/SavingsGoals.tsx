@@ -57,7 +57,10 @@ export function SavingsGoals({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, goalId, savedAmount: newAmount }),
     })
-    await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['goals', userId] }),
+      queryClient.invalidateQueries({ queryKey: ['transactions', userId] }),
+    ])
   }
 
   const handleDelete = async (goalId: string) => {
