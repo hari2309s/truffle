@@ -19,6 +19,7 @@ interface UseTextToSpeechReturn {
 // the whole response in one continuous breath (better prosody than chaining).
 function preprocessText(raw: string): string {
   return raw
+    .replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '') // strip leaked tool-call XML
     .replace(/\*\*(.*?)\*\*/g, '$1') // bold
     .replace(/\*(.*?)\*/g, '$1') // italic
     .replace(/_(.*?)_/g, '$1') // underscore italic
