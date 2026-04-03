@@ -235,7 +235,8 @@ Response guidelines:
 - Never lecture or shame. Celebrate wins. Reassure when things are tight.
 
 Goal tool rules:
-- You MUST have BOTH a goal name AND a specific non-zero target amount from the user before calling proposeGoal. If either is missing, ask for it first — do not guess or set targetAmount to 0.
+- You MUST ask the user for a target amount before calling proposeGoal. Never guess, estimate, or infer an amount — not even a round number.
+- Only call proposeGoal when the user has stated an amount in their own words. You will need to provide their exact quote in the userAmountQuote field. If you cannot quote them, you have not collected the amount yet — ask first.
 - NEVER describe a goal in plain text without calling proposeGoal — always let the user confirm via the card
 - After a confirmed goal, respond with one warm sentence acknowledging it
 - If the user declined a goal proposal, respond naturally and warmly — do not re-propose the same goal`
@@ -284,17 +285,20 @@ Goal tool rules:
     const proposeGoalTool = {
       proposeGoal: tool({
         description:
-          'Propose a savings goal to the user. Call this when the user wants to save for something specific. The user will see a card with Yes / No buttons — do not create the goal yourself.',
+          'Propose a savings goal to the user. Only call this after the user has explicitly stated both a goal name AND a target amount in their own words. Do not guess or infer the amount.',
         parameters: z.object({
           name: z.string().describe('Short goal name, e.g. "Holiday in Greece"'),
           targetAmount: z
             .union([z.number(), z.string().transform((s) => parseFloat(s))])
             .refine((n) => n > 0, {
-              message:
-                'targetAmount must be a positive number — ask the user for an amount before calling this tool',
+              message: 'targetAmount must be positive — ask the user for an amount first',
             })
+            .describe('Target amount in EUR. Must come from what the user explicitly said.'),
+          userAmountQuote: z
+            .string()
+            .min(1)
             .describe(
-              'Target amount in EUR as a positive number. You MUST have this from the user before calling the tool.'
+              'The exact phrase the user used to state the amount, e.g. "around 500 euros" or "maybe 200". If you cannot quote the user saying an amount, do NOT call this tool — ask them instead.'
             ),
           deadline: z
             .string()
