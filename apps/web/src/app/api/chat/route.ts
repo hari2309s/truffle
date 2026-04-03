@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
 
     // Route intent
     const intentSpan = trace.span({ name: 'routeIntent', input: message })
-    const intent = await routeIntent(message)
+    let intent = await routeIntent(message)
     intentSpan.end({ output: intent })
 
     // RAG retrieval — falls back to latest 25 if ChromaDB is unavailable
@@ -280,6 +280,23 @@ Goal tool rules:
       lastAssistant.toolInvocations.every(
         (inv: { toolCallId: string; state: string; result?: unknown }) => inv.state === 'result'
       )
+
+    // If the previous assistant message was asking for a goal amount (mid-collection
+    // flow), the user's reply (e.g. "20000 euros") won't match goal_setting keywords.
+    // Detect this and force the intent so tools stay enabled for this turn.
+    const prevAssistantText =
+      typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : ''
+    const prevWasAskingForGoalAmount =
+      !lastAssistant?.toolInvocations?.length &&
+      (prevAssistantText.includes('how much') ||
+        prevAssistantText.includes('amount') ||
+        prevAssistantText.includes('cost')) &&
+      (prevAssistantText.includes('goal') ||
+        prevAssistantText.includes('save') ||
+        prevAssistantText.includes('saving'))
+    if (prevWasAskingForGoalAmount) {
+      intent = 'goal_setting'
+    }
 
     const proposeGoalTool = {
       proposeGoal: tool({
