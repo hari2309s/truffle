@@ -23,6 +23,7 @@ export function SavingsGoals({
 }: SavingsGoalsProps) {
   const queryClient = useQueryClient()
   const [internalShowAdd, setInternalShowAdd] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const showAdd = embedded ? Boolean(addGoalOpen) : internalShowAdd
   const setShowAdd = (open: boolean) => {
@@ -64,8 +65,10 @@ export function SavingsGoals({
   }
 
   const handleDelete = async (goalId: string) => {
+    setDeletingId(goalId)
     await fetch(`/api/goals?userId=${userId}&goalId=${goalId}`, { method: 'DELETE' })
     await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
+    setDeletingId(null)
   }
 
   const body = (
@@ -113,6 +116,7 @@ export function SavingsGoals({
               goal={goal}
               onAddFunds={(amount) => handleAddFunds(goal.id, goal.savedAmount, amount)}
               onDelete={() => handleDelete(goal.id)}
+              isDeleting={deletingId === goal.id}
             />
           ))}
         </div>
@@ -127,10 +131,12 @@ function GoalCard({
   goal,
   onAddFunds,
   onDelete,
+  isDeleting,
 }: {
   goal: SavingsGoal
   onAddFunds: (amount: number) => void
   onDelete: () => void
+  isDeleting: boolean
 }) {
   const [showDeposit, setShowDeposit] = useState(false)
   const [depositAmount, setDepositAmount] = useState('')
@@ -144,7 +150,9 @@ function GoalCard({
     : null
 
   return (
-    <div className="card space-y-3">
+    <div
+      className={`card space-y-3 transition-opacity ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
+    >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
           <span className="text-2xl">{goal.emoji}</span>
