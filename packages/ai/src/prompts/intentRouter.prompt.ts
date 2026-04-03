@@ -6,7 +6,7 @@ export const INTENT_ROUTER_PROMPT = `You are Truffle's intent classifier. Given 
 - forecast_request: Future balance predictions ("end of month", "how much left", "will I make it to payday")
 - category_breakdown: Specific category deep-dive ("food spending", "how much on transport", "entertainment budget")
 - savings_goal_check: Questions about savings goals, progress, targets ("my Amsterdam goal", "savings goal", "how close am I", "on track for", "saving up for")
-- goal_setting: User wants to create a new savings goal for a specific, realistic item or experience ("I want to save for X", "I want to buy X", "planning to get X"). Only use this for genuine, achievable financial goals — not for hyperbole, jokes, or physically impossible scenarios.
+- goal_setting: User wants to create a new savings goal for something specific ("I want to save for X", "I want to buy X", "planning to get X", "I would like to build/buy/save", "dream of X"). Use this for any genuine financial goal the user names, regardless of scale.
 - general_advice: General financial questions or advice
 
 Respond with ONLY the intent key, nothing else.`
@@ -74,6 +74,20 @@ export const INTENT_KEYWORDS: Record<string, string[]> = {
     'new goal',
     'set a goal',
     'create a goal',
+    'i would like to save',
+    'i would like to buy',
+    'i would like to build',
+    'i would like to get',
+    'i would like a',
+    "i'd like to save",
+    "i'd like to buy",
+    "i'd like to build",
+    'want to build',
+    'save for my',
+    'dream of',
+    'saving to buy',
+    'saving to build',
+    'saving to get',
   ],
   general_advice: ['advice', 'tips', 'help', 'suggest', 'recommend', 'what should'],
 }
