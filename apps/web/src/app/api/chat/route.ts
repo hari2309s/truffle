@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { streamText, tool, convertToCoreMessages } from 'ai'
+import { streamText, tool, convertToCoreMessages, StreamData } from 'ai'
 import { z } from 'zod'
 import { chatModel, queryTransactions, routeIntent, langfuse } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
@@ -30,6 +30,27 @@ function buildEmptySnapshot(): MonthlySnapshot {
     savingsRate: 0,
     balance: 0,
   }
+}
+
+type SpeechTone = 'celebratory' | 'reassuring' | 'concerned' | 'neutral'
+
+function getSpeechTone(snapshot: MonthlySnapshot): SpeechTone {
+  const { totalIncome, totalExpenses, balance } = snapshot
+  if (totalIncome === 0 && totalExpenses === 0) return 'neutral'
+
+  const savingsRate = totalIncome > 0 ? (totalIncome + totalExpenses) / totalIncome : 0
+  const today = new Date()
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+  const daysElapsed = today.getDate()
+  const daysRemaining = daysInMonth - daysElapsed
+  const dailySpend =
+    daysElapsed > 0 && totalExpenses < 0 ? Math.abs(totalExpenses) / daysElapsed : 0
+  const projectedBalance = balance - dailySpend * daysRemaining
+
+  if (projectedBalance < 0) return 'concerned'
+  if (savingsRate < 0.1) return 'reassuring'
+  if (savingsRate > 0.4) return 'celebratory'
+  return 'neutral'
 }
 
 function getToneGuidance(snapshot: MonthlySnapshot): string {
@@ -186,7 +207,11 @@ export async function POST(request: NextRequest) {
         : 0
     const projectedBalance = snapshot.balance - dailySpend * daysRemaining
 
+    const speechTone = getSpeechTone(snapshot)
     const toneGuidance = getToneGuidance(snapshot)
+
+    const streamData = new StreamData()
+    streamData.append({ type: 'speech_tone', tone: speechTone })
 
     const systemPrompt = `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.
 
@@ -286,15 +311,22 @@ Goal tool rules:
       maxTokens: 400,
       tools: isFollowUpAfterTool || intent !== 'goal_setting' ? undefined : proposeGoalTool,
       onFinish: async ({ text, usage }) => {
-        generation.end({
-          output: text,
-          usage: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
-        })
-        await langfuse.flushAsync()
+        try {
+          generation.end({
+            output: text,
+            usage: usage
+              ? { input: usage.promptTokens, output: usage.completionTokens }
+              : undefined,
+          })
+          await langfuse.flushAsync()
+        } finally {
+          streamData.close()
+        }
       },
     })
 
     return result.toDataStreamResponse({
+      data: streamData,
       getErrorMessage: (error: unknown) => {
         console.error('[chat/stream error]', error)
         return error instanceof Error ? error.message : 'An error occurred.'

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { truffleEase } from '@/lib/motion'
 import { useQuery } from '@tanstack/react-query'
+import { useTextToSpeech } from '@/hooks/useTextToSpeech'
 
 interface WeeklySummaryProps {
   userId: string
@@ -54,7 +55,7 @@ function buildSummary(
 export function WeeklySummary({ userId }: WeeklySummaryProps) {
   const [visible, setVisible] = useState(false)
   const [summaryText, setSummaryText] = useState<string | null>(null)
-  const [spoken, setSpoken] = useState(false)
+  const { speak, isSpeaking } = useTextToSpeech()
 
   const { data } = useQuery({
     queryKey: ['transactions', userId],
@@ -80,22 +81,8 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
   }, [data])
 
   const handleSpeak = () => {
-    if (!summaryText || spoken) return
-    const utterance = new SpeechSynthesisUtterance(summaryText)
-    utterance.rate = 0.95
-    utterance.pitch = 1
-
-    const voices = window.speechSynthesis.getVoices()
-    const preferred = voices.find(
-      (v) =>
-        v.lang.startsWith('en') &&
-        (v.name.includes('Natural') || v.name.includes('Neural') || v.localService)
-    )
-    if (preferred) utterance.voice = preferred
-
-    utterance.onend = () => setSpoken(false)
-    window.speechSynthesis.speak(utterance)
-    setSpoken(true)
+    if (!summaryText || isSpeaking) return
+    speak(summaryText)
   }
 
   if (!visible || !summaryText) return null
@@ -123,11 +110,11 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
       </div>
       <button
         onClick={handleSpeak}
-        disabled={spoken}
-        className={`text-xs flex items-center gap-1.5 transition-colors ${spoken ? 'text-truffle-muted cursor-default' : 'text-truffle-amber hover:text-truffle-amber-light'}`}
+        disabled={isSpeaking}
+        className={`text-xs flex items-center gap-1.5 transition-colors ${isSpeaking ? 'text-truffle-muted cursor-default' : 'text-truffle-amber hover:text-truffle-amber-light'}`}
       >
-        <span>{spoken ? '🔊' : '▶'}</span>
-        {spoken ? 'Playing…' : 'Read aloud'}
+        <span>{isSpeaking ? '🔊' : '▶'}</span>
+        {isSpeaking ? 'Playing…' : 'Read aloud'}
       </button>
     </motion.div>
   )
