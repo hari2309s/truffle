@@ -32,69 +32,11 @@ function preprocessText(raw: string): string {
     .trim()
 }
 
-// Heuristic tone detection from response text
-function detectTone(text: string): SpeechTone {
-  const lower = text.toLowerCase()
-
-  const celebratoryMarkers = [
-    'great job',
-    'well done',
-    'amazing',
-    'excellent',
-    'congratulations',
-    "you're crushing",
-    'killing it',
-    'keep it up',
-    'fantastic',
-    'awesome',
-    "you've saved",
-    'you saved',
-    'ahead of',
-  ]
-  const reassuringMarkers = [
-    "don't worry",
-    "it's okay",
-    "that's okay",
-    'wiggle room',
-    'small step',
-    "you've got this",
-    'one step',
-    'tight month',
-    "it'll be okay",
-    "you're doing",
-    'not alone',
-    'we can',
-    'breathe',
-  ]
-  const concernedMarkers = [
-    'careful',
-    'overspending',
-    'over budget',
-    'going negative',
-    'shortfall',
-    'watch out',
-    'running low',
-    'projected to',
-    'might want to',
-  ]
-
-  if (celebratoryMarkers.some((m) => lower.includes(m))) return 'celebratory'
-  if (reassuringMarkers.some((m) => lower.includes(m))) return 'reassuring'
-  if (concernedMarkers.some((m) => lower.includes(m))) return 'concerned'
-  return 'neutral'
-}
-
-function getProsody(tone: SpeechTone): { rate: number; pitch: number } {
-  switch (tone) {
-    case 'celebratory':
-      return { rate: 1.05, pitch: 1.08 }
-    case 'reassuring':
-      return { rate: 0.92, pitch: 0.97 }
-    case 'concerned':
-      return { rate: 0.93, pitch: 0.95 }
-    default:
-      return { rate: 0.95, pitch: 1.0 }
-  }
+// Web Speech API pitch-shifting applies DSP that sounds robotic on high-quality
+// voices. Keep pitch fixed at 1.0 and rate constant — tone metadata is preserved
+// for future use with a real TTS API (ElevenLabs, etc.) where it actually helps.
+function getProsody(_tone: SpeechTone): { rate: number; pitch: number } {
+  return { rate: 0.95, pitch: 1.0 }
 }
 
 function getBestVoice(): SpeechSynthesisVoice | null {
@@ -137,8 +79,7 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     window.speechSynthesis.cancel()
 
     const clean = preprocessText(text)
-    const tone = options?.tone ?? detectTone(text)
-    const { rate, pitch } = getProsody(tone)
+    const { rate, pitch } = getProsody(options?.tone ?? 'neutral')
 
     const utterance = new SpeechSynthesisUtterance(clean)
     utteranceRef.current = utterance
