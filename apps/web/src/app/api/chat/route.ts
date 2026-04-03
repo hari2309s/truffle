@@ -235,8 +235,8 @@ Response guidelines:
 - Never lecture or shame. Celebrate wins. Reassure when things are tight.
 
 Goal tool rules:
-- Gather name and target amount from the conversation before calling proposeGoal
-- NEVER describe a goal in plain text without calling proposeGoal — always let the user confirm
+- You MUST have BOTH a goal name AND a specific non-zero target amount from the user before calling proposeGoal. If either is missing, ask for it first — do not guess or set targetAmount to 0.
+- NEVER describe a goal in plain text without calling proposeGoal — always let the user confirm via the card
 - After a confirmed goal, respond with one warm sentence acknowledging it
 - If the user declined a goal proposal, respond naturally and warmly — do not re-propose the same goal`
 
@@ -282,7 +282,13 @@ Goal tool rules:
           name: z.string().describe('Short goal name, e.g. "Holiday in Greece"'),
           targetAmount: z
             .union([z.number(), z.string().transform((s) => parseFloat(s))])
-            .describe('Target amount in EUR as a number'),
+            .refine((n) => n > 0, {
+              message:
+                'targetAmount must be a positive number — ask the user for an amount before calling this tool',
+            })
+            .describe(
+              'Target amount in EUR as a positive number. You MUST have this from the user before calling the tool.'
+            ),
           deadline: z
             .string()
             .regex(/^\d{4}-\d{2}-\d{2}$/)
