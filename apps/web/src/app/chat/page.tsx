@@ -42,6 +42,7 @@ export default function Chat() {
                 id: row.id as string,
                 role: row.role as 'user' | 'assistant',
                 content: row.content as string,
+                createdAt: new Date(row.created_at as string),
               }))
             : []
         )

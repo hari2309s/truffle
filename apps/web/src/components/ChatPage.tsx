@@ -146,6 +146,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                     role={message.role as 'user' | 'assistant'}
                     content={clean}
                     name={name}
+                    timestamp={message.createdAt?.toISOString()}
                   />
                 ) : null
               })()}
