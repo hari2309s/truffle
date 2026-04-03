@@ -10,7 +10,7 @@ export function TopBar({ subtitle = 'Ask me anything', title = 'Truffle', childr
   return (
     <header className="flex items-center gap-3 px-4 py-4 border-b border-truffle-border">
       <div className="flex items-center gap-2">
-        <Image src="/icons/truffle.png" alt="Truffle" width={24} height={24} priority />
+        <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
         <div>
           <p className="font-semibold text-truffle-text text-sm">{title}</p>
           {subtitle && <p className="text-xs text-truffle-muted">{subtitle}</p>}
