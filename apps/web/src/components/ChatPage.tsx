@@ -134,14 +134,21 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                 }
                 return null
               })}
-              {/* Only render bubble if there is text content */}
-              {message.content && (
-                <ChatBubble
-                  role={message.role as 'user' | 'assistant'}
-                  content={message.content}
-                  name={name}
-                />
-              )}
+              {/* Strip leaked tool-call XML (Groq/LLaMA occasionally emits
+                  <function=...>...</function> as plain text instead of a
+                  structured tool invocation) then render if content remains */}
+              {(() => {
+                const clean = message.content
+                  .replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '')
+                  .trim()
+                return clean ? (
+                  <ChatBubble
+                    role={message.role as 'user' | 'assistant'}
+                    content={clean}
+                    name={name}
+                  />
+                ) : null
+              })()}
               {/* Inline error + resend on the last user message */}
               {showError && (
                 <div className="flex justify-end items-center gap-2 mb-3 pr-1">

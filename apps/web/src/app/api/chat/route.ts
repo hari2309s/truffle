@@ -242,20 +242,27 @@ Goal tool rules:
 
     type ClientMessage = {
       role: string
+      content?: string
       toolInvocations?: { toolCallId: string; state: string; result?: unknown }[]
     }
     // Resolve any tool invocations that are still in 'call' or 'partial-call' state —
     // convertToCoreMessages throws if a toolInvocation doesn't have a result yet.
+    // Also strip leaked <function=...> XML from assistant message content so the
+    // model never sees its own malformed tool-call output in history, which causes
+    // it to assume the goal was already proposed/confirmed.
     const normalizedMessages = clientMessages.map((m: ClientMessage) => {
-      if (
-        m.role !== 'assistant' ||
-        !m.toolInvocations?.length ||
-        m.toolInvocations.every((inv) => inv.state === 'result')
-      ) {
-        return m
+      if (m.role !== 'assistant') return m
+
+      const cleanContent = m.content
+        ? m.content.replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '').trim()
+        : m.content
+
+      if (!m.toolInvocations?.length || m.toolInvocations.every((inv) => inv.state === 'result')) {
+        return { ...m, content: cleanContent }
       }
       return {
         ...m,
+        content: cleanContent,
         toolInvocations: m.toolInvocations.map((inv) =>
           inv.state === 'result' ? inv : { ...inv, state: 'result', result: { confirmed: false } }
         ),
