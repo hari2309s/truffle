@@ -253,9 +253,10 @@ Goal tool rules:
     const normalizedMessages = clientMessages.map((m: ClientMessage) => {
       if (m.role !== 'assistant') return m
 
-      const cleanContent = m.content
-        ? m.content.replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '').trim()
-        : m.content
+      const cleanContent =
+        m.content && typeof m.content === 'string'
+          ? m.content.replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '').trim()
+          : m.content
 
       if (!m.toolInvocations?.length || m.toolInvocations.every((inv) => inv.state === 'result')) {
         return { ...m, content: cleanContent }
