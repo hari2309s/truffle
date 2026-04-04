@@ -21,6 +21,9 @@ export function useFinancialChat(userId: string, initialMessages: Message[]) {
       // Reset data ref at the start of each new response
       latestDataRef.current = []
     },
+    onError: (error) => {
+      console.error('[useFinancialChat] stream error:', error, error?.message, error?.cause)
+    },
     onFinish: async (message, { finishReason }) => {
       // Speak the response, using the server-emitted tone if available
       if (message.role === 'assistant' && message.content !== lastAssistantMessageRef.current) {

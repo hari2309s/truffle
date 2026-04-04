@@ -235,10 +235,11 @@ Response guidelines:
 - Never lecture or shame. Celebrate wins. Reassure when things are tight.
 
 Goal tool rules:
-- Ask the user for a target amount before calling proposeGoal. Do not guess or estimate — wait for them to state a number.
-- Once you have a name and amount from the user, call proposeGoal immediately. Do not describe it in text first.
-- After a confirmed goal, respond with one warm sentence acknowledging it.
-- If the user declined, respond warmly and do not re-propose the same goal.`
+- When a user mentions a new goal, ALWAYS ask for the target amount in plain text first. Never call proposeGoal on the same turn.
+- Only call proposeGoal when the user's current reply contains a specific amount for this goal. A number mentioned earlier for a different goal does not count — ask again.
+- Once you have both a goal name and an amount from the user in the same exchange, call proposeGoal immediately. Do not describe it in text first.
+- After a confirmed goal, respond with one warm sentence. If the user then mentions another goal, start fresh and ask for the new amount.
+- If the user declined, respond warmly and do not re-propose.`
 
     type ClientMessage = {
       role: string
@@ -302,7 +303,7 @@ Goal tool rules:
     const proposeGoalTool = {
       proposeGoal: tool({
         description:
-          'Propose a savings goal to the user. Call this ONLY after the user has stated a target amount themselves. The user will see a Yes / No card — do not create the goal yourself.',
+          "Propose a savings goal card for the user to confirm. STRICT RULES: (1) NEVER call on the turn the user first names a goal — always ask for the price first in plain text. (2) Only call when the user's CURRENT message contains a specific numeric amount for THIS goal. A number from a previous turn does not count. (3) Never guess, infer, or reuse amounts from other goals in the conversation.",
         parameters: z.object({
           name: z.string().describe('Short goal name, e.g. "Holiday in Greece"'),
           targetAmount: z
@@ -313,9 +314,10 @@ Goal tool rules:
             .describe('Target amount in EUR stated by the user. Do not guess.'),
           deadline: z
             .string()
-            .regex(/^\d{4}-\d{2}-\d{2}$/)
             .optional()
-            .describe('Optional target date in YYYY-MM-DD format. Omit if no deadline.'),
+            .describe(
+              'Optional target date in YYYY-MM-DD format (e.g. "2026-04-30"). Omit if the user gave no deadline.'
+            ),
           emoji: z.string().describe('A single relevant emoji'),
           pitch: z
             .string()

@@ -184,7 +184,14 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
         )}
 
         {chat.error && (
-          <div className="text-center text-xs text-truffle-red py-2">{chat.error.message}</div>
+          <div className="text-center text-xs text-truffle-red py-2">
+            {chat.error.message || 'An error occurred.'}
+            {process.env.NODE_ENV === 'development' && (
+              <pre className="text-left text-[10px] mt-1 opacity-70 whitespace-pre-wrap">
+                {String(chat.error.cause ?? chat.error)}
+              </pre>
+            )}
+          </div>
         )}
 
         <div ref={messagesEndRef} />
