@@ -91,25 +91,9 @@ export function TransactionProposalCard({
     onResult(false)
   }
 
-  if (status === 'done') {
-    return (
-      <motion.div
-        className="flex justify-start mb-3"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.32, ease: truffleEase }}
-      >
-        <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
-          <p className="text-sm text-truffle-text">
-            {emoji} <span className="font-medium">{proposal.description}</span> logged —{' '}
-            <span className={amountColor}>{formattedAmount}</span>
-          </p>
-        </div>
-      </motion.div>
-    )
-  }
-
-  if (status === 'declined') return null
+  // Return null on done/declined — ChatPage's inv.state === 'result' branch
+  // renders the persistent confirmation, avoiding a double bubble.
+  if (status === 'done' || status === 'declined') return null
 
   return (
     <motion.div
@@ -146,7 +130,7 @@ export function TransactionProposalCard({
             disabled={status === 'saving'}
             className="flex-1 btn-primary text-sm py-2 disabled:opacity-50"
           >
-            {status === 'saving' ? 'Saving…' : 'Yes, log it'}
+            {status === 'saving' ? 'Saving…' : 'Add'}
           </button>
         </div>
       </div>
