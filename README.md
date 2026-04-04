@@ -180,7 +180,3 @@ Spoken + displayed answer
 MIT
 
 ---
-
-<div align="center">
-  <sub>Built by <a href="https://github.com/hari2309s">Hariharan Selvaraj</a></sub>
-</div>
