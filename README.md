@@ -42,6 +42,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 - 🔄 **Subscription tracker** — automatically detects recurring charges from your history
 - 🎯 **Savings goals** — set goals manually or let Truffle propose one mid-conversation; confirm with one tap, track progress and deposits in Insights
 - 💬 **Log transactions from chat** — say "I just paid €45 at Lidl" and Truffle shows a confirmation card before logging it to your history
+- 🔁 **Saving habits** — set up a recurring weekly or monthly saving habit in chat ("save €50 every week"); Truffle tracks your streak, logs contributions, and reminds you when a period is due
 - 🔊 **Weekly audio summary** — spoken recap of your week, once per week
 - 💱 **Multi-currency** — EUR, GBP, USD converted to EUR for consistent totals
 - 📱 **PWA** — installs on iOS and Android, works offline
@@ -53,7 +54,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ```
 You speak → Groq Whisper transcribes → LangGraph routes your intent
 → Groq Llama-3.3-70b reasons over your actual transaction history
-→ Response streams back (or a goal / transaction proposal card appears via AI tool calling)
+→ Response streams back (or a goal / transaction / habit proposal card appears via AI tool calling)
 → Web Speech API reads the answer aloud
 ```
 
@@ -134,11 +135,13 @@ LANGFUSE_BASE_URL=https://cloud.langfuse.com
 
 ### Database setup
 
-Run both migrations in your Supabase project SQL editor in order:
+Run all migrations in your Supabase project SQL editor in order:
 
 ```bash
-packages/db/src/migrations/001_initial.sql   # transactions, anomalies, snapshots, chat
-packages/db/src/migrations/002_savings_goals.sql  # savings_goals table + RLS
+packages/db/src/migrations/001_initial.sql          # transactions, anomalies, snapshots, chat
+packages/db/src/migrations/002_savings_goals.sql    # savings_goals table + RLS
+packages/db/src/migrations/003_pgvector_gemini.sql  # pgvector extension + match_transactions RPC
+packages/db/src/migrations/004_savings_habits.sql   # savings_habits + habit_contributions + RLS
 ```
 
 ### Run
@@ -172,6 +175,12 @@ Synthesizer           ← formats a calm, spoken response
     ↓
 Spoken + displayed answer
 ```
+
+---
+
+## Documentation
+
+- [Habit Tracker Feature](docs/habit-tracker-feature.md) — deep dive into the saving habits system: DB schema, intent routing, API, chat integration, streak logic, and Insights UI
 
 ---
 
