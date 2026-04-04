@@ -101,4 +101,5 @@ export type QueryIntent =
   | 'savings_goal_check'
   | 'goal_setting'
   | 'add_transaction'
+  | 'greeting'
   | 'general_advice'
