@@ -36,6 +36,7 @@ export async function routeIntent(query: string): Promise<QueryIntent> {
       'savings_goal_check',
       'goal_setting',
       'add_transaction',
+      'greeting',
       'general_advice',
     ]
     return validIntents.includes(intent) ? intent : 'general_advice'
