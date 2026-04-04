@@ -74,24 +74,22 @@ export function LoadingSpinner({ className }: { className?: string }) {
 }
 
 /** Inline typing indicator (chat). */
-const THINKING_PHRASES = [
-  'Looking at your finances…',
-  'Crunching the numbers…',
-  'On it…',
-  'Let me check…',
-  'Thinking…',
-]
-
-export function ThinkingIndicator({ className }: { className?: string }) {
-  const phrase = THINKING_PHRASES[Math.floor(Math.random() * THINKING_PHRASES.length)]
+export function TypingDots({ className }: { className?: string }) {
   return (
-    <motion.span
-      className={className ?? 'text-sm text-truffle-muted italic'}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: [0, 1, 1, 0.4] }}
-      transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-    >
-      {phrase}
-    </motion.span>
+    <div className={className ?? 'flex gap-1'}>
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="w-2 h-2 rounded-full bg-truffle-amber"
+          animate={{ y: [0, -4, 0] }}
+          transition={{
+            duration: 0.45,
+            repeat: Infinity,
+            delay: i * 0.14,
+            ease: truffleEase,
+          }}
+        />
+      ))}
+    </div>
   )
 }
