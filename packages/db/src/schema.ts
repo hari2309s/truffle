@@ -133,6 +133,56 @@ export interface Database {
           content?: string
         }
       }
+      savings_habits: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          amount: number
+          frequency: string
+          emoji: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          amount: number
+          frequency: string
+          emoji?: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          name?: string
+          amount?: number
+          frequency?: string
+          emoji?: string
+          is_active?: boolean
+        }
+      }
+      habit_contributions: {
+        Row: {
+          id: string
+          habit_id: string
+          user_id: string
+          period: string
+          amount: number
+          logged_at: string
+        }
+        Insert: {
+          id?: string
+          habit_id: string
+          user_id: string
+          period: string
+          amount: number
+          logged_at?: string
+        }
+        Update: {
+          amount?: number
+        }
+      }
     }
   }
 }
