@@ -343,11 +343,11 @@ export async function POST(request: NextRequest) {
       historyHasToolResults ||
       (!isFollowUpAfterTool && (intent === 'goal_setting' || intent === 'add_transaction'))
 
-    // For add_transaction, force the model to call proposeTransaction — don't let it
-    // narrate a fake confirmation in plain text. goal_setting stays 'auto' because the
-    // model legitimately needs to ask for the amount first (text turn) before tool call.
+    // For add_transaction, always force proposeTransaction regardless of isFollowUpAfterTool.
+    // Each "I just spent" is a new transaction — prior confirmed tool results in history
+    // are irrelevant. goal_setting stays 'auto' so the model can ask for an amount first.
     const toolChoice =
-      !isFollowUpAfterTool && intent === 'add_transaction'
+      intent === 'add_transaction'
         ? ({ type: 'tool', toolName: 'proposeTransaction' } as const)
         : 'auto'
 
