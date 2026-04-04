@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
     const proposeTransactionTool = {
       proposeTransaction: tool({
         description:
-          'Propose a transaction card for the user to confirm before it is logged. Call this whenever the user wants to record a specific income or expense. Use negative amounts for expenses and positive for income. Default date to today if not given.',
+          'Show a transaction confirmation card. MUST be called whenever the user mentions paying, spending, buying, or receiving money. NEVER skip this and respond in plain text instead — the transaction is only logged after the user confirms the card. Use negative amounts for expenses, positive for income.',
         parameters: z.object({
           description: z.string().describe('Short description, e.g. "Coffee at Costa"'),
           amount: z
