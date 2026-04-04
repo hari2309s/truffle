@@ -36,6 +36,7 @@ export async function routeIntent(query: string): Promise<QueryIntent> {
       'savings_goal_check',
       'goal_setting',
       'add_transaction',
+      'habit_setting',
       'greeting',
       'general_advice',
     ]

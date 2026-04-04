@@ -15,6 +15,14 @@ type GoalRow = {
   target_amount: unknown
   deadline: unknown
 }
+type HabitRow = {
+  emoji: unknown
+  name: unknown
+  amount: unknown
+  frequency: unknown
+  streak: unknown
+  currentPeriodLogged: unknown
+}
 
 // Intents that need full transaction data
 const NEEDS_TRANSACTIONS: QueryIntent[] = [
@@ -29,6 +37,9 @@ const NEEDS_TRANSACTIONS: QueryIntent[] = [
 // Intents that need anomaly context
 const NEEDS_ANOMALIES: QueryIntent[] = ['anomaly_review', 'spending_summary']
 
+// Intents where pending habit reminders are shown proactively
+const SHOW_HABIT_REMINDERS: QueryIntent[] = ['greeting', 'general_advice', 'spending_summary']
+
 export function buildSystemPrompt(params: {
   intent: QueryIntent
   toneGuidance: string
@@ -36,6 +47,7 @@ export function buildSystemPrompt(params: {
   transactions: Transaction[]
   anomalyRows: AnomalyRow[] | null
   goalRows: GoalRow[] | null
+  habitRows: HabitRow[] | null
   projectedBalance: number
   daysRemaining: number
   dailySpend: number
@@ -47,6 +59,7 @@ export function buildSystemPrompt(params: {
     transactions,
     anomalyRows,
     goalRows,
+    habitRows,
     projectedBalance,
     daysRemaining,
     dailySpend,
@@ -79,6 +92,26 @@ export function buildSystemPrompt(params: {
           .join('\n')
       : ''
 
+  const pendingHabits =
+    habitRows && habitRows.length > 0 ? habitRows.filter((h) => !h.currentPeriodLogged) : []
+
+  const habitsContext =
+    habitRows && habitRows.length > 0
+      ? '\nSavings habits:\n' +
+        habitRows
+          .map((h) => {
+            const streakStr = (h.streak as number) > 0 ? ` 🔥 ${h.streak}-period streak` : ''
+            const status = h.currentPeriodLogged ? '✓ logged this period' : '⏳ not yet logged'
+            return `- ${h.emoji} ${h.name}: €${h.amount}/${h.frequency} (${status}${streakStr})`
+          })
+          .join('\n')
+      : ''
+
+  const habitReminderContext =
+    SHOW_HABIT_REMINDERS.includes(intent) && pendingHabits.length > 0
+      ? `\nHabit reminder: The user has ${pendingHabits.length} saving habit(s) not yet logged this period: ${pendingHabits.map((h) => `${h.emoji} ${h.name}`).join(', ')}. You may gently mention this if it fits naturally.`
+      : ''
+
   if (intent === 'greeting') {
     return `You are Truffle — a warm, calm personal finance companion. The user is just saying hello.
 Respond with a single warm, brief greeting. Do not mention their finances, balance, goals, or any financial data unprompted. Just say hi back.`
@@ -87,7 +120,7 @@ Respond with a single warm, brief greeting. Do not mention their finances, balan
   return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.
 
 Tone guidance for this conversation: ${toneGuidance}
-${transactionContext}${anomalyContext}${goalsContext}
+${transactionContext}${anomalyContext}${goalsContext}${habitsContext}${habitReminderContext}
 
 Monthly summary (${snapshot.month}):
 - Income: €${snapshot.totalIncome.toFixed(2)}
@@ -118,5 +151,12 @@ Transaction tool rules:
 - Choose the most appropriate category from the allowed list.
 - If the merchant is not clear, omit it.
 - After a confirmed transaction, respond with one warm sentence. Do not log the same transaction twice.
+- If the user declined, respond warmly and do not re-propose.
+
+Habit tool rules:
+- When a user wants to set up a recurring saving habit (e.g. "save €50 every week"), call proposeHabit.
+- If the user hasn't specified an amount, ask for one first in plain text — never guess.
+- Only call proposeHabit when both a name/purpose AND an amount AND a frequency ('weekly' or 'monthly') are clear from the user's message.
+- After a confirmed habit, respond with one warm encouraging sentence.
 - If the user declined, respond warmly and do not re-propose.`
 }

@@ -8,6 +8,7 @@ export const INTENT_ROUTER_PROMPT = `You are Truffle's intent classifier. Given 
 - savings_goal_check: Questions about savings goals, progress, targets ("my Amsterdam goal", "savings goal", "how close am I", "on track for", "saving up for")
 - goal_setting: User wants to create a new savings goal for something specific ("I want to save for X", "I want to buy X", "planning to get X", "I would like to build/buy/save", "dream of X"). Use this for any genuine financial goal the user names, regardless of scale.
 - add_transaction: User wants to log a specific income or expense ("I just spent", "I paid", "I bought", "add a transaction", "log a payment", "I received", "charge me", "record a purchase")
+- habit_setting: User wants to create a recurring saving habit ("save every week", "set aside monthly", "I want to save regularly", "recurring savings", "put away each month", "weekly saving")
 - greeting: User is greeting or making small talk with no financial question ("hey", "hi", "hello", "good morning", "how are you")
 - general_advice: General financial questions or advice
 
@@ -114,6 +115,22 @@ export const INTENT_KEYWORDS: Record<string, string[]> = {
     'saving to buy',
     'saving to build',
     'saving to get',
+  ],
+  habit_setting: [
+    'save every week',
+    'save every month',
+    'weekly saving',
+    'monthly saving',
+    'set aside every',
+    'put aside every',
+    'put away every',
+    'recurring saving',
+    'save regularly',
+    'save each week',
+    'save each month',
+    'i want to save regularly',
+    'automatic saving',
+    'savings habit',
   ],
   greeting: [
     'hey',
