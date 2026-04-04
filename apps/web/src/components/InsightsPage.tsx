@@ -9,6 +9,7 @@ import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/mot
 import { InsightsAccordionSection } from './InsightsAccordionSection'
 import { PageEnter, SkeletonPulse } from './PageMotion'
 import { SavingsGoals } from './SavingsGoals'
+import { SavingsHabits } from './SavingsHabits'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
 
@@ -142,6 +143,10 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               addGoalOpen={addGoalOpen}
               onAddGoalOpenChange={setAddGoalOpen}
             />
+          </InsightsAccordionSection>
+
+          <InsightsAccordionSection title="Saving Habits" scrollRootRef={mainRef}>
+            <SavingsHabits userId={userId} />
           </InsightsAccordionSection>
 
           {/* Subscriptions */}

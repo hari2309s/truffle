@@ -9,6 +9,7 @@ import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { ChatBubble } from './ChatBubble'
 import { GoalProposalCard } from './GoalProposalCard'
 import { TransactionProposalCard, CATEGORY_EMOJI } from './TransactionProposalCard'
+import { HabitProposalCard } from './HabitProposalCard'
 import type { TransactionCategory } from '@truffle/types'
 import { VoiceButton } from './VoiceButton'
 import { TopBar } from './TopBar'
@@ -166,6 +167,40 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                             <span className={isExpense ? 'text-red-400' : 'text-green-400'}>
                               {formattedAmount}
                             </span>
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  }
+                }
+                if (inv.toolName === 'proposeHabit') {
+                  const args = inv.args as {
+                    name: string
+                    amount: number
+                    frequency: 'weekly' | 'monthly'
+                    emoji: string
+                    pitch: string
+                  }
+                  if (inv.state === 'call') {
+                    return (
+                      <HabitProposalCard
+                        key={inv.toolCallId}
+                        proposal={args}
+                        userId={userId}
+                        onResult={(confirmed) =>
+                          chat.addToolResult({ toolCallId: inv.toolCallId, result: { confirmed } })
+                        }
+                      />
+                    )
+                  }
+                  if (inv.state === 'result' && (inv.result as { confirmed: boolean })?.confirmed) {
+                    return (
+                      <div key={inv.toolCallId} className="flex justify-start mb-3">
+                        <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
+                          <p className="text-sm text-truffle-text">
+                            {args.emoji} <span className="font-medium">{args.name}</span> habit set
+                            up — €{args.amount.toFixed(2)}/
+                            {args.frequency === 'weekly' ? 'week' : 'month'}.
                           </p>
                         </div>
                       </div>
