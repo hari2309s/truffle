@@ -104,6 +104,94 @@ export async function POST(request: NextRequest) {
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
 
+    // Fetch active savings habits for context
+    const { data: rawHabitRows } = await db
+      .from('savings_habits')
+      .select('id, name, amount, frequency, emoji')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true })
+
+    // Fetch contributions to compute currentPeriodLogged and streak per habit
+    const habitIds = (rawHabitRows ?? []).map((h: Record<string, unknown>) => h.id as string)
+    const { data: habitContribRows } =
+      habitIds.length > 0
+        ? await db
+            .from('habit_contributions')
+            .select('habit_id, period')
+            .in('habit_id', habitIds)
+            .eq('user_id', userId)
+        : { data: [] }
+
+    // Build per-habit period sets for quick lookup
+    const habitPeriodMap: Record<string, string[]> = {}
+    for (const c of (habitContribRows ?? []) as { habit_id: string; period: string }[]) {
+      if (!habitPeriodMap[c.habit_id]) habitPeriodMap[c.habit_id] = []
+      habitPeriodMap[c.habit_id]!.push(c.period)
+    }
+
+    const habitRows = (rawHabitRows ?? []).map((h: Record<string, unknown>) => {
+      const freq = h.frequency as 'weekly' | 'monthly'
+      const today = new Date()
+      const currentPeriod =
+        freq === 'monthly'
+          ? today.toISOString().slice(0, 7)
+          : (() => {
+              const d = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()))
+              const dow = d.getUTCDay() || 7
+              d.setUTCDate(d.getUTCDate() + 4 - dow)
+              const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+              const wk = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+              return `${d.getUTCFullYear()}-W${String(wk).padStart(2, '0')}`
+            })()
+      const periods = habitPeriodMap[h.id as string] ?? []
+      const currentPeriodLogged = periods.includes(currentPeriod)
+      // Simple streak: count consecutive periods backwards
+      let streak = 0
+      const sortedPeriods = [...periods].sort()
+      let check: string = currentPeriodLogged
+        ? currentPeriod
+        : (sortedPeriods[sortedPeriods.length - 1] ?? '')
+      const periodSet = new Set(periods)
+      while (check && periodSet.has(check)) {
+        streak++
+        // Move to previous period
+        if (freq === 'monthly') {
+          const parts = check.split('-')
+          const y = Number(parts[0])
+          const m = Number(parts[1])
+          const prev = new Date(y, m - 2, 1)
+          check = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`
+        } else {
+          // subtract 7 days from a Monday of that week
+          const wparts = check.split('-W')
+          const yw = Number(wparts[0])
+          const ww = Number(wparts[1])
+          const jan4 = new Date(Date.UTC(yw, 0, 4))
+          const dowJ = jan4.getUTCDay() || 7
+          const mon1 = new Date(jan4.getTime() - (dowJ - 1) * 86400000)
+          const monW = new Date(mon1.getTime() + (ww - 1) * 7 * 86400000)
+          const prevMon = new Date(monW.getTime() - 7 * 86400000)
+          const pd = new Date(
+            Date.UTC(prevMon.getUTCFullYear(), prevMon.getUTCMonth(), prevMon.getUTCDate())
+          )
+          const pdow = pd.getUTCDay() || 7
+          pd.setUTCDate(pd.getUTCDate() + 4 - pdow)
+          const pYearStart = new Date(Date.UTC(pd.getUTCFullYear(), 0, 1))
+          const pwk = Math.ceil(((pd.getTime() - pYearStart.getTime()) / 86400000 + 1) / 7)
+          check = `${pd.getUTCFullYear()}-W${String(pwk).padStart(2, '0')}`
+        }
+      }
+      return {
+        emoji: h.emoji,
+        name: h.name,
+        amount: h.amount,
+        frequency: h.frequency,
+        streak,
+        currentPeriodLogged,
+      }
+    })
+
     // Langfuse trace for the full request
     const trace = langfuse.trace({
       name: 'chat',
@@ -156,6 +244,7 @@ export async function POST(request: NextRequest) {
             deadline: unknown
           }[]
         | null,
+      habitRows,
       projectedBalance,
       daysRemaining,
       dailySpend,
@@ -247,6 +336,25 @@ export async function POST(request: NextRequest) {
       intent = 'add_transaction'
     }
 
+    // Detect habit follow-up — if Truffle asked for a habit amount/frequency and
+    // the user replies with a number, keep tools enabled for habit_setting.
+    const prevWasAskingForHabitDetails =
+      !lastAssistant?.toolInvocations?.length &&
+      (prevAssistantText.includes('how much') ||
+        prevAssistantText.includes('amount') ||
+        prevAssistantText.includes('often') ||
+        prevAssistantText.includes('weekly') ||
+        prevAssistantText.includes('monthly')) &&
+      (prevAssistantText.includes('habit') ||
+        prevAssistantText.includes('save') ||
+        prevAssistantText.includes('saving') ||
+        prevAssistantText.includes('set aside') ||
+        prevAssistantText.includes('put away') ||
+        prevAssistantText.includes('regularly'))
+    if (prevWasAskingForHabitDetails) {
+      intent = 'habit_setting'
+    }
+
     const proposeGoalTool = {
       proposeGoal: tool({
         description:
@@ -312,6 +420,27 @@ export async function POST(request: NextRequest) {
       }),
     }
 
+    const proposeHabitTool = {
+      proposeHabit: tool({
+        description:
+          'Show a recurring savings habit confirmation card. Call when the user wants to save a fixed amount weekly or monthly. Only call when you have a name/purpose, a specific amount, AND a frequency (weekly or monthly) from the user. Never guess the amount.',
+        parameters: z.object({
+          name: z.string().describe('Short habit name, e.g. "Emergency fund"'),
+          amount: z
+            .number()
+            .positive()
+            .describe('Amount in EUR to save each period. Must be stated by the user.'),
+          frequency: z
+            .enum(['weekly', 'monthly'])
+            .describe('How often to save: weekly or monthly.'),
+          emoji: z.string().describe('A single relevant emoji'),
+          pitch: z
+            .string()
+            .describe('One warm sentence motivating this habit based on their finances'),
+        }),
+      }),
+    }
+
     const generation = trace.generation({
       name: 'streamText',
       model: 'llama-3.3-70b-versatile',
@@ -341,11 +470,13 @@ export async function POST(request: NextRequest) {
     )
     const enableTools =
       historyHasToolResults ||
-      (!isFollowUpAfterTool && (intent === 'goal_setting' || intent === 'add_transaction'))
+      (!isFollowUpAfterTool &&
+        (intent === 'goal_setting' || intent === 'add_transaction' || intent === 'habit_setting'))
 
     // For add_transaction, always force proposeTransaction regardless of isFollowUpAfterTool.
     // Each "I just spent" is a new transaction — prior confirmed tool results in history
-    // are irrelevant. goal_setting stays 'auto' so the model can ask for an amount first.
+    // are irrelevant. goal_setting and habit_setting stay 'auto' so the model can ask for
+    // missing details first.
     const toolChoice =
       intent === 'add_transaction'
         ? ({ type: 'tool', toolName: 'proposeTransaction' } as const)
@@ -356,7 +487,9 @@ export async function POST(request: NextRequest) {
       system: systemPrompt,
       messages: convertToCoreMessages(boundedMessages),
       maxTokens: 400,
-      tools: enableTools ? { ...proposeGoalTool, ...proposeTransactionTool } : undefined,
+      tools: enableTools
+        ? { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
+        : undefined,
       toolChoice: enableTools ? toolChoice : undefined,
       onFinish: async ({ text, usage }) => {
         try {
