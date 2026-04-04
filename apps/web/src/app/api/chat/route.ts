@@ -292,10 +292,17 @@ Goal tool rules:
       !lastAssistant?.toolInvocations?.length &&
       (prevAssistantText.includes('how much') ||
         prevAssistantText.includes('amount') ||
-        prevAssistantText.includes('cost')) &&
+        prevAssistantText.includes('cost') ||
+        prevAssistantText.includes('budget') ||
+        prevAssistantText.includes('target')) &&
       (prevAssistantText.includes('goal') ||
         prevAssistantText.includes('save') ||
-        prevAssistantText.includes('saving'))
+        prevAssistantText.includes('saving') ||
+        prevAssistantText.includes('plan') ||
+        prevAssistantText.includes('trip') ||
+        prevAssistantText.includes('buy') ||
+        prevAssistantText.includes('purchase') ||
+        prevAssistantText.includes('afford'))
     if (prevWasAskingForGoalAmount) {
       intent = 'goal_setting'
     }
