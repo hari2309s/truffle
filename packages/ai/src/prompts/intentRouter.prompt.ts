@@ -7,6 +7,7 @@ export const INTENT_ROUTER_PROMPT = `You are Truffle's intent classifier. Given 
 - category_breakdown: Specific category deep-dive ("food spending", "how much on transport", "entertainment budget")
 - savings_goal_check: Questions about savings goals, progress, targets ("my Amsterdam goal", "savings goal", "how close am I", "on track for", "saving up for")
 - goal_setting: User wants to create a new savings goal for something specific ("I want to save for X", "I want to buy X", "planning to get X", "I would like to build/buy/save", "dream of X"). Use this for any genuine financial goal the user names, regardless of scale.
+- add_transaction: User wants to log a specific income or expense ("I just spent", "I paid", "I bought", "add a transaction", "log a payment", "I received", "charge me", "record a purchase")
 - general_advice: General financial questions or advice
 
 Respond with ONLY the intent key, nothing else.`
@@ -88,6 +89,24 @@ export const INTENT_KEYWORDS: Record<string, string[]> = {
     'saving to buy',
     'saving to build',
     'saving to get',
+  ],
+  add_transaction: [
+    'i just spent',
+    'i paid',
+    'i bought',
+    'add a transaction',
+    'log a transaction',
+    'record a transaction',
+    'log a payment',
+    'add a payment',
+    'record a purchase',
+    'i received',
+    'add income',
+    'log income',
+    'i got paid',
+    'charge me',
+    'add an expense',
+    'log an expense',
   ],
   general_advice: ['advice', 'tips', 'help', 'suggest', 'recommend', 'what should'],
 }

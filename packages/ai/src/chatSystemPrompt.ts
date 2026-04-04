@@ -23,6 +23,7 @@ const NEEDS_TRANSACTIONS: QueryIntent[] = [
   'anomaly_review',
   'category_breakdown',
   'goal_setting',
+  'add_transaction',
 ]
 
 // Intents that need anomaly context
@@ -102,5 +103,14 @@ Goal tool rules:
 - Only call proposeGoal when the user's current reply contains a specific amount for this goal. A number mentioned earlier for a different goal does not count — ask again.
 - Once you have both a goal name and an amount from the user in the same exchange, call proposeGoal immediately. Do not describe it in text first.
 - After a confirmed goal, respond with one warm sentence. If the user then mentions another goal, start fresh and ask for the new amount.
+- If the user declined, respond warmly and do not re-propose.
+
+Transaction tool rules:
+- When the user wants to log a transaction, call proposeTransaction immediately with all fields you can infer from their message.
+- Use a negative amount for expenses and a positive amount for income.
+- Default the date to today if the user does not specify one.
+- Choose the most appropriate category from the allowed list.
+- If the merchant is not clear, omit it.
+- After a confirmed transaction, respond with one warm sentence. Do not log the same transaction twice.
 - If the user declined, respond warmly and do not re-propose.`
 }
