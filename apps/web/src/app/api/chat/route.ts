@@ -343,12 +343,21 @@ export async function POST(request: NextRequest) {
       historyHasToolResults ||
       (!isFollowUpAfterTool && (intent === 'goal_setting' || intent === 'add_transaction'))
 
+    // For add_transaction, force the model to call proposeTransaction — don't let it
+    // narrate a fake confirmation in plain text. goal_setting stays 'auto' because the
+    // model legitimately needs to ask for the amount first (text turn) before tool call.
+    const toolChoice =
+      !isFollowUpAfterTool && intent === 'add_transaction'
+        ? ({ type: 'tool', toolName: 'proposeTransaction' } as const)
+        : 'auto'
+
     const result = streamText({
       model: chatModel,
       system: systemPrompt,
       messages: convertToCoreMessages(boundedMessages),
       maxTokens: 400,
       tools: enableTools ? { ...proposeGoalTool, ...proposeTransactionTool } : undefined,
+      toolChoice: enableTools ? toolChoice : undefined,
       onFinish: async ({ text, usage }) => {
         try {
           generation.end({
