@@ -178,12 +178,6 @@ Spoken + displayed answer
 
 ---
 
-## Documentation
-
-- [Habit Tracker Feature](docs/habit-tracker-feature.md) — deep dive into the saving habits system: DB schema, intent routing, API, chat integration, streak logic, and Insights UI
-
----
-
 ## License
 
 MIT
