@@ -11,7 +11,7 @@ import { GoalProposalCard } from './GoalProposalCard'
 import { VoiceButton } from './VoiceButton'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
-import { PageEnter, TypingDots } from './PageMotion'
+import { PageEnter, ThinkingIndicator } from './PageMotion'
 
 interface ChatPageProps {
   userId: string
@@ -174,7 +174,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
             transition={{ duration: 0.28, ease: truffleEase }}
           >
             <div className="bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
-              <TypingDots />
+              <ThinkingIndicator />
             </div>
           </motion.div>
         )}
