@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { chatModel, queryTransactions, routeIntent, langfuse } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory } from '@truffle/types'
+import { buildSystemPrompt } from './buildSystemPrompt'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -142,34 +143,12 @@ export async function POST(request: NextRequest) {
       .order('detected_at', { ascending: false })
       .limit(5)
 
-    const anomalyContext =
-      anomalyRows && anomalyRows.length > 0
-        ? '\nRecent anomalies detected:\n' +
-          anomalyRows
-            .map((a: Record<string, unknown>) => `- [${a.severity}] ${a.description}`)
-            .join('\n')
-        : ''
-
     // Fetch savings goals for context
     const { data: goalRows } = await db
       .from('savings_goals')
       .select('name, target_amount, saved_amount, deadline, emoji')
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
-
-    const goalsContext =
-      goalRows && goalRows.length > 0
-        ? '\nSavings goals:\n' +
-          goalRows
-            .map((g: Record<string, unknown>) => {
-              const pct = (
-                ((g.saved_amount as number) / (g.target_amount as number)) *
-                100
-              ).toFixed(0)
-              return `- ${g.emoji} ${g.name}: €${g.saved_amount} / €${g.target_amount} (${pct}%)${g.deadline ? ` by ${g.deadline}` : ''}`
-            })
-            .join('\n')
-        : ''
 
     // Langfuse trace for the full request
     const trace = langfuse.trace({
@@ -191,11 +170,6 @@ export async function POST(request: NextRequest) {
     const contextTransactions =
       relevantTransactions.length > 0 ? relevantTransactions : transactions
 
-    const context = contextTransactions
-      .slice(0, 25)
-      .map((t) => `${t.date}: ${t.description} (${t.category}) €${t.amount.toFixed(2)}`)
-      .join('\n')
-
     // Compute forecast numbers for affordability / forecast intents
     const today = new Date()
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
@@ -213,33 +187,25 @@ export async function POST(request: NextRequest) {
     const streamData = new StreamData()
     streamData.append({ type: 'speech_tone', tone: speechTone })
 
-    const systemPrompt = `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.
-
-Tone guidance for this conversation: ${toneGuidance}
-
-The user's recent transactions:
-${context}${anomalyContext}${goalsContext}
-
-Monthly summary (${snapshot.month}):
-- Income: €${snapshot.totalIncome.toFixed(2)}
-- Expenses: €${Math.abs(snapshot.totalExpenses).toFixed(2)}
-- Balance: €${snapshot.balance.toFixed(2)}
-- Projected end of month: €${projectedBalance.toFixed(2)} (${daysRemaining} days remaining, spending ~€${dailySpend.toFixed(2)}/day)
-
-Intent detected: ${intent}
-
-Response guidelines:
-- Be concise (2-4 sentences) — your response will be read aloud
-- Use actual numbers from the transaction data
-- No bullet points or lists — use natural spoken language
-- Never lecture or shame. Celebrate wins. Reassure when things are tight.
-
-Goal tool rules:
-- When a user mentions a new goal, ALWAYS ask for the target amount in plain text first. Never call proposeGoal on the same turn.
-- Only call proposeGoal when the user's current reply contains a specific amount for this goal. A number mentioned earlier for a different goal does not count — ask again.
-- Once you have both a goal name and an amount from the user in the same exchange, call proposeGoal immediately. Do not describe it in text first.
-- After a confirmed goal, respond with one warm sentence. If the user then mentions another goal, start fresh and ask for the new amount.
-- If the user declined, respond warmly and do not re-propose.`
+    const systemPrompt = buildSystemPrompt({
+      intent,
+      toneGuidance,
+      snapshot,
+      transactions: contextTransactions,
+      anomalyRows: anomalyRows as { severity: unknown; description: unknown }[] | null,
+      goalRows: goalRows as
+        | {
+            emoji: unknown
+            name: unknown
+            saved_amount: unknown
+            target_amount: unknown
+            deadline: unknown
+          }[]
+        | null,
+      projectedBalance,
+      daysRemaining,
+      dailySpend,
+    })
 
     type ClientMessage = {
       role: string
