@@ -227,6 +227,26 @@ export async function POST(request: NextRequest) {
       intent = 'goal_setting'
     }
 
+    // Same detection for transaction follow-ups — if Truffle asked for transaction
+    // details and the user replies with an amount/description, keep tools enabled.
+    const prevWasAskingForTransactionDetails =
+      !lastAssistant?.toolInvocations?.length &&
+      (prevAssistantText.includes('how much') ||
+        prevAssistantText.includes('amount') ||
+        prevAssistantText.includes('what did') ||
+        prevAssistantText.includes('which category') ||
+        prevAssistantText.includes('what category')) &&
+      (prevAssistantText.includes('transaction') ||
+        prevAssistantText.includes('expense') ||
+        prevAssistantText.includes('purchase') ||
+        prevAssistantText.includes('payment') ||
+        prevAssistantText.includes('spent') ||
+        prevAssistantText.includes('paid') ||
+        prevAssistantText.includes('log'))
+    if (prevWasAskingForTransactionDetails) {
+      intent = 'add_transaction'
+    }
+
     const proposeGoalTool = {
       proposeGoal: tool({
         description:
@@ -250,6 +270,43 @@ export async function POST(request: NextRequest) {
             .string()
             .describe(
               'One warm sentence explaining why this goal is achievable based on their finances'
+            ),
+        }),
+      }),
+    }
+
+    const proposeTransactionTool = {
+      proposeTransaction: tool({
+        description:
+          'Propose a transaction card for the user to confirm before it is logged. Call this whenever the user wants to record a specific income or expense. Use negative amounts for expenses and positive for income. Default date to today if not given.',
+        parameters: z.object({
+          description: z.string().describe('Short description, e.g. "Coffee at Costa"'),
+          amount: z
+            .number()
+            .describe(
+              'Transaction amount. Negative for expenses (e.g. -4.50), positive for income (e.g. 1500).'
+            ),
+          category: z
+            .enum([
+              'food_groceries',
+              'food_delivery',
+              'transport',
+              'housing',
+              'utilities',
+              'subscriptions',
+              'health',
+              'entertainment',
+              'shopping',
+              'income',
+              'savings',
+              'other',
+            ])
+            .describe('The most appropriate category for this transaction.'),
+          merchant: z.string().optional().describe('Optional merchant or payee name.'),
+          date: z
+            .string()
+            .describe(
+              `Transaction date in YYYY-MM-DD format. Default to today: ${new Date().toISOString().slice(0, 10)}`
             ),
         }),
       }),
@@ -282,14 +339,16 @@ export async function POST(request: NextRequest) {
       (m: ClientMessage) =>
         m.role === 'assistant' && m.toolInvocations?.some((inv) => inv.state === 'result')
     )
-    const enableTools = historyHasToolResults || (!isFollowUpAfterTool && intent === 'goal_setting')
+    const enableTools =
+      historyHasToolResults ||
+      (!isFollowUpAfterTool && (intent === 'goal_setting' || intent === 'add_transaction'))
 
     const result = streamText({
       model: chatModel,
       system: systemPrompt,
       messages: convertToCoreMessages(boundedMessages),
       maxTokens: 400,
-      tools: enableTools ? proposeGoalTool : undefined,
+      tools: enableTools ? { ...proposeGoalTool, ...proposeTransactionTool } : undefined,
       onFinish: async ({ text, usage }) => {
         try {
           generation.end({

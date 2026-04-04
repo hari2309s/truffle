@@ -8,6 +8,8 @@ import { useFinancialChat } from '@/hooks/useFinancialChat'
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { ChatBubble } from './ChatBubble'
 import { GoalProposalCard } from './GoalProposalCard'
+import { TransactionProposalCard, CATEGORY_EMOJI } from './TransactionProposalCard'
+import type { TransactionCategory } from '@truffle/types'
 import { VoiceButton } from './VoiceButton'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
@@ -126,6 +128,44 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                           <p className="text-sm text-truffle-text">
                             {args.emoji} <span className="font-medium">{args.name}</span> added to
                             your goals — find it in Insights.
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  }
+                }
+                if (inv.toolName === 'proposeTransaction') {
+                  const args = inv.args as {
+                    description: string
+                    amount: number
+                    category: TransactionCategory
+                    merchant?: string
+                    date: string
+                  }
+                  if (inv.state === 'call') {
+                    return (
+                      <TransactionProposalCard
+                        key={inv.toolCallId}
+                        proposal={args}
+                        userId={userId}
+                        onResult={(confirmed) =>
+                          chat.addToolResult({ toolCallId: inv.toolCallId, result: { confirmed } })
+                        }
+                      />
+                    )
+                  }
+                  if (inv.state === 'result' && (inv.result as { confirmed: boolean })?.confirmed) {
+                    const isExpense = args.amount < 0
+                    const formattedAmount = `${isExpense ? '-' : '+'}€${Math.abs(args.amount).toFixed(2)}`
+                    return (
+                      <div key={inv.toolCallId} className="flex justify-start mb-3">
+                        <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
+                          <p className="text-sm text-truffle-text">
+                            {CATEGORY_EMOJI[args.category] ?? '📝'}{' '}
+                            <span className="font-medium">{args.description}</span> logged —{' '}
+                            <span className={isExpense ? 'text-red-400' : 'text-green-400'}>
+                              {formattedAmount}
+                            </span>
                           </p>
                         </div>
                       </div>
