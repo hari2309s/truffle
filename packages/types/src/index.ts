@@ -101,5 +101,32 @@ export type QueryIntent =
   | 'savings_goal_check'
   | 'goal_setting'
   | 'add_transaction'
+  | 'habit_setting'
   | 'greeting'
   | 'general_advice'
+
+export interface SavingsHabit {
+  id: string
+  userId: string
+  name: string
+  amount: number
+  frequency: 'weekly' | 'monthly'
+  emoji: string
+  isActive: boolean
+  createdAt: string
+}
+
+export interface HabitContribution {
+  id: string
+  habitId: string
+  userId: string
+  period: string // 'YYYY-MM' or 'YYYY-WNN'
+  amount: number
+  loggedAt: string
+}
+
+export interface HabitWithStats extends SavingsHabit {
+  streak: number
+  currentPeriodLogged: boolean
+  totalSaved: number
+}
