@@ -474,30 +474,41 @@ export async function POST(request: NextRequest) {
       (!isFollowUpAfterTool &&
         (intent === 'goal_setting' || intent === 'add_transaction' || intent === 'habit_setting'))
 
-    // Always pass all tools when enabled. Scoping tools by intent is too fragile —
-    // intent misclassification causes the model to call a tool that is not in the
-    // request, which Groq rejects. The tool descriptions and system prompt rules
-    // are sufficient to guide the model to the correct tool for each intent.
-    const allTools = { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
+    // Scope tools strictly by intent. Groq/LLaMA does not reliably honour
+    // toolChoice: { type: 'tool', toolName } when multiple tools are available —
+    // it still picks the wrong one. Restricting the tools list is the only
+    // reliable guard. The system prompt only injects tool rules for the current
+    // intent, so the model won't try to call a tool not in the list.
+    //
+    // When history has any tool invocation, all tools must be present so Groq
+    // can resolve { role: 'tool' } history messages without schema errors.
+    const activeTools = (() => {
+      if (!enableTools) return undefined
+      if (historyHasToolResults) {
+        return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
+      }
+      if (intent === 'habit_setting') return { ...proposeHabitTool }
+      if (intent === 'goal_setting') return { ...proposeGoalTool }
+      if (intent === 'add_transaction') return { ...proposeTransactionTool }
+      return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
+    })()
 
-    // Force the relevant tool for intents that always need a card response.
-    // Without forcing, LLaMA picks proposeTransaction for habit phrases despite
-    // the description saying otherwise. goal_setting stays 'auto' so the model
-    // can ask for the target amount first before calling proposeGoal.
-    const toolChoice =
-      intent === 'add_transaction'
-        ? ({ type: 'tool', toolName: 'proposeTransaction' } as const)
-        : intent === 'habit_setting'
-          ? ({ type: 'tool', toolName: 'proposeHabit' } as const)
-          : ('auto' as const)
+    // 'required' forces a tool call without naming it — safe because the tools
+    // list is already scoped to the one correct tool for this intent.
+    // goal_setting uses 'auto' so the model can ask for the amount first.
+    const toolChoice = (() => {
+      if (!activeTools) return undefined
+      if (intent === 'add_transaction' || intent === 'habit_setting') return 'required' as const
+      return 'auto' as const
+    })()
 
     const result = streamText({
       model: chatModel,
       system: systemPrompt,
       messages: convertToCoreMessages(boundedMessages),
       maxTokens: 400,
-      tools: enableTools ? allTools : undefined,
-      toolChoice: enableTools ? toolChoice : undefined,
+      tools: activeTools,
+      toolChoice,
       onFinish: async ({ text, usage }) => {
         try {
           generation.end({
