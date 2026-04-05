@@ -55,7 +55,6 @@ function parseCSV(text: string): ParsedRow[] {
   const lines = text.trim().split('\n')
   if (lines.length < 2 || !lines[0]) return []
 
-  // Normalize header names
   const headers = lines[0].split(',').map((h) => h.trim().toLowerCase().replace(/['"]/g, ''))
 
   const dateIdx = headers.findIndex((h) => h === 'date')
@@ -97,10 +96,14 @@ interface CSVImportProps {
   onClose?: () => void
 }
 
+const PREVIEW_LIMIT = 5
+
 export function CSVImport({ userId, onClose }: CSVImportProps) {
   const queryClient = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<ParsedRow[] | null>(null)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [showAll, setShowAll] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [imported, setImported] = useState(false)
@@ -110,22 +113,53 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
     if (!file) return
     setError(null)
     setPreview(null)
+    setShowAll(false)
 
     const reader = new FileReader()
     reader.onload = (ev) => {
       const text = ev.target?.result as string
-      const rows = parseCSV(text)
+      const rows = parseCSV(text).sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
       if (rows.length === 0) {
         setError('Could not parse the CSV. Make sure it has date, description, and amount columns.')
         return
       }
       setPreview(rows)
+      setSelected(new Set(rows.map((_, i) => i)))
     }
     reader.readAsText(file)
   }
 
+  const handleReset = () => {
+    setPreview(null)
+    setSelected(new Set())
+    setShowAll(false)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const toggleRow = (i: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    if (!preview) return
+    if (selected.size === preview.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(preview.map((_, i) => i)))
+    }
+  }
+
   const handleImport = async () => {
     if (!preview) return
+    const rows = preview.filter((_, i) => selected.has(i))
+    if (rows.length === 0) return
     setIsLoading(true)
     try {
       const res = await fetch('/api/transactions', {
@@ -133,7 +167,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          transactions: preview.map((row) => ({
+          transactions: rows.map((row) => ({
             description: row.description,
             amount: row.amount,
             currency: 'EUR',
@@ -162,7 +196,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       <div className="card text-center space-y-3">
         <p className="text-2xl">✓</p>
         <p className="font-semibold text-truffle-text">
-          {preview?.length} transaction{preview?.length !== 1 ? 's' : ''} imported
+          {selected.size} transaction{selected.size !== 1 ? 's' : ''} imported
         </p>
         <button onClick={onClose} className="btn-primary w-full">
           Done
@@ -170,6 +204,11 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       </div>
     )
   }
+
+  const visibleRows = preview ? (showAll ? preview : preview.slice(0, PREVIEW_LIMIT)) : []
+  const hiddenCount = preview ? preview.length - PREVIEW_LIMIT : 0
+  const allSelected = preview ? selected.size === preview.length : false
+  const someSelected = selected.size > 0 && !allSelected
 
   return (
     <div className="card space-y-4">
@@ -196,51 +235,84 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-truffle-muted">
-            {preview.length} transaction{preview.length !== 1 ? 's' : ''} found — review before
-            importing
+            {preview.length} transaction{preview.length !== 1 ? 's' : ''} found — select which to
+            import
           </p>
-          <div className="max-h-48 overflow-y-auto space-y-1">
-            {preview.slice(0, 30).map((row, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between text-xs py-1.5 border-b border-truffle-border last:border-0"
-              >
-                <div className="flex-1 min-w-0">
-                  <span className="text-truffle-text truncate block">{row.description}</span>
-                  <span className="text-truffle-muted">
-                    {row.date} · {row.category.replace(/_/g, ' ')}
-                  </span>
-                </div>
-                <span
-                  className={`ml-3 font-medium tabular-nums ${row.amount >= 0 ? 'text-truffle-green' : 'text-truffle-red'}`}
+
+          <div className="space-y-1">
+            {/* Select all header */}
+            <div className="flex items-center gap-2 py-1.5 px-1 border-b border-truffle-border">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected
+                }}
+                onChange={toggleAll}
+                disabled={isLoading}
+                className="accent-truffle-amber cursor-pointer"
+              />
+              <span className="text-xs font-medium text-truffle-text-secondary">
+                {selected.size} of {preview.length} selected
+              </span>
+            </div>
+
+            {/* Rows */}
+            <div className="max-h-48 overflow-y-auto space-y-0">
+              {visibleRows.map((row, i) => (
+                <label
+                  key={i}
+                  className="flex items-center gap-2 py-1.5 border-b border-truffle-border last:border-0 cursor-pointer px-1 transition-all duration-150 hover:bg-truffle-surface hover:border-transparent hover:px-2 rounded-lg"
                 >
-                  {row.amount >= 0 ? '+' : ''}€{row.amount.toFixed(2)}
-                </span>
-              </div>
-            ))}
-            {preview.length > 30 && (
-              <p className="text-xs text-truffle-muted text-center pt-1">
-                +{preview.length - 30} more
-              </p>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(i)}
+                    onChange={() => toggleRow(i)}
+                    disabled={isLoading}
+                    className="accent-truffle-amber cursor-pointer flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs text-truffle-text truncate block">
+                      {row.description}
+                    </span>
+                    <span className="text-xs text-truffle-muted">
+                      {row.date} · {row.category.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <span
+                    className={`ml-2 text-xs font-medium tabular-nums flex-shrink-0 ${row.amount >= 0 ? 'text-truffle-green' : 'text-truffle-red'}`}
+                  >
+                    {row.amount >= 0 ? '+' : ''}€{row.amount.toFixed(2)}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {/* Show more / show less */}
+            {hiddenCount > 0 && (
+              <button
+                onClick={() => setShowAll((v) => !v)}
+                className="w-full text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors py-1.5 text-center"
+              >
+                {showAll ? 'Show less' : `+${hiddenCount} more`}
+              </button>
             )}
           </div>
 
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                setPreview(null)
-                if (fileRef.current) fileRef.current.value = ''
-              }}
-              className="btn-ghost flex-1 text-sm"
+              onClick={handleReset}
+              disabled={isLoading}
+              className="btn-ghost flex-1 text-sm disabled:opacity-50"
             >
-              Change file
+              Cancel
             </button>
             <button
               onClick={handleImport}
-              disabled={isLoading}
+              disabled={isLoading || selected.size === 0}
               className="btn-primary flex-1 text-sm disabled:opacity-50"
             >
-              {isLoading ? 'Importing...' : `Import ${preview.length}`}
+              {isLoading ? 'Importing…' : `Import ${selected.size}`}
             </button>
           </div>
         </div>
