@@ -23,7 +23,8 @@ export function HabitProposalCard({ proposal, userId, onResult }: HabitProposalC
   const queryClient = useQueryClient()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
 
-  const formattedAmount = `€${proposal.amount.toFixed(2)}/${proposal.frequency === 'weekly' ? 'week' : 'month'}`
+  const periodLabel = proposal.frequency === 'weekly' ? 'week' : 'month'
+  const frequencyLabel = proposal.frequency === 'weekly' ? 'Weekly' : 'Monthly'
 
   const handleYes = async () => {
     setStatus('saving')
@@ -57,34 +58,55 @@ export function HabitProposalCard({ proposal, userId, onResult }: HabitProposalC
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.36, ease: truffleEase }}
     >
-      <div className="max-w-[85%] bg-truffle-card border border-truffle-amber/40 rounded-2xl rounded-bl-sm px-4 py-4 space-y-3">
-        <div className="flex items-center gap-3">
-          <span className="text-3xl">{proposal.emoji}</span>
-          <div>
-            <p className="font-semibold text-truffle-text text-sm">{proposal.name}</p>
-            <p className="text-xs text-truffle-muted capitalize">{formattedAmount}</p>
-          </div>
+      <div className="max-w-[85%] bg-truffle-card border border-truffle-green/40 rounded-2xl rounded-bl-sm overflow-hidden">
+        {/* Header band */}
+        <div className="bg-truffle-green/10 px-4 py-3 flex items-center gap-2">
+          <span className="text-base">🔁</span>
+          <span className="text-xs font-semibold text-truffle-green uppercase tracking-wide">
+            {frequencyLabel} saving habit
+          </span>
         </div>
 
-        <p className="text-sm text-truffle-muted">{proposal.pitch}</p>
+        <div className="px-4 py-4 space-y-4">
+          {/* Habit identity */}
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">{proposal.emoji}</span>
+            <div>
+              <p className="font-semibold text-truffle-text text-sm">{proposal.name}</p>
+              <p className="text-xs text-truffle-muted">
+                You log each {periodLabel} yourself in Insights
+              </p>
+            </div>
+          </div>
 
-        <p className="text-sm font-medium text-truffle-text">Set up this saving habit?</p>
+          {/* Amount callout */}
+          <div className="bg-truffle-surface rounded-xl px-4 py-3 flex items-baseline gap-1">
+            <span className="text-2xl font-bold text-truffle-green">
+              €{proposal.amount.toFixed(0)}
+            </span>
+            <span className="text-sm text-truffle-muted">/ {periodLabel}</span>
+          </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={handleNo}
-            disabled={status === 'saving'}
-            className="flex-1 btn-ghost text-sm py-2"
-          >
-            No thanks
-          </button>
-          <button
-            onClick={handleYes}
-            disabled={status === 'saving'}
-            className="flex-1 btn-primary text-sm py-2 disabled:opacity-50"
-          >
-            {status === 'saving' ? 'Saving…' : 'Add habit'}
-          </button>
+          {/* Pitch */}
+          <p className="text-xs text-truffle-muted leading-relaxed">{proposal.pitch}</p>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={handleNo}
+              disabled={status === 'saving'}
+              className="flex-1 btn-ghost text-sm py-2"
+            >
+              Not now
+            </button>
+            <button
+              onClick={handleYes}
+              disabled={status === 'saving'}
+              className="flex-1 text-sm py-2 rounded-xl font-semibold bg-truffle-green text-truffle-bg disabled:opacity-50 transition-opacity"
+            >
+              {status === 'saving' ? 'Setting up…' : 'Start saving'}
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

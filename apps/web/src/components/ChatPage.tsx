@@ -194,13 +194,15 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                     )
                   }
                   if (inv.state === 'result' && (inv.result as { confirmed: boolean })?.confirmed) {
+                    const periodLabel = args.frequency === 'weekly' ? 'week' : 'month'
                     return (
                       <div key={inv.toolCallId} className="flex justify-start mb-3">
-                        <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
+                        <div className="max-w-[85%] bg-truffle-card border border-truffle-green/40 rounded-2xl rounded-bl-sm px-4 py-3">
                           <p className="text-sm text-truffle-text">
-                            {args.emoji} <span className="font-medium">{args.name}</span> habit set
-                            up — €{args.amount.toFixed(2)}/
-                            {args.frequency === 'weekly' ? 'week' : 'month'}.
+                            {args.emoji} <span className="font-medium">{args.name}</span>{' '}
+                            <span className="text-truffle-green">habit started</span> — €
+                            {Number(args.amount).toFixed(0)}/{periodLabel}. Log each {periodLabel}{' '}
+                            in Insights.
                           </p>
                         </div>
                       </div>
