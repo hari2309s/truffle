@@ -131,6 +131,17 @@ export const INTENT_KEYWORDS: Record<string, string[]> = {
     'i want to save regularly',
     'automatic saving',
     'savings habit',
+    // Cover "save 500 euros every month" where an amount sits between "save" and "every"
+    'euros every month',
+    'euros every week',
+    'euros per month',
+    'euros per week',
+    '€ every month',
+    '€ every week',
+    '€ per month',
+    '€ per week',
+    'save monthly',
+    'save weekly',
   ],
   greeting: [
     'hey',
