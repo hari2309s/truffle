@@ -386,11 +386,12 @@ export async function POST(request: NextRequest) {
     const proposeTransactionTool = {
       proposeTransaction: tool({
         description:
-          'Show a transaction confirmation card. MUST be called whenever the user mentions paying, spending, buying, or receiving money. NEVER skip this and respond in plain text instead — the transaction is only logged after the user confirms the card. Use negative amounts for expenses, positive for income.',
+          'Show a ONE-TIME transaction confirmation card. Use for expenses, purchases, or income the user just made or received. DO NOT use this for recurring saving habits — use proposeHabit for those. NEVER skip this and respond in plain text instead — the transaction is only logged after the user confirms the card. Use negative amounts for expenses, positive for income.',
         parameters: z.object({
           description: z.string().describe('Short description, e.g. "Coffee at Costa"'),
           amount: z
-            .number()
+            .union([z.number(), z.string().transform((s) => parseFloat(s))])
+            .refine((n) => !isNaN(n as number), { message: 'amount must be a valid number' })
             .describe(
               'Transaction amount. Negative for expenses (e.g. -4.50), positive for income (e.g. 1500).'
             ),
@@ -427,8 +428,8 @@ export async function POST(request: NextRequest) {
         parameters: z.object({
           name: z.string().describe('Short habit name, e.g. "Emergency fund"'),
           amount: z
-            .number()
-            .positive()
+            .union([z.number(), z.string().transform((s) => parseFloat(s))])
+            .refine((n) => (n as number) > 0, { message: 'amount must be positive' })
             .describe('Amount in EUR to save each period. Must be stated by the user.'),
           frequency: z
             .enum(['weekly', 'monthly'])
@@ -473,24 +474,34 @@ export async function POST(request: NextRequest) {
       (!isFollowUpAfterTool &&
         (intent === 'goal_setting' || intent === 'add_transaction' || intent === 'habit_setting'))
 
-    // For add_transaction, always force proposeTransaction regardless of isFollowUpAfterTool.
-    // Each "I just spent" is a new transaction — prior confirmed tool results in history
-    // are irrelevant. goal_setting and habit_setting stay 'auto' so the model can ask for
-    // missing details first.
-    const toolChoice =
-      intent === 'add_transaction'
-        ? ({ type: 'tool', toolName: 'proposeTransaction' } as const)
-        : 'auto'
+    // Scope tools by intent so the model cannot call the wrong tool type.
+    // When history has prior tool results, all tools must be available so Groq
+    // can resolve { role: 'tool' } messages without schema errors.
+    // For fresh intent-based turns, only expose the tool relevant to that intent.
+    const activeTools = (() => {
+      if (!enableTools) return undefined
+      if (historyHasToolResults) {
+        return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
+      }
+      if (intent === 'habit_setting') return { ...proposeHabitTool }
+      if (intent === 'goal_setting') return { ...proposeGoalTool }
+      if (intent === 'add_transaction') return { ...proposeTransactionTool }
+      return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
+    })()
+
+    // For add_transaction, require a tool call (the only available tool is proposeTransaction).
+    // Using 'required' avoids TypeScript narrowing issues with tool-name literals while
+    // still preventing the model from responding in plain text without calling the tool.
+    // habit_setting and goal_setting stay 'auto' so the model can ask for missing details.
+    const toolChoice = intent === 'add_transaction' ? ('required' as const) : ('auto' as const)
 
     const result = streamText({
       model: chatModel,
       system: systemPrompt,
       messages: convertToCoreMessages(boundedMessages),
       maxTokens: 400,
-      tools: enableTools
-        ? { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
-        : undefined,
-      toolChoice: enableTools ? toolChoice : undefined,
+      tools: activeTools,
+      toolChoice: activeTools ? toolChoice : undefined,
       onFinish: async ({ text, usage }) => {
         try {
           generation.end({
