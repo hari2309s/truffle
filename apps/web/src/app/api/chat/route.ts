@@ -460,48 +460,44 @@ export async function POST(request: NextRequest) {
           ].filter((m: ClientMessage, i: number, arr: ClientMessage[]) => arr.indexOf(m) === i)
         : normalizedMessages
 
-    // If any prior message has a completed tool invocation, the converted history will
-    // contain a { role: 'tool' } message. Groq/LLaMA rejects requests that include tool
-    // result messages in history when no tools are defined in the current request.
-    // Always pass proposeGoalTool when tool history exists so the model can resolve
-    // the context — the system prompt and isFollowUpAfterTool guard prevent re-calling it.
+    // If history contains any tool invocation — pending (state='call') or confirmed
+    // (state='result') — convertToCoreMessages emits assistant tool-call messages that
+    // Groq validates against the request's tools list. Any tool referenced in history
+    // must be present in the current request or Groq rejects with "tool not in request.tools".
     const historyHasToolResults = boundedMessages.some(
       (m: ClientMessage) =>
-        m.role === 'assistant' && m.toolInvocations?.some((inv) => inv.state === 'result')
+        m.role === 'assistant' &&
+        m.toolInvocations?.some((inv) => inv.state === 'call' || inv.state === 'result')
     )
     const enableTools =
       historyHasToolResults ||
       (!isFollowUpAfterTool &&
         (intent === 'goal_setting' || intent === 'add_transaction' || intent === 'habit_setting'))
 
-    // Scope tools by intent so the model cannot call the wrong tool type.
-    // When history has prior tool results, all tools must be available so Groq
-    // can resolve { role: 'tool' } messages without schema errors.
-    // For fresh intent-based turns, only expose the tool relevant to that intent.
-    const activeTools = (() => {
-      if (!enableTools) return undefined
-      if (historyHasToolResults) {
-        return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
-      }
-      if (intent === 'habit_setting') return { ...proposeHabitTool }
-      if (intent === 'goal_setting') return { ...proposeGoalTool }
-      if (intent === 'add_transaction') return { ...proposeTransactionTool }
-      return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
-    })()
+    // Always pass all tools when enabled. Scoping tools by intent is too fragile —
+    // intent misclassification causes the model to call a tool that is not in the
+    // request, which Groq rejects. The tool descriptions and system prompt rules
+    // are sufficient to guide the model to the correct tool for each intent.
+    const allTools = { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
 
-    // For add_transaction, require a tool call (the only available tool is proposeTransaction).
-    // Using 'required' avoids TypeScript narrowing issues with tool-name literals while
-    // still preventing the model from responding in plain text without calling the tool.
-    // habit_setting and goal_setting stay 'auto' so the model can ask for missing details.
-    const toolChoice = intent === 'add_transaction' ? ('required' as const) : ('auto' as const)
+    // Force the relevant tool for intents that always need a card response.
+    // Without forcing, LLaMA picks proposeTransaction for habit phrases despite
+    // the description saying otherwise. goal_setting stays 'auto' so the model
+    // can ask for the target amount first before calling proposeGoal.
+    const toolChoice =
+      intent === 'add_transaction'
+        ? ({ type: 'tool', toolName: 'proposeTransaction' } as const)
+        : intent === 'habit_setting'
+          ? ({ type: 'tool', toolName: 'proposeHabit' } as const)
+          : ('auto' as const)
 
     const result = streamText({
       model: chatModel,
       system: systemPrompt,
       messages: convertToCoreMessages(boundedMessages),
       maxTokens: 400,
-      tools: activeTools,
-      toolChoice: activeTools ? toolChoice : undefined,
+      tools: enableTools ? allTools : undefined,
+      toolChoice: enableTools ? toolChoice : undefined,
       onFinish: async ({ text, usage }) => {
         try {
           generation.end({
