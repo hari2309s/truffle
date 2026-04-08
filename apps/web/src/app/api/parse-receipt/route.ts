@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { chatModel } from '@truffle/ai'
+import { visionModel } from '@truffle/ai'
 import type { TransactionCategory } from '@truffle/types'
 
 export const runtime = 'nodejs'
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
         }
 
     const { text } = await generateText({
-      model: chatModel,
+      model: visionModel,
       messages: [
         {
           role: 'user',
