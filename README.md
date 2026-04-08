@@ -16,7 +16,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?logo=pwa&logoColor=white)
 
 ![LangGraph](https://img.shields.io/badge/LangGraph.js-agent_orchestration-1C3C3C?logo=langchain&logoColor=white)
-![Groq](https://img.shields.io/badge/Groq-Llama_3.3_70B_%2B_Whisper-F55036?logoColor=white)
+![Groq](https://img.shields.io/badge/Groq-Llama_3.3_70B_%2B_Llama_4_Scout_%2B_Whisper-F55036?logoColor=white)
 ![Gemini](https://img.shields.io/badge/Gemini-text--embedding--004-4285F4?logo=google&logoColor=white)
 ![Web Speech API](https://img.shields.io/badge/Web_Speech_API-TTS-orange?logo=googlechrome&logoColor=white)
 
@@ -37,7 +37,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 - 🔍 **Anomaly detection** — spots unusual charges automatically
 - 📈 **Spending forecast** — projects your end-of-month balance with daily spend rate
 - 😌 **Emotionally aware** — calm, warm tone always. Never a lecture
-- 🧾 **Receipt & statement scanning** — photograph a receipt or upload a PDF bank statement; Groq extracts all transactions
+- 🧾 **Receipt & statement scanning** — photograph a receipt or upload a PDF bank statement; extracted by Groq Llama 4 Scout (vision-capable)
 - 📂 **CSV import** — drag-and-drop with column auto-detection and category guessing
 - 🔄 **Subscription tracker** — automatically detects recurring charges from your history
 - 🎯 **Savings goals** — set goals manually or let Truffle propose one mid-conversation; confirm with one tap, track progress and deposits in Insights
@@ -70,7 +70,8 @@ Your recent transactions are passed directly as context to the model on every qu
 | Styling | Tailwind CSS |
 | PWA | `next-pwa` + Web Speech API + MediaRecorder API |
 | AI Orchestration | LangGraph.js |
-| LLM | Vercel AI SDK v4 + Groq Llama-3.3-70b-versatile |
+| LLM (chat / reasoning) | Vercel AI SDK v4 + Groq `llama-3.3-70b-versatile` |
+| LLM (vision / receipt parsing) | Groq `meta-llama/llama-4-scout-17b-16e-instruct` |
 | Embeddings | Gemini text-embedding-004 (Google AI Studio) |
 | Voice → Text | Groq API (Whisper large-v3) |
 | Text → Voice | Web Speech API (browser native) |
