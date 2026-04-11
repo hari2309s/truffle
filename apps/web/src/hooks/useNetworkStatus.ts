@@ -4,9 +4,16 @@ import { useEffect, useState, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { flushQueuedActions, offlineDb } from '@/lib/offline-db'
 
-export function useNetworkStatus() {
-  // Always start as true (optimistic) to match the SSR-rendered HTML and
-  // avoid a hydration mismatch. The real value is synced in the useEffect below.
+/**
+ * Tracks online/offline state, pending queued-action count, and sync status.
+ * Accepts an optional onOnline callback fired in addition to the default
+ * queue flush — use this when a consumer needs its own reconnect logic
+ * (e.g. useFinancialChat flushing pending chat messages).
+ *
+ * Always initialises isOnline to true to match SSR output and avoid a
+ * hydration mismatch. The real value is synced after mount.
+ */
+export function useNetworkStatus(onOnline?: () => void) {
   const [isOnline, setIsOnline] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
@@ -25,7 +32,6 @@ export function useNetworkStatus() {
   }, [queryClient])
 
   useEffect(() => {
-    // Sync the real navigator.onLine value after mount (avoids SSR mismatch)
     setIsOnline(navigator.onLine)
   }, [])
 
@@ -33,6 +39,7 @@ export function useNetworkStatus() {
     const handleOnline = () => {
       setIsOnline(true)
       sync()
+      onOnline?.()
     }
     const handleOffline = () => setIsOnline(false)
 
@@ -42,7 +49,7 @@ export function useNetworkStatus() {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [sync])
+  }, [sync, onOnline])
 
   useEffect(() => {
     const refresh = () =>
