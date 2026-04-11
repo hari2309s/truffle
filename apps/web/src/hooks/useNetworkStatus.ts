@@ -5,9 +5,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { flushQueuedActions, offlineDb } from '@/lib/offline-db'
 
 export function useNetworkStatus() {
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  )
+  // Always start as true (optimistic) to match the SSR-rendered HTML and
+  // avoid a hydration mismatch. The real value is synced in the useEffect below.
+  const [isOnline, setIsOnline] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const queryClient = useQueryClient()
@@ -23,6 +23,11 @@ export function useNetworkStatus() {
       setIsSyncing(false)
     }
   }, [queryClient])
+
+  useEffect(() => {
+    // Sync the real navigator.onLine value after mount (avoids SSR mismatch)
+    setIsOnline(navigator.onLine)
+  }, [])
 
   useEffect(() => {
     const handleOnline = () => {
