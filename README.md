@@ -13,7 +13,9 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)
-![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?logo=pwa&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-offline--ready-5A0FC8?logo=pwa&logoColor=white)
+![Workbox](https://img.shields.io/badge/Workbox-service_worker-FF6D00?logo=googlechrome&logoColor=white)
+![Dexie](https://img.shields.io/badge/Dexie.js-IndexedDB-0769AD?logoColor=white)
 
 ![LangGraph](https://img.shields.io/badge/LangGraph.js-agent_orchestration-1C3C3C?logo=langchain&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-Llama_3.3_70B_%2B_Llama_4_Scout_%2B_Whisper-F55036?logoColor=white)
@@ -45,7 +47,9 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 - 🔁 **Saving habits** — set up a recurring weekly or monthly saving habit in chat ("save €50 every week"); Truffle tracks your streak, logs contributions, and reminds you when a period is due
 - 🔊 **Weekly audio summary** — spoken recap of your week, once per week
 - 💱 **Multi-currency** — EUR, GBP, USD converted to EUR for consistent totals
-- 📱 **PWA** — installs on iOS and Android, works offline
+- 📱 **PWA** — installs on iOS and Android, fully offline-capable
+- 📡 **Offline-first** — browse transactions, goals, and insights with no connection; writes are queued via Background Sync and flushed automatically on reconnect
+- 💬 **Offline chat** — Truffle responds from cached data when offline; queued messages are sent to the real AI the moment the connection returns, annotated "answered just now"
 
 ---
 
@@ -68,16 +72,18 @@ Your recent transactions are passed directly as context to the model on every qu
 |---|---|
 | Framework | Next.js 14 (App Router) + TypeScript |
 | Styling | Tailwind CSS |
-| PWA | `next-pwa` + Web Speech API + MediaRecorder API |
+| PWA / Service Worker | `next-pwa` v5 + Workbox (asset caching, runtime caching, offline fallback) |
+| Offline storage | Dexie.js v3 (typed IndexedDB wrapper) |
+| Offline sync | Background Sync API + client-side online-event fallback |
+| Voice input | MediaRecorder API → Groq Whisper large-v3 |
+| Text → Voice | Web Speech API (browser native) |
 | AI Orchestration | LangGraph.js |
 | LLM (chat / reasoning) | Vercel AI SDK v4 + Groq `llama-3.3-70b-versatile` |
 | LLM (vision / receipt parsing) | Groq `meta-llama/llama-4-scout-17b-16e-instruct` |
 | Embeddings | Gemini text-embedding-004 (Google AI Studio) |
-| Voice → Text | Groq API (Whisper large-v3) |
-| Text → Voice | Web Speech API (browser native) |
 | Database | Supabase (PostgreSQL + Auth + Storage) |
 | Observability | Langfuse (traces, generations, token usage) |
-| State | Zustand + TanStack Query |
+| State | TanStack Query (`networkMode: always`) |
 | Monorepo | pnpm workspaces + Turborepo |
 | Deployment | Vercel |
 
@@ -176,6 +182,30 @@ Synthesizer           ← formats a calm, spoken response
     ↓
 Spoken + displayed answer
 ```
+
+---
+
+## Offline capability
+
+Truffle is fully usable without a network connection.
+
+| Feature | Offline behaviour |
+|---|---|
+| Transaction list | Served from IndexedDB cache |
+| Add transaction | Saved locally, synced on reconnect |
+| Savings goals | Read + write (optimistic UI), synced on reconnect |
+| Saving habits | Read + log contribution, synced on reconnect |
+| Insights / forecast | Computed from cached transactions |
+| Anomalies | Last-fetched results served from cache |
+| Chat | Warm contextual reply from cached data; real answer delivered on reconnect |
+
+**How sync works:**
+1. Any write while offline is queued as a typed action in IndexedDB (`queuedActions` table).
+2. On reconnect the browser fires the `online` event (and optionally the Background Sync API fires a `truffle-sync-queue` event via the service worker).
+3. Each queued action is replayed against the API in order, then removed from the queue.
+4. TanStack Query caches are invalidated so the UI reflects the synced state.
+
+For the full technical reference see [docs/offline-capability.md](docs/offline-capability.md).
 
 ---
 
