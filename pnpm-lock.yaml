@@ -53,6 +53,9 @@ importers:
       ai:
         specifier: ^4.0.0
         version: 4.3.19(react@18.3.1)(zod@3.25.76)
+      dexie:
+        specifier: ^3.2.7
+        version: 3.2.7
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -81,6 +84,9 @@ importers:
         specifier: ^4.5.0
         version: 4.5.7(@types/react@18.3.28)(react@18.3.1)
     devDependencies:
+      '@babel/core':
+        specifier: ^7.29.0
+        version: 7.29.0
       '@types/node':
         specifier: ^20
         version: 20.19.37
@@ -93,6 +99,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.0
         version: 10.4.27(postcss@8.5.8)
+      babel-loader:
+        specifier: ^10.1.1
+        version: 10.1.1(@babel/core@7.29.0)(webpack@5.105.4)
       eslint-config-next:
         specifier: ^14.2.35
         version: 14.2.35(eslint@8.57.1)(typescript@5.9.3)
@@ -1443,6 +1452,19 @@ packages:
     resolution: {integrity: sha512-qIj0G9wZbMGNLjLmg1PT6v2mE9AH2zlnADJD/2tC6E00hgmhUOfEB6greHPAfLRSufHqROIUTkw6E+M3lH0PTQ==}
     engines: {node: '>= 0.4'}
 
+  babel-loader@10.1.1:
+    resolution: {integrity: sha512-JwKSzk2kjIe7mgPK+/lyZ2QAaJcpahNAdM+hgR2HI8D0OJVkdj8Rl6J3kaLYki9pwF7P2iWnD8qVv80Lq1ABtg==}
+    engines: {node: ^18.20.0 || ^20.10.0 || >=22.0.0}
+    peerDependencies:
+      '@babel/core': ^7.12.0 || ^8.0.0-beta.1
+      '@rspack/core': ^1.0.0 || ^2.0.0-0
+      webpack: '>=5.61.0'
+    peerDependenciesMeta:
+      '@rspack/core':
+        optional: true
+      webpack:
+        optional: true
+
   babel-loader@8.4.1:
     resolution: {integrity: sha512-nXzRChX+Z1GoE6yWavBQg6jDslyFF3SDjl2paADuoQtQW10JqShJt62R6eJQ5m/pjJFDT8xgKIWSP85OY8eXeA==}
     engines: {node: '>= 8.9'}
@@ -1688,6 +1710,10 @@ packages:
   dequal@2.0.3:
     resolution: {integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==}
     engines: {node: '>=6'}
+
+  dexie@3.2.7:
+    resolution: {integrity: sha512-2a+BXvVhY5op+smDRLxeBAivE7YcYaneXJ1la3HOkUfX9zKkE/AJ8CNgjiXbtXepFyFmJNGSbmjOwqbT749r/w==}
+    engines: {node: '>=6.0'}
 
   didyoumean@1.2.2:
     resolution: {integrity: sha512-gxtyfqMg7GKyhQmb056K7M3xszy/myH8w+B4RT+QXBQsvAOdc3XymqDDPHx1BgPgsdAA5SIifona89YtRATDzw==}
@@ -5037,6 +5063,13 @@ snapshots:
 
   axobject-query@4.1.0: {}
 
+  babel-loader@10.1.1(@babel/core@7.29.0)(webpack@5.105.4):
+    dependencies:
+      '@babel/core': 7.29.0
+      find-up: 5.0.0
+    optionalDependencies:
+      webpack: 5.105.4
+
   babel-loader@8.4.1(@babel/core@7.29.0)(webpack@5.105.4):
     dependencies:
       '@babel/core': 7.29.0
@@ -5271,6 +5304,8 @@ snapshots:
   delayed-stream@1.0.0: {}
 
   dequal@2.0.3: {}
+
+  dexie@3.2.7: {}
 
   didyoumean@1.2.2: {}
 
