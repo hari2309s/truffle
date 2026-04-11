@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -19,29 +19,41 @@ interface HabitProposalCardProps {
   onResult: (confirmed: boolean) => void
 }
 
-export function HabitProposalCard({ proposal, userId, onResult }: HabitProposalCardProps) {
+export const HabitProposalCard = memo(function HabitProposalCard({
+  proposal,
+  userId,
+  onResult,
+}: HabitProposalCardProps) {
   const queryClient = useQueryClient()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
+  const [error, setError] = useState<string | null>(null)
 
   const periodLabel = proposal.frequency === 'weekly' ? 'week' : 'month'
   const frequencyLabel = proposal.frequency === 'weekly' ? 'Weekly' : 'Monthly'
 
   const handleYes = async () => {
     setStatus('saving')
-    await fetch('/api/habits', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId,
-        name: proposal.name,
-        amount: proposal.amount,
-        frequency: proposal.frequency,
-        emoji: proposal.emoji,
-      }),
-    })
-    await queryClient.invalidateQueries({ queryKey: ['habits', userId] })
-    setStatus('done')
-    onResult(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/habits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          name: proposal.name,
+          amount: proposal.amount,
+          frequency: proposal.frequency,
+          emoji: proposal.emoji,
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to create habit')
+      await queryClient.invalidateQueries({ queryKey: ['habits', userId] })
+      setStatus('done')
+      onResult(true)
+    } catch {
+      setError('Something went wrong — please try again.')
+      setStatus('pending')
+    }
   }
 
   const handleNo = () => {
@@ -90,6 +102,8 @@ export function HabitProposalCard({ proposal, userId, onResult }: HabitProposalC
           {/* Pitch */}
           <p className="text-xs text-truffle-muted leading-relaxed">{proposal.pitch}</p>
 
+          {error && <p className="text-xs text-truffle-red">{error}</p>}
+
           {/* Actions */}
           <div className="flex gap-2 pt-1">
             <button
@@ -111,4 +125,4 @@ export function HabitProposalCard({ proposal, userId, onResult }: HabitProposalC
       </div>
     </motion.div>
   )
-}
+})

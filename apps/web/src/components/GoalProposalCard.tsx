@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -20,33 +20,44 @@ interface GoalProposalCardProps {
   onResult: (confirmed: boolean) => void
 }
 
-export function GoalProposalCard({ proposal, userId, onResult }: GoalProposalCardProps) {
+export const GoalProposalCard = memo(function GoalProposalCard({
+  proposal,
+  userId,
+  onResult,
+}: GoalProposalCardProps) {
   const queryClient = useQueryClient()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
+  const [error, setError] = useState<string | null>(null)
 
   const handleYes = async () => {
     setStatus('saving')
-    await fetch('/api/goals', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId,
-        name: proposal.name,
-        targetAmount: proposal.targetAmount,
-        savedAmount: 0,
-        deadline: proposal.deadline || null,
-        emoji: proposal.emoji,
-      }),
-    })
-    await queryClient.refetchQueries({ queryKey: ['goals', userId] })
-    // Persist confirmation so it survives a page reload
-    await supabase.from('chat_messages').insert({
-      user_id: userId,
-      role: 'assistant',
-      content: `${proposal.emoji} ${proposal.name} added to your goals — find it in Insights.`,
-    })
-    setStatus('done')
-    onResult(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          name: proposal.name,
+          targetAmount: proposal.targetAmount,
+          savedAmount: 0,
+          deadline: proposal.deadline || null,
+          emoji: proposal.emoji,
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to save goal')
+      await queryClient.refetchQueries({ queryKey: ['goals', userId] })
+      await supabase.from('chat_messages').insert({
+        user_id: userId,
+        role: 'assistant',
+        content: `${proposal.emoji} ${proposal.name} added to your goals — find it in Insights.`,
+      })
+      setStatus('done')
+      onResult(true)
+    } catch {
+      setError('Something went wrong — please try again.')
+      setStatus('pending')
+    }
   }
 
   const handleNo = () => {
@@ -103,6 +114,8 @@ export function GoalProposalCard({ proposal, userId, onResult }: GoalProposalCar
 
         <p className="text-sm font-medium text-truffle-text">Add this to your goals?</p>
 
+        {error && <p className="text-xs text-truffle-red">{error}</p>}
+
         <div className="flex gap-2">
           <button
             onClick={handleNo}
@@ -122,4 +135,4 @@ export function GoalProposalCard({ proposal, userId, onResult }: GoalProposalCar
       </div>
     </motion.div>
   )
-}
+})

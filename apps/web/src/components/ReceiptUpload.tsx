@@ -43,6 +43,12 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
       return
     }
 
+    const MAX_SIZE_MB = 10
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      setError(`File is too large — maximum size is ${MAX_SIZE_MB} MB.`)
+      return
+    }
+
     if (preview?.objectUrl) URL.revokeObjectURL(preview.objectUrl)
     const objectUrl = isImage ? URL.createObjectURL(file) : ''
     setPreview({ file, objectUrl })

@@ -13,17 +13,25 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState<'EUR' | 'GBP' | 'USD'>('EUR')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
 
     setIsLoading(true)
-    await supabase.auth.updateUser({
-      data: { name: name.trim(), currency },
-    })
-    setIsLoading(false)
-    onComplete()
+    setError(null)
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { name: name.trim(), currency },
+      })
+      if (error) throw error
+      onComplete()
+    } catch {
+      setError('Failed to save your details — please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -79,6 +87,8 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
               ))}
             </div>
           </div>
+
+          {error && <p className="text-sm text-truffle-red text-center">{error}</p>}
 
           <button
             type="submit"

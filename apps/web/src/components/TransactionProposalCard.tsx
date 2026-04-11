@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -24,13 +24,14 @@ interface TransactionProposalCardProps {
   onResult: (confirmed: boolean) => void
 }
 
-export function TransactionProposalCard({
+export const TransactionProposalCard = memo(function TransactionProposalCard({
   proposal,
   userId,
   onResult,
 }: TransactionProposalCardProps) {
   const queryClient = useQueryClient()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
+  const [error, setError] = useState<string | null>(null)
 
   const isExpense = proposal.amount < 0
   const formattedAmount = `${isExpense ? '-' : '+'}€${Math.abs(proposal.amount).toFixed(2)}`
@@ -45,33 +46,40 @@ export function TransactionProposalCard({
 
   const handleYes = async () => {
     setStatus('saving')
-    await fetch('/api/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId,
-        transactions: [
-          {
-            userId,
-            amount: proposal.amount,
-            currency: 'EUR',
-            description: proposal.description,
-            category: proposal.category,
-            merchant: proposal.merchant ?? null,
-            date: proposal.date,
-            isRecurring: false,
-          },
-        ],
-      }),
-    })
-    await queryClient.refetchQueries({ queryKey: ['transactions', userId] })
-    await supabase.from('chat_messages').insert({
-      user_id: userId,
-      role: 'assistant',
-      content: `${emoji} ${proposal.description} logged — ${formattedAmount}`,
-    })
-    setStatus('done')
-    onResult(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          transactions: [
+            {
+              userId,
+              amount: proposal.amount,
+              currency: 'EUR',
+              description: proposal.description,
+              category: proposal.category,
+              merchant: proposal.merchant ?? null,
+              date: proposal.date,
+              isRecurring: false,
+            },
+          ],
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to log transaction')
+      await queryClient.refetchQueries({ queryKey: ['transactions', userId] })
+      await supabase.from('chat_messages').insert({
+        user_id: userId,
+        role: 'assistant',
+        content: `${emoji} ${proposal.description} logged — ${formattedAmount}`,
+      })
+      setStatus('done')
+      onResult(true)
+    } catch {
+      setError('Something went wrong — please try again.')
+      setStatus('pending')
+    }
   }
 
   const handleNo = () => {
@@ -105,6 +113,8 @@ export function TransactionProposalCard({
 
         <p className="text-sm font-medium text-truffle-text">Log this transaction?</p>
 
+        {error && <p className="text-xs text-truffle-red">{error}</p>}
+
         <div className="flex gap-2">
           <button
             onClick={handleNo}
@@ -124,4 +134,4 @@ export function TransactionProposalCard({
       </div>
     </motion.div>
   )
-}
+})
