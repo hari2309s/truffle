@@ -4,12 +4,18 @@ import { useEffect, useState } from 'react'
 
 /**
  * Tracks navigator.onLine state and fires an optional callback when the
- * browser comes back online. SSR-safe: defaults to `true` on the server.
+ * browser comes back online. Always initialises to `true` (optimistic) so
+ * the SSR-rendered HTML and the first client render match, preventing a
+ * hydration mismatch. The real value is synced after mount.
  */
 export function useIsOnline(onOnline?: () => void): boolean {
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  )
+  // Always start as true to match SSR and avoid hydration mismatch.
+  // The real value is synced after mount via the effect below.
+  const [isOnline, setIsOnline] = useState(true)
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine)
+  }, [])
 
   useEffect(() => {
     const handleOnline = () => {
