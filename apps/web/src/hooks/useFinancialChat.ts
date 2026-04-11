@@ -7,7 +7,7 @@ import { useTextToSpeech, type SpeechTone } from './useTextToSpeech'
 import { supabase } from '@/lib/supabase'
 import { offlineDb } from '@/lib/offline-db'
 import { generateOfflineFallback } from '@/lib/offline-chat'
-import { useIsOnline } from './useIsOnline'
+import { useNetworkStatus } from './useNetworkStatus'
 
 type StreamAnnotation = { type: string; tone?: SpeechTone }
 
@@ -83,7 +83,7 @@ export function useFinancialChat(userId: string, initialMessages: Message[]) {
     isFlushingRef.current = false
   }, [userId, chat])
 
-  const isOnline = useIsOnline(flushPendingMessages)
+  const { isOnline } = useNetworkStatus(flushPendingMessages)
 
   // ----- Offline message handling -----
 
