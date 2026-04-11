@@ -25,3 +25,13 @@ pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# next-pwa generated service worker artifacts (regenerated at build time)
+apps/web/public/sw.js
+apps/web/public/sw.js.map
+apps/web/public/workbox-*.js
+apps/web/public/workbox-*.js.map
+apps/web/public/worker-*.js
+apps/web/public/worker-*.js.map
+apps/web/public/fallback-*.js
+apps/web/public/fallback-*.js.map
