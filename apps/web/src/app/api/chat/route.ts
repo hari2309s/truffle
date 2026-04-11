@@ -12,6 +12,7 @@ import {
 } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory } from '@truffle/types'
+import { getCurrentPeriod, computeStreak } from '@/lib/habits'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -132,56 +133,10 @@ export async function POST(request: NextRequest) {
 
     const habitRows = (rawHabitRows ?? []).map((h: Record<string, unknown>) => {
       const freq = h.frequency as 'weekly' | 'monthly'
-      const today = new Date()
-      const currentPeriod =
-        freq === 'monthly'
-          ? today.toISOString().slice(0, 7)
-          : (() => {
-              const d = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()))
-              const dow = d.getUTCDay() || 7
-              d.setUTCDate(d.getUTCDate() + 4 - dow)
-              const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-              const wk = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
-              return `${d.getUTCFullYear()}-W${String(wk).padStart(2, '0')}`
-            })()
       const periods = habitPeriodMap[h.id as string] ?? []
+      const currentPeriod = getCurrentPeriod(freq)
       const currentPeriodLogged = periods.includes(currentPeriod)
-      // Simple streak: count consecutive periods backwards
-      let streak = 0
-      const sortedPeriods = [...periods].sort()
-      let check: string = currentPeriodLogged
-        ? currentPeriod
-        : (sortedPeriods[sortedPeriods.length - 1] ?? '')
-      const periodSet = new Set(periods)
-      while (check && periodSet.has(check)) {
-        streak++
-        // Move to previous period
-        if (freq === 'monthly') {
-          const parts = check.split('-')
-          const y = Number(parts[0])
-          const m = Number(parts[1])
-          const prev = new Date(y, m - 2, 1)
-          check = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`
-        } else {
-          // subtract 7 days from a Monday of that week
-          const wparts = check.split('-W')
-          const yw = Number(wparts[0])
-          const ww = Number(wparts[1])
-          const jan4 = new Date(Date.UTC(yw, 0, 4))
-          const dowJ = jan4.getUTCDay() || 7
-          const mon1 = new Date(jan4.getTime() - (dowJ - 1) * 86400000)
-          const monW = new Date(mon1.getTime() + (ww - 1) * 7 * 86400000)
-          const prevMon = new Date(monW.getTime() - 7 * 86400000)
-          const pd = new Date(
-            Date.UTC(prevMon.getUTCFullYear(), prevMon.getUTCMonth(), prevMon.getUTCDate())
-          )
-          const pdow = pd.getUTCDay() || 7
-          pd.setUTCDate(pd.getUTCDate() + 4 - pdow)
-          const pYearStart = new Date(Date.UTC(pd.getUTCFullYear(), 0, 1))
-          const pwk = Math.ceil(((pd.getTime() - pYearStart.getTime()) / 86400000 + 1) / 7)
-          check = `${pd.getUTCFullYear()}-W${String(pwk).padStart(2, '0')}`
-        }
-      }
+      const streak = computeStreak(freq, periods)
       return {
         emoji: h.emoji,
         name: h.name,
