@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { Transaction, TransactionCategory } from '@truffle/types'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
-import { useIsOnline } from '@/hooks/useIsOnline'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 
 const CATEGORIES: { value: TransactionCategory; label: string }[] = [
   { value: 'food_groceries', label: '🛒 Groceries' },
@@ -30,7 +30,7 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
   const queryClient = useQueryClient()
   const [isLoading, setIsLoading] = useState(false)
   const [queued, setQueued] = useState(false)
-  const isOnline = useIsOnline()
+  const { isOnline } = useNetworkStatus()
   const [form, setForm] = useState({
     description: '',
     amount: '',
