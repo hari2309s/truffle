@@ -7,6 +7,7 @@ import { getCurrentPeriod } from '@/lib/habits'
 import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
 import type { HabitWithStats } from '@truffle/types'
+import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 
 interface SavingsHabitsProps {
   userId: string
@@ -19,11 +20,18 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
   const { data, isLoading } = useQuery({
     queryKey: ['habits', userId],
     queryFn: async () => {
-      const res = await fetch(`/api/habits?userId=${userId}`)
-      if (!res.ok) throw new Error('Failed to fetch habits')
-      const json = await res.json()
-      return json.habits as HabitWithStats[]
+      try {
+        const res = await fetch(`/api/habits?userId=${userId}`)
+        if (!res.ok) throw new Error('Failed to fetch habits')
+        const json = await res.json()
+        const habits = json.habits as HabitWithStats[]
+        await offlineDb.habitsWithStats.bulkPut(habits)
+        return habits
+      } catch {
+        return offlineDb.habitsWithStats.where('userId').equals(userId).toArray()
+      }
     },
+    networkMode: 'always',
   })
 
   const habits = data ?? []
@@ -32,15 +40,28 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
     setLoggingId(habit.id)
     try {
       const period = getCurrentPeriod(habit.frequency)
+      const payload = { userId, habitId: habit.id, period, amount: habit.amount }
+
+      if (!navigator.onLine) {
+        // Optimistically mark as logged for this period in the cached record
+        await offlineDb.habitsWithStats.update(habit.id, {
+          currentPeriodLogged: true,
+          totalSaved: habit.totalSaved + habit.amount,
+        })
+        await offlineDb.queuedActions.add({
+          type: 'log_habit_contribution',
+          payload,
+          createdAt: Date.now(),
+        })
+        await registerBackgroundSync()
+        await queryClient.invalidateQueries({ queryKey: ['habits', userId] })
+        return
+      }
+
       await fetch('/api/habits', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          habitId: habit.id,
-          period,
-          amount: habit.amount,
-        }),
+        body: JSON.stringify(payload),
       })
       await queryClient.invalidateQueries({ queryKey: ['habits', userId] })
     } finally {

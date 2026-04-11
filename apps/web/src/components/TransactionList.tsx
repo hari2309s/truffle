@@ -5,52 +5,37 @@ import { useQuery } from '@tanstack/react-query'
 import type { Transaction } from '@truffle/types'
 import { staggerItemVariants, staggerListVariants } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
+import { offlineDb, mapTransactionRow } from '@/lib/offline-db'
+import { CATEGORY_EMOJI, formatCategory } from '@/lib/categories'
 
 interface TransactionListProps {
   userId: string
-}
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  food_groceries: '🛒',
-  food_delivery: '🍕',
-  transport: '🚇',
-  housing: '🏠',
-  utilities: '💡',
-  subscriptions: '📱',
-  health: '💊',
-  entertainment: '🎬',
-  shopping: '🛍️',
-  income: '💰',
-  savings: '🏦',
-  other: '📦',
-}
-
-function formatCategory(cat: string): string {
-  return cat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 export function TransactionList({ userId }: TransactionListProps) {
   const { data, isLoading } = useQuery({
     queryKey: ['transactions', userId],
     queryFn: async () => {
-      const res = await fetch(`/api/transactions?userId=${userId}`)
-      if (!res.ok) throw new Error('Failed to fetch transactions')
-      return res.json()
+      try {
+        const res = await fetch(`/api/transactions?userId=${userId}`)
+        if (!res.ok) throw new Error('Failed to fetch transactions')
+        const json = await res.json()
+        const transactions: Transaction[] = (json.transactions ?? []).map(mapTransactionRow)
+        // Persist to IndexedDB for offline reads
+        await offlineDb.transactions.bulkPut(transactions)
+        return { transactions, fromCache: false }
+      } catch {
+        // Network failed — serve from IndexedDB
+        const cached = await offlineDb.transactions.where('userId').equals(userId).toArray()
+        cached.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        return { transactions: cached, fromCache: true }
+      }
     },
+    networkMode: 'always',
   })
 
-  const transactions: Transaction[] =
-    data?.transactions?.map((row: Record<string, unknown>) => ({
-      id: row.id,
-      userId: row.user_id,
-      amount: Number(row.amount),
-      currency: row.currency,
-      description: row.description,
-      category: row.category,
-      merchant: row.merchant,
-      date: row.date,
-      isRecurring: row.is_recurring,
-    })) ?? []
+  const transactions = data?.transactions ?? []
+  const fromCache = data?.fromCache ?? false
 
   if (isLoading) {
     return (
@@ -91,6 +76,9 @@ export function TransactionList({ userId }: TransactionListProps) {
       animate="show"
       variants={staggerListVariants}
     >
+      {fromCache && (
+        <p className="text-xs text-truffle-muted text-center pb-1">Showing cached data</p>
+      )}
       {transactions.map((tx) => (
         <motion.div
           key={tx.id}

@@ -6,21 +6,9 @@ import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { TransactionCategory } from '@truffle/types'
+import { CATEGORY_EMOJI } from '@/lib/categories'
 
-export const CATEGORY_EMOJI: Record<TransactionCategory, string> = {
-  food_groceries: '🛒',
-  food_delivery: '🍕',
-  transport: '🚗',
-  housing: '🏠',
-  utilities: '💡',
-  subscriptions: '📺',
-  health: '💊',
-  entertainment: '🎬',
-  shopping: '🛍️',
-  income: '💰',
-  savings: '🏦',
-  other: '📝',
-}
+export { CATEGORY_EMOJI }
 
 export interface TransactionProposal {
   description: string

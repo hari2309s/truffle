@@ -3,9 +3,12 @@
 import { motion } from 'framer-motion'
 import { useCallback, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import type { Anomaly } from '@truffle/types'
+import type { Anomaly, Transaction } from '@truffle/types'
+import { offlineDb, mapTransactionRow } from '@/lib/offline-db'
 import { detectSubscriptions } from '@/lib/subscriptions'
 import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
+import { computeForecast } from '@/lib/forecast'
+import type { Forecast } from '@/lib/forecast'
 import { InsightsAccordionSection } from './InsightsAccordionSection'
 import { PageEnter, SkeletonPulse } from './PageMotion'
 import { SavingsGoals } from './SavingsGoals'
@@ -17,51 +20,6 @@ interface InsightsPageProps {
   userId: string
 }
 
-interface Forecast {
-  currentBalance: number
-  projectedEndOfMonth: number
-  confidence: 'high' | 'medium' | 'low'
-  assumptions: string[]
-}
-
-function computeForecast(
-  transactions: { amount: number | string; date: string }[]
-): Forecast | null {
-  const currentMonth = new Date().toISOString().slice(0, 7)
-  const txs = transactions.filter((t) => String(t.date).startsWith(currentMonth))
-  if (txs.length === 0) return null
-
-  const totalIncome = txs
-    .filter((t) => Number(t.amount) > 0)
-    .reduce((s, t) => s + Number(t.amount), 0)
-  const totalExpenses = txs
-    .filter((t) => Number(t.amount) < 0)
-    .reduce((s, t) => s + Number(t.amount), 0)
-  const balance = txs.reduce((s, t) => s + Number(t.amount), 0)
-
-  const today = new Date()
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-  const daysElapsed = today.getDate()
-  const daysRemaining = daysInMonth - daysElapsed
-  const dailySpendRate = daysElapsed > 0 && totalExpenses < 0 ? totalExpenses / daysElapsed : 0
-  const projectedEndOfMonth = balance + dailySpendRate * daysRemaining
-
-  const monthName = today.toLocaleString('default', { month: 'long' })
-  const count = txs.length
-
-  return {
-    currentBalance: balance,
-    projectedEndOfMonth,
-    confidence: count >= 10 ? 'high' : count >= 3 ? 'medium' : 'low',
-    assumptions: [
-      `Based on ${count} transaction${count !== 1 ? 's' : ''} in ${monthName}`,
-      `Daily spend rate: €${Math.abs(dailySpendRate).toFixed(2)}`,
-      `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`,
-      `Income this month: €${totalIncome.toFixed(2)}`,
-    ],
-  }
-}
-
 export function InsightsPage({ userId }: InsightsPageProps) {
   const mainRef = useRef<HTMLElement>(null)
   const [addGoalOpen, setAddGoalOpen] = useState(false)
@@ -70,25 +28,42 @@ export function InsightsPage({ userId }: InsightsPageProps) {
     setAddGoalOpen(false)
   }, [])
 
-  // Shared transactions cache — same key as Dashboard/FinancialBrief
+  // Shared transactions cache — same key as Dashboard/TransactionList (has IndexedDB fallback)
   const { data: txData, isLoading: txLoading } = useQuery({
     queryKey: ['transactions', userId],
     queryFn: async () => {
-      const res = await fetch(`/api/transactions?userId=${userId}`)
-      if (!res.ok) throw new Error('Failed to fetch transactions')
-      return res.json()
+      try {
+        const res = await fetch(`/api/transactions?userId=${userId}`)
+        if (!res.ok) throw new Error('Failed to fetch transactions')
+        const json = await res.json()
+        const transactions: Transaction[] = (json.transactions ?? []).map(mapTransactionRow)
+        await offlineDb.transactions.bulkPut(transactions)
+        return { transactions }
+      } catch {
+        const cached = await offlineDb.transactions.where('userId').equals(userId).toArray()
+        return { transactions: cached }
+      }
     },
+    networkMode: 'always',
   })
 
-  // Anomalies are server-computed — separate lightweight query
+  // Anomalies are server-computed — cache in IndexedDB for offline reads
   const { data: anomalyData, isLoading: anomalyLoading } = useQuery({
     queryKey: ['anomalies', userId],
     queryFn: async () => {
-      const res = await fetch(`/api/insights?userId=${userId}`)
-      if (!res.ok) throw new Error('Failed to fetch anomalies')
-      const json = await res.json()
-      return (json.anomalies ?? []) as Anomaly[]
+      try {
+        const res = await fetch(`/api/insights?userId=${userId}`)
+        if (!res.ok) throw new Error('Failed to fetch anomalies')
+        const json = await res.json()
+        const anomalies = (json.anomalies ?? []) as Anomaly[]
+        await offlineDb.anomalies.bulkPut(anomalies.map((a) => ({ ...a, userId })))
+        return anomalies
+      } catch {
+        const cached = await offlineDb.anomalies.where('userId').equals(userId).toArray()
+        return cached as Anomaly[]
+      }
     },
+    networkMode: 'always',
   })
 
   const forecast = txData?.transactions ? computeForecast(txData.transactions) : null

@@ -9,9 +9,18 @@ interface ChatBubbleProps {
   content: string
   name?: string
   timestamp?: string
+  isOfflineFallback?: boolean
+  isAnsweredJustNow?: boolean
 }
 
-export function ChatBubble({ role, content, name, timestamp }: ChatBubbleProps) {
+export function ChatBubble({
+  role,
+  content,
+  name,
+  timestamp,
+  isOfflineFallback,
+  isAnsweredJustNow,
+}: ChatBubbleProps) {
   const isUser = role === 'user'
 
   return (
@@ -25,7 +34,9 @@ export function ChatBubble({ role, content, name, timestamp }: ChatBubbleProps) 
         className={`max-w-[85%] rounded-2xl px-4 py-3 ${
           isUser
             ? 'bg-truffle-amber text-truffle-bg rounded-br-sm'
-            : 'bg-truffle-card border border-truffle-border text-truffle-text rounded-bl-sm'
+            : isOfflineFallback
+              ? 'bg-truffle-surface border border-truffle-border/50 text-truffle-text rounded-bl-sm opacity-80'
+              : 'bg-truffle-card border border-truffle-border text-truffle-text rounded-bl-sm'
         }`}
       >
         {!isUser && (
@@ -34,6 +45,12 @@ export function ChatBubble({ role, content, name, timestamp }: ChatBubbleProps) 
               <Image src="/icons/truffle.png" alt="Truffle" width={16} height={16} />
             </div>
             <span className="text-xs font-medium text-truffle-amber">Truffle</span>
+            {isOfflineFallback && (
+              <span className="text-xs text-truffle-muted ml-1">· offline</span>
+            )}
+            {isAnsweredJustNow && (
+              <span className="text-xs text-truffle-green ml-1">· answered just now</span>
+            )}
           </div>
         )}
         {isUser && name && (
@@ -41,7 +58,11 @@ export function ChatBubble({ role, content, name, timestamp }: ChatBubbleProps) 
             <span className="text-xs font-medium text-truffle-bg/70">{name}</span>
           </div>
         )}
-        <p className={`text-sm leading-relaxed ${isUser ? 'font-medium' : ''}`}>{content}</p>
+        <p
+          className={`text-sm leading-relaxed ${isUser ? 'font-medium' : ''} ${isOfflineFallback ? 'italic' : ''}`}
+        >
+          {content}
+        </p>
         {timestamp && (
           <p className={`text-xs mt-1 ${isUser ? 'text-truffle-bg/60' : 'text-truffle-muted'}`}>
             {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

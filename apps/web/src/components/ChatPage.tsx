@@ -218,12 +218,17 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                 const clean = message.content
                   .replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '')
                   .trim()
+                const annotations = message.annotations as { type: string }[] | undefined
+                const isOfflineFallback = annotations?.some((a) => a.type === 'offline_fallback')
+                const isAnsweredJustNow = annotations?.some((a) => a.type === 'answered_just_now')
                 return clean ? (
                   <ChatBubble
                     role={message.role as 'user' | 'assistant'}
                     content={clean}
                     name={name}
                     timestamp={message.createdAt?.toISOString()}
+                    isOfflineFallback={isOfflineFallback}
+                    isAnsweredJustNow={isAnsweredJustNow}
                   />
                 ) : null
               })()}
@@ -276,6 +281,11 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
 
       {/* Input area */}
       <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-lg bg-truffle-bg/95 backdrop-blur-sm border-t border-truffle-border px-4 py-4">
+        {!chat.isOnline && (
+          <p className="text-center text-xs text-truffle-muted mb-3">
+            Offline — messages will be answered when you reconnect
+          </p>
+        )}
         <div className="flex flex-col items-center gap-4">
           <VoiceButton
             isRecording={voice.isRecording}

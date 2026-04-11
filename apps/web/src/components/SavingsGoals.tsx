@@ -4,12 +4,25 @@ import { useState } from 'react'
 import { SkeletonPulse } from './PageMotion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { SavingsGoal } from '@truffle/types'
+import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 
 const GOAL_EMOJIS = ['🎯', '✈️', '🏠', '🚗', '💻', '🎓', '💍', '🏖️', '🎸', '📱', '🏋️', '🌍']
 
+function mapGoal(row: Record<string, unknown>): SavingsGoal {
+  return {
+    id: row.id as string,
+    userId: (row.user_id ?? row.userId) as string,
+    name: row.name as string,
+    targetAmount: Number(row.target_amount ?? row.targetAmount),
+    savedAmount: Number(row.saved_amount ?? row.savedAmount),
+    deadline: (row.deadline as string | undefined) ?? undefined,
+    emoji: row.emoji as string,
+    createdAt: (row.created_at ?? row.createdAt) as string,
+  }
+}
+
 interface SavingsGoalsProps {
   userId: string
-  /** When true, omits the section header (use accordion header + `addGoalOpen` / `onAddGoalOpenChange`). */
   embedded?: boolean
   addGoalOpen?: boolean
   onAddGoalOpenChange?: (open: boolean) => void
@@ -31,32 +44,40 @@ export function SavingsGoals({
     else setInternalShowAdd(open)
   }
 
-  const { data, isLoading } = useQuery({
+  const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals', userId],
     queryFn: async () => {
-      const res = await fetch(`/api/goals?userId=${userId}`)
-      if (!res.ok) throw new Error('Failed to fetch goals')
-      return res.json() as Promise<{ goals: SavingsGoal[] }>
+      try {
+        const res = await fetch(`/api/goals?userId=${userId}`)
+        if (!res.ok) throw new Error('Failed to fetch goals')
+        const json = await res.json()
+        const mapped: SavingsGoal[] = (json.goals ?? []).map(mapGoal)
+        await offlineDb.goals.bulkPut(mapped)
+        return mapped
+      } catch {
+        return offlineDb.goals.where('userId').equals(userId).toArray()
+      }
     },
+    networkMode: 'always',
   })
 
-  const goals = (data?.goals ?? []).map((g) => ({
-    ...g,
-    targetAmount: Number(
-      g.targetAmount ?? (g as unknown as Record<string, unknown>)['target_amount']
-    ),
-    savedAmount: Number(g.savedAmount ?? (g as unknown as Record<string, unknown>)['saved_amount']),
-  }))
+  const handleAddFunds = async (goalId: string, currentSaved: number, deposit: number) => {
+    const goal = goals.find((g) => g.id === goalId)
+    const newAmount = Math.min(currentSaved + deposit, goal?.targetAmount ?? Infinity)
+    const payload = { userId, goalId, savedAmount: newAmount }
 
-  const handleAddFunds = async (goalId: string, current: number, amount: number) => {
-    const newAmount = Math.min(
-      current + amount,
-      goals.find((g) => g.id === goalId)?.targetAmount ?? Infinity
-    )
+    if (!navigator.onLine) {
+      await offlineDb.goals.update(goalId, { savedAmount: newAmount })
+      await offlineDb.queuedActions.add({ type: 'fund_goal', payload, createdAt: Date.now() })
+      await registerBackgroundSync()
+      await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
+      return
+    }
+
     await fetch('/api/goals', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, goalId, savedAmount: newAmount }),
+      body: JSON.stringify(payload),
     })
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['goals', userId] }),
@@ -66,9 +87,24 @@ export function SavingsGoals({
 
   const handleDelete = async (goalId: string) => {
     setDeletingId(goalId)
-    await fetch(`/api/goals?userId=${userId}&goalId=${goalId}`, { method: 'DELETE' })
-    await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
-    setDeletingId(null)
+    try {
+      if (!navigator.onLine) {
+        await offlineDb.goals.delete(goalId)
+        await offlineDb.queuedActions.add({
+          type: 'delete_goal',
+          payload: { userId, goalId },
+          createdAt: Date.now(),
+        })
+        await registerBackgroundSync()
+        await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
+        return
+      }
+
+      await fetch(`/api/goals?userId=${userId}&goalId=${goalId}`, { method: 'DELETE' })
+      await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   const body = (
@@ -177,7 +213,6 @@ function GoalCard({
         )}
       </div>
 
-      {/* Progress bar */}
       <div className="h-1.5 bg-truffle-surface rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${done ? 'bg-truffle-green' : 'bg-truffle-amber'}`}
@@ -227,6 +262,7 @@ function GoalCard({
 }
 
 function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void }) {
+  const queryClient = useQueryClient()
   const [form, setForm] = useState({
     name: '',
     targetAmount: '',
@@ -240,16 +276,41 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
     if (!form.name || !form.targetAmount) return
     setIsLoading(true)
     try {
-      await fetch('/api/goals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const payload = {
+        userId,
+        name: form.name,
+        targetAmount: parseFloat(form.targetAmount),
+        deadline: form.deadline || undefined,
+        emoji: form.emoji,
+      }
+
+      if (!navigator.onLine) {
+        const optimisticGoal: SavingsGoal = {
+          id: crypto.randomUUID(),
           userId,
           name: form.name,
           targetAmount: parseFloat(form.targetAmount),
+          savedAmount: 0,
           deadline: form.deadline || undefined,
           emoji: form.emoji,
-        }),
+          createdAt: new Date().toISOString(),
+        }
+        await offlineDb.goals.add(optimisticGoal)
+        await offlineDb.queuedActions.add({
+          type: 'create_goal',
+          payload,
+          createdAt: Date.now(),
+        })
+        await registerBackgroundSync()
+        await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
+        onDone()
+        return
+      }
+
+      await fetch('/api/goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
       onDone()
     } finally {
