@@ -1,12 +1,14 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import type { Transaction } from '@truffle/types'
 import { staggerItemVariants, staggerListVariants } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
 import { offlineDb, mapTransactionRow } from '@/lib/offline-db'
 import { CATEGORY_EMOJI, formatCategory } from '@/lib/categories'
+import { useTransactionFilters } from '@/hooks/useTransactionFilters'
+import { TransactionFilterPanel } from './TransactionFilterPanel'
 
 interface TransactionListProps {
   userId: string
@@ -21,11 +23,9 @@ export function TransactionList({ userId }: TransactionListProps) {
         if (!res.ok) throw new Error('Failed to fetch transactions')
         const json = await res.json()
         const transactions: Transaction[] = (json.transactions ?? []).map(mapTransactionRow)
-        // Persist to IndexedDB for offline reads
         await offlineDb.transactions.bulkPut(transactions)
         return { transactions, fromCache: false }
       } catch {
-        // Network failed — serve from IndexedDB
         const cached = await offlineDb.transactions.where('userId').equals(userId).toArray()
         cached.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         return { transactions: cached, fromCache: true }
@@ -34,8 +34,11 @@ export function TransactionList({ userId }: TransactionListProps) {
     networkMode: 'always',
   })
 
-  const transactions = data?.transactions ?? []
+  const allTransactions = data?.transactions ?? []
   const fromCache = data?.fromCache ?? false
+
+  const filters = useTransactionFilters(allTransactions)
+  const { filtered, isFiltered, clearFilters } = filters
 
   if (isLoading) {
     return (
@@ -54,7 +57,7 @@ export function TransactionList({ userId }: TransactionListProps) {
     )
   }
 
-  if (transactions.length === 0) {
+  if (allTransactions.length === 0) {
     return (
       <motion.div
         className="card border-dashed text-center py-8"
@@ -69,39 +72,76 @@ export function TransactionList({ userId }: TransactionListProps) {
   }
 
   return (
-    <motion.div
-      key={transactions.length}
-      className="space-y-2"
-      initial="hidden"
-      animate="show"
-      variants={staggerListVariants}
-    >
-      {fromCache && (
-        <p className="text-xs text-truffle-muted text-center pb-1">Showing cached data</p>
-      )}
-      {transactions.map((tx) => (
-        <motion.div
-          key={tx.id}
-          className="card flex items-center gap-3"
-          variants={staggerItemVariants}
-        >
-          <div className="w-10 h-10 rounded-xl bg-truffle-surface flex items-center justify-center text-lg flex-shrink-0">
-            {CATEGORY_EMOJI[tx.category] ?? '📦'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-truffle-text truncate">{tx.description}</p>
-            <p className="text-xs text-truffle-muted">
-              {formatCategory(tx.category)} ·{' '}
-              {new Date(tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-            </p>
-          </div>
-          <span
-            className={`text-sm font-semibold flex-shrink-0 ${tx.amount > 0 ? 'text-truffle-green' : 'text-red-400'}`}
+    <div className="space-y-3">
+      {fromCache && <p className="text-xs text-truffle-muted text-center">Showing cached data</p>}
+
+      <TransactionFilterPanel {...filters} />
+
+      {/* Result count + clear */}
+      {isFiltered && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-truffle-muted">
+            {filtered.length} of {allTransactions.length} transactions
+          </p>
+          <button
+            onClick={clearFilters}
+            className="text-xs text-truffle-muted hover:text-truffle-text underline underline-offset-2"
           >
-            {tx.amount > 0 ? '+' : '-'}€{Math.abs(tx.amount).toFixed(2)}
-          </span>
-        </motion.div>
-      ))}
-    </motion.div>
+            Clear filters
+          </button>
+        </div>
+      )}
+
+      {/* List */}
+      <AnimatePresence mode="wait">
+        {filtered.length === 0 ? (
+          <motion.div
+            key="empty"
+            className="card border-dashed text-center py-6"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+          >
+            <p className="text-truffle-muted text-sm">No matching transactions.</p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key={`list-${filtered.length}`}
+            className="space-y-2"
+            initial="hidden"
+            animate="show"
+            variants={staggerListVariants}
+          >
+            {filtered.map((tx) => (
+              <motion.div
+                key={tx.id}
+                className="card flex items-center gap-3"
+                variants={staggerItemVariants}
+              >
+                <div className="w-10 h-10 rounded-xl bg-truffle-surface flex items-center justify-center text-lg flex-shrink-0">
+                  {CATEGORY_EMOJI[tx.category] ?? '📦'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-truffle-text truncate">{tx.description}</p>
+                  <p className="text-xs text-truffle-muted">
+                    {formatCategory(tx.category)} ·{' '}
+                    {new Date(tx.date).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
+                  </p>
+                </div>
+                <span
+                  className={`text-sm font-semibold flex-shrink-0 ${tx.amount > 0 ? 'text-truffle-green' : 'text-red-400'}`}
+                >
+                  {tx.amount > 0 ? '+' : '-'}€{Math.abs(tx.amount).toFixed(2)}
+                </span>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
