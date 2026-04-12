@@ -48,12 +48,15 @@ export async function sendAnomalyNudge(params: {
   if (await alreadySent(db, userId, nudgeKey)) return
 
   const { generateProactiveMessage } = await import('@truffle/ai')
-  const message = await generateProactiveMessage({
-    type: 'anomaly',
-    anomaly,
-    transactions,
-    snapshot,
-  })
+  const message = await generateProactiveMessage(
+    {
+      type: 'anomaly',
+      anomaly,
+      transactions,
+      snapshot,
+    },
+    userId
+  )
   if (!message) return
 
   await writeNudge(db, userId, message, nudgeKey)
@@ -72,12 +75,15 @@ export async function sendGoalMilestoneNudge(params: {
   if (await alreadySent(db, userId, nudgeKey)) return
 
   const { generateProactiveMessage } = await import('@truffle/ai')
-  const message = await generateProactiveMessage({
-    type: 'goal_milestone',
-    goal,
-    milestone,
-    snapshot,
-  })
+  const message = await generateProactiveMessage(
+    {
+      type: 'goal_milestone',
+      goal,
+      milestone,
+      snapshot,
+    },
+    userId
+  )
   if (!message) return
 
   await writeNudge(db, userId, message, nudgeKey)

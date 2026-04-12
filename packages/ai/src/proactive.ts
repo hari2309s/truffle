@@ -3,6 +3,7 @@ import type { Transaction, Anomaly, SavingsGoal, MonthlySnapshot } from '@truffl
 import { reviewAnomalies } from './agents/anomalyReviewer'
 import { adviseSavingsGoals } from './agents/savingsGoalAdvisor'
 import { GraphAnnotation } from './graph'
+import { langfuse } from './langfuse'
 
 type ProactiveState = typeof GraphAnnotation.State
 
@@ -67,9 +68,16 @@ export interface GoalMilestoneTrigger {
 }
 
 export async function generateProactiveMessage(
-  trigger: AnomalyTrigger | GoalMilestoneTrigger
+  trigger: AnomalyTrigger | GoalMilestoneTrigger,
+  userId?: string
 ): Promise<string | null> {
   const graph = buildProactiveGraph()
+
+  const nodeName = trigger.type === 'anomaly' ? 'anomalyNudge' : 'goalNudge'
+  const nudgeKey =
+    trigger.type === 'anomaly'
+      ? `anomaly:${trigger.anomaly.transactionId}`
+      : `goal:${trigger.goal.id}:${trigger.milestone}`
 
   const input =
     trigger.type === 'anomaly'
@@ -90,6 +98,19 @@ export async function generateProactiveMessage(
           currentMonth: trigger.snapshot,
         }
 
+  const trace = langfuse.trace({
+    name: 'proactive_nudge',
+    userId,
+    input: input.userQuery,
+    metadata: { triggerType: trigger.type, nudgeKey },
+  })
+  const span = trace.span({ name: nodeName, input: input.userQuery })
+
   const result = await graph.invoke(input)
-  return result.agentResponse?.trim() || null
+  const message = result.agentResponse?.trim() || null
+
+  span.end({ output: message ?? '' })
+  await langfuse.flushAsync()
+
+  return message
 }
