@@ -1,5 +1,11 @@
 import { StateGraph, END, START, Annotation } from '@langchain/langgraph'
-import type { MonthlySnapshot, Transaction, Anomaly, QueryIntent } from '@truffle/types'
+import type {
+  MonthlySnapshot,
+  Transaction,
+  Anomaly,
+  QueryIntent,
+  SavingsGoal,
+} from '@truffle/types'
 import { routeIntent } from './agents/intentRouter'
 import { analyseSpending } from './agents/spendingAnalyst'
 import { forecastSpending } from './agents/forecaster'
@@ -8,7 +14,7 @@ import { reviewAnomalies } from './agents/anomalyReviewer'
 import { adviseSavingsGoals } from './agents/savingsGoalAdvisor'
 import { queryTransactions } from './vectorStore'
 
-const GraphAnnotation = Annotation.Root({
+export const GraphAnnotation = Annotation.Root({
   userQuery: Annotation<string>({ reducer: (x, y) => y ?? x, default: () => '' }),
   agentResponse: Annotation<string>({ reducer: (x, y) => y ?? x, default: () => '' }),
   intent: Annotation<QueryIntent>({
@@ -17,7 +23,7 @@ const GraphAnnotation = Annotation.Root({
   }),
   transactions: Annotation<Transaction[]>({ reducer: (x, y) => y ?? x, default: () => [] }),
   anomalies: Annotation<Anomaly[]>({ reducer: (x, y) => y ?? x, default: () => [] }),
-  savingsGoals: Annotation<import('@truffle/types').SavingsGoal[]>({
+  savingsGoals: Annotation<SavingsGoal[]>({
     reducer: (x, y) => y ?? x,
     default: () => [],
   }),
