@@ -3,8 +3,9 @@
 import { motion } from 'framer-motion'
 import { useCallback, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import type { Anomaly, Transaction } from '@truffle/types'
-import { offlineDb, mapTransactionRow } from '@/lib/offline-db'
+import type { Anomaly } from '@truffle/types'
+import { offlineDb } from '@/lib/offline-db'
+import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { detectSubscriptions } from '@/lib/subscriptions'
 import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
 import { computeForecast } from '@/lib/forecast'
@@ -28,24 +29,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
     setAddGoalOpen(false)
   }, [])
 
-  // Shared transactions cache — same key as Dashboard/TransactionList (has IndexedDB fallback)
-  const { data: txData, isLoading: txLoading } = useQuery({
-    queryKey: ['transactions', userId],
-    queryFn: async () => {
-      try {
-        const res = await fetch(`/api/transactions?userId=${userId}`)
-        if (!res.ok) throw new Error('Failed to fetch transactions')
-        const json = await res.json()
-        const transactions: Transaction[] = (json.transactions ?? []).map(mapTransactionRow)
-        await offlineDb.transactions.bulkPut(transactions)
-        return { transactions }
-      } catch {
-        const cached = await offlineDb.transactions.where('userId').equals(userId).toArray()
-        return { transactions: cached }
-      }
-    },
-    networkMode: 'always',
-  })
+  const { data: txData, isLoading: txLoading } = useTransactionsQuery(userId)
 
   // Anomalies are server-computed — cache in IndexedDB for offline reads
   const { data: anomalyData, isLoading: anomalyLoading } = useQuery({

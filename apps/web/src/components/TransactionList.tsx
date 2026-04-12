@@ -1,13 +1,11 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { useQuery } from '@tanstack/react-query'
-import type { Transaction } from '@truffle/types'
 import { staggerItemVariants, staggerListVariants } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
-import { offlineDb, mapTransactionRow } from '@/lib/offline-db'
 import { CATEGORY_EMOJI, formatCategory } from '@/lib/categories'
 import { useTransactionFilters } from '@/hooks/useTransactionFilters'
+import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { TransactionFilterPanel } from './TransactionFilterPanel'
 
 interface TransactionListProps {
@@ -15,24 +13,7 @@ interface TransactionListProps {
 }
 
 export function TransactionList({ userId }: TransactionListProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['transactions', userId],
-    queryFn: async () => {
-      try {
-        const res = await fetch(`/api/transactions?userId=${userId}`)
-        if (!res.ok) throw new Error('Failed to fetch transactions')
-        const json = await res.json()
-        const transactions: Transaction[] = (json.transactions ?? []).map(mapTransactionRow)
-        await offlineDb.transactions.bulkPut(transactions)
-        return { transactions, fromCache: false }
-      } catch {
-        const cached = await offlineDb.transactions.where('userId').equals(userId).toArray()
-        cached.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        return { transactions: cached, fromCache: true }
-      }
-    },
-    networkMode: 'always',
-  })
+  const { data, isLoading } = useTransactionsQuery(userId)
 
   const allTransactions = data?.transactions ?? []
   const fromCache = data?.fromCache ?? false

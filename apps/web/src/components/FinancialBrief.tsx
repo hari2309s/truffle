@@ -1,10 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useQuery } from '@tanstack/react-query'
 import { computeForecast } from '@/lib/forecast'
 import { truffleEase } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
+import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 
 interface FinancialBriefProps {
   userId: string
@@ -33,14 +33,7 @@ function computeAllTimeSummary(
 }
 
 export function FinancialBrief({ userId }: FinancialBriefProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['transactions', userId],
-    queryFn: async () => {
-      const res = await fetch(`/api/transactions?userId=${userId}`)
-      if (!res.ok) throw new Error('Failed to fetch transactions')
-      return res.json()
-    },
-  })
+  const { data, isLoading } = useTransactionsQuery(userId)
 
   const forecast = data?.transactions ? computeForecast(data.transactions) : null
   const allTime =

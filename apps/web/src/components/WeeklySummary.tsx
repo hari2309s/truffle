@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { truffleEase } from '@/lib/motion'
-import { useQuery } from '@tanstack/react-query'
+import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { useTextToSpeech } from '@/hooks/useTextToSpeech'
 
 interface WeeklySummaryProps {
@@ -57,14 +57,7 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
   const [summaryText, setSummaryText] = useState<string | null>(null)
   const { speak, isSpeaking } = useTextToSpeech()
 
-  const { data } = useQuery({
-    queryKey: ['transactions', userId],
-    queryFn: async () => {
-      const res = await fetch(`/api/transactions?userId=${userId}`)
-      if (!res.ok) throw new Error('Failed to fetch transactions')
-      return res.json()
-    },
-  })
+  const { data } = useTransactionsQuery(userId)
 
   useEffect(() => {
     if (!data?.transactions) return
