@@ -48,6 +48,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 - 🎯 **Savings goals** — set goals manually or let Truffle propose one mid-conversation; confirm with one tap, track progress and deposits in Insights
 - 💬 **Log transactions from chat** — say "I just paid €45 at Lidl" and Truffle shows a confirmation card before logging it to your history
 - 🔁 **Saving habits** — set up a recurring weekly or monthly saving habit in chat ("save €50 every week"); Truffle tracks your streak, logs contributions, and reminds you when a period is due
+- 🔔 **Proactive nudges** — Truffle messages you in chat when it spots something worth flagging (anomalous charge, goal milestone) without you having to ask; unread badge on the Chat tab
 - 🔊 **Weekly audio summary** — spoken recap of your week, once per week
 - 💱 **Multi-currency** — EUR, GBP, USD converted to EUR for consistent totals
 - 📱 **PWA** — installs on iOS and Android, fully offline-capable
@@ -152,6 +153,7 @@ packages/db/src/migrations/001_initial.sql          # transactions, anomalies, s
 packages/db/src/migrations/002_savings_goals.sql    # savings_goals table + RLS
 packages/db/src/migrations/003_pgvector_gemini.sql  # pgvector extension + match_transactions RPC
 packages/db/src/migrations/004_savings_habits.sql   # savings_habits + habit_contributions + RLS
+packages/db/src/migrations/005_proactive_messages.sql  # is_proactive, read_at, nudge_key on chat_messages
 ```
 
 ### Run
