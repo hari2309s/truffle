@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { visionModel } from '@truffle/ai'
+import { visionModel, langfuse } from '@truffle/ai'
 import type { TransactionCategory } from '@truffle/types'
 
 export const runtime = 'nodejs'
@@ -81,7 +81,18 @@ export async function POST(req: NextRequest) {
           mimeType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
         }
 
-    const { text } = await generateText({
+    const trace = langfuse.trace({
+      name: 'parse_receipt',
+      input: EXTRACT_PROMPT(today),
+      metadata: { fileType: isPDF ? 'pdf' : 'image', mimeType, fileSize: file.size },
+    })
+    const generation = trace.generation({
+      name: 'extractTransactions',
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      input: EXTRACT_PROMPT(today),
+    })
+
+    const { text, usage } = await generateText({
       model: visionModel,
       messages: [
         {
@@ -90,6 +101,12 @@ export async function POST(req: NextRequest) {
         },
       ],
     })
+
+    generation.end({
+      output: text,
+      usage: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
+    })
+    await langfuse.flushAsync()
 
     // Strip markdown fences if model wraps despite instructions
     const cleaned = text
