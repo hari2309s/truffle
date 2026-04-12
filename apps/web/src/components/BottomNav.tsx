@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 type Tab = 'home' | 'chat' | 'insights'
 
@@ -9,6 +11,21 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ active }: BottomNavProps) {
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      supabase
+        .from('chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', session.user.id)
+        .eq('is_proactive', true)
+        .is('read_at', null)
+        .then(({ count }) => setUnreadCount(count ?? 0))
+    })
+  }, [])
+
   const base = 'flex-1 flex flex-col items-center py-3 gap-1 transition-colors'
   const activeClass = 'text-truffle-amber'
   const inactiveClass = 'text-truffle-muted hover:text-truffle-text'
@@ -21,7 +38,14 @@ export function BottomNav({ active }: BottomNavProps) {
           <span className="text-[10px]">Home</span>
         </Link>
         <Link href="/chat" className={`${base} ${active === 'chat' ? activeClass : inactiveClass}`}>
-          <ChatIcon />
+          <div className="relative">
+            <ChatIcon />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-truffle-amber text-truffle-bg text-[9px] font-bold leading-none">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </div>
           <span className="text-[10px]">Chat</span>
         </Link>
         <Link
