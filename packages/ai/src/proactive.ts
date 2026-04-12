@@ -18,20 +18,6 @@ function emptySnapshot(): MonthlySnapshot {
   }
 }
 
-async function anomalyNudgeNode(state: ProactiveState): Promise<Partial<ProactiveState>> {
-  const response = await reviewAnomalies(state.userQuery, state.transactions, state.anomalies)
-  return { agentResponse: response }
-}
-
-async function goalNudgeNode(state: ProactiveState): Promise<Partial<ProactiveState>> {
-  const response = await adviseSavingsGoals(
-    state.userQuery,
-    state.savingsGoals,
-    state.currentMonth ?? emptySnapshot()
-  )
-  return { agentResponse: response }
-}
-
 function routeByIntent(state: ProactiveState): string {
   return state.intent === 'anomaly_review' ? 'anomalyNudge' : 'goalNudge'
 }
@@ -39,8 +25,30 @@ function routeByIntent(state: ProactiveState): string {
 /**
  * Proactive graph — skips the intent router since the trigger already tells us
  * what kind of insight to surface. Routes directly to the relevant analyst node.
+ * traceId is threaded via closure so each node can attach child generations to
+ * the parent Langfuse trace.
  */
-function buildProactiveGraph() {
+function buildProactiveGraph(traceId: string) {
+  async function anomalyNudgeNode(state: ProactiveState): Promise<Partial<ProactiveState>> {
+    const response = await reviewAnomalies(
+      state.userQuery,
+      state.transactions,
+      state.anomalies,
+      traceId
+    )
+    return { agentResponse: response }
+  }
+
+  async function goalNudgeNode(state: ProactiveState): Promise<Partial<ProactiveState>> {
+    const response = await adviseSavingsGoals(
+      state.userQuery,
+      state.savingsGoals,
+      state.currentMonth ?? emptySnapshot(),
+      traceId
+    )
+    return { agentResponse: response }
+  }
+
   return new StateGraph(GraphAnnotation)
     .addNode('anomalyNudge', anomalyNudgeNode)
     .addNode('goalNudge', goalNudgeNode)
@@ -71,9 +79,6 @@ export async function generateProactiveMessage(
   trigger: AnomalyTrigger | GoalMilestoneTrigger,
   userId?: string
 ): Promise<string | null> {
-  const graph = buildProactiveGraph()
-
-  const nodeName = trigger.type === 'anomaly' ? 'anomalyNudge' : 'goalNudge'
   const nudgeKey =
     trigger.type === 'anomaly'
       ? `anomaly:${trigger.anomaly.transactionId}`
@@ -104,12 +109,12 @@ export async function generateProactiveMessage(
     input: input.userQuery,
     metadata: { triggerType: trigger.type, nudgeKey },
   })
-  const span = trace.span({ name: nodeName, input: input.userQuery })
 
+  const graph = buildProactiveGraph(trace.id)
   const result = await graph.invoke(input)
   const message = result.agentResponse?.trim() || null
 
-  span.end({ output: message ?? '' })
+  trace.update({ output: message ?? '' })
   await langfuse.flushAsync()
 
   return message
