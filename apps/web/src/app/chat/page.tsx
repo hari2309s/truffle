@@ -28,9 +28,11 @@ export default function Chat() {
 
   useEffect(() => {
     if (!userId) return
+
+    // Load history
     supabase
       .from('chat_messages')
-      .select('id, role, content, created_at')
+      .select('id, role, content, created_at, is_proactive')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(50)
@@ -43,10 +45,20 @@ export default function Chat() {
                 role: row.role as 'user' | 'assistant',
                 content: row.content as string,
                 createdAt: new Date(row.created_at as string),
+                annotations: row.is_proactive ? [{ type: 'proactive' }] : undefined,
               }))
             : []
         )
       })
+
+    // Mark all unread proactive messages as read
+    supabase
+      .from('chat_messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('is_proactive', true)
+      .is('read_at', null)
+      .then(() => {})
   }, [userId])
 
   // Wait for both auth and history before mounting ChatPage so useChat
