@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
+import type { SavingsGoal } from '@truffle/types'
 import { recomputeSnapshot } from '@/lib/server-db'
+import { sendGoalMilestoneNudge } from '@/lib/proactive-nudge'
 
 export const runtime = 'nodejs'
 
@@ -62,10 +64,10 @@ export async function PATCH(request: NextRequest) {
 
     const db = createServerClient()
 
-    // Fetch current goal to compute deposit delta and get goal name
+    // Fetch current goal to compute deposit delta, milestone detection, and goal name
     const { data: currentGoal, error: fetchError } = await db
       .from('savings_goals')
-      .select('name, saved_amount')
+      .select('name, saved_amount, target_amount')
       .eq('id', goalId)
       .eq('user_id', userId)
       .single()
@@ -103,6 +105,32 @@ export async function PATCH(request: NextRequest) {
 
       // Recompute monthly snapshot so balance reflects the deduction
       await recomputeSnapshot(userId, db)
+    }
+
+    // Fire proactive nudge if a milestone was crossed (non-blocking)
+    if (data) {
+      const targetAmount = Number(currentGoal.target_amount)
+      if (targetAmount > 0) {
+        const prevPct = (Number(currentGoal.saved_amount) / targetAmount) * 100
+        const newPct = (savedAmount / targetAmount) * 100
+        const MILESTONES = [25, 50, 75, 100] as const
+        const crossed = MILESTONES.find((m) => prevPct < m && newPct >= m)
+        if (crossed) {
+          const goal: SavingsGoal = {
+            id: data.id as string,
+            userId: data.user_id as string,
+            name: data.name as string,
+            targetAmount: Number(data.target_amount),
+            savedAmount: Number(data.saved_amount),
+            deadline: data.deadline as string | undefined,
+            emoji: data.emoji as string,
+            createdAt: data.created_at as string,
+          }
+          sendGoalMilestoneNudge({ userId, goal, milestone: crossed, snapshot: null }).catch((e) =>
+            console.warn('Proactive goal nudge failed (non-fatal):', e)
+          )
+        }
+      }
     }
 
     return NextResponse.json({ goal: data })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
-import type { Transaction } from '@truffle/types'
+import type { Transaction, Anomaly } from '@truffle/types'
 import { recomputeSnapshot } from '@/lib/server-db'
 
 export const runtime = 'nodejs'
@@ -95,10 +95,19 @@ export async function POST(request: NextRequest) {
     // Recompute monthly snapshot
     await recomputeSnapshot(userId, db)
 
-    // Run anomaly detection (non-fatal)
-    await detectAnomalies(userId, results, db).catch((e) =>
-      console.warn('Anomaly detection failed (non-fatal):', e)
-    )
+    // Run anomaly detection then fire proactive nudges (both non-fatal)
+    detectAnomalies(userId, results, db)
+      .then(async (anomalies) => {
+        if (!anomalies.length) return
+        const { sendAnomalyNudge } = await import('@/lib/proactive-nudge')
+        const typedTxs = results.map((r) => ({ ...r }) as unknown as Transaction)
+        for (const anomaly of anomalies) {
+          sendAnomalyNudge({ userId, anomaly, transactions: typedTxs, snapshot: null }).catch((e) =>
+            console.warn('Proactive anomaly nudge failed (non-fatal):', e)
+          )
+        }
+      })
+      .catch((e) => console.warn('Anomaly detection failed (non-fatal):', e))
 
     return NextResponse.json({ transactions: results })
   } catch (error) {
@@ -111,7 +120,7 @@ async function detectAnomalies(
   userId: string,
   newTxs: Record<string, unknown>[],
   db: ReturnType<typeof createServerClient>
-) {
+): Promise<Anomaly[]> {
   // Fetch last 90 days of history for statistical baseline
   const since = new Date()
   since.setDate(since.getDate() - 90)
@@ -122,7 +131,7 @@ async function detectAnomalies(
     .gte('date', since.toISOString().slice(0, 10))
     .lt('amount', '0') // expenses only
 
-  if (!history || history.length < 5) return // not enough history
+  if (!history || history.length < 5) return [] // not enough history
 
   // Build per-category stats
   const categoryStats: Record<string, { amounts: number[] }> = {}
@@ -159,7 +168,19 @@ async function detectAnomalies(
     }
   }
 
-  if (anomaliesToInsert.length > 0) {
-    await db.from('anomalies').insert(anomaliesToInsert)
-  }
+  if (anomaliesToInsert.length === 0) return []
+
+  const { data: inserted } = await db
+    .from('anomalies')
+    .insert(anomaliesToInsert)
+    .select('id, transaction_id, type, severity, description, detected_at')
+
+  return (inserted ?? []).map((row) => ({
+    id: row.id as string,
+    transactionId: row.transaction_id as string,
+    type: row.type as Anomaly['type'],
+    severity: row.severity as Anomaly['severity'],
+    description: row.description as string,
+    detectedAt: row.detected_at as string,
+  }))
 }
