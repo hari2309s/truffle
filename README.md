@@ -13,6 +13,8 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)
+![TanStack Query](https://img.shields.io/badge/TanStack_Query-server_state-FF4154?logo=reactquery&logoColor=white)
+
 ![PWA](https://img.shields.io/badge/PWA-offline--ready-5A0FC8?logo=pwa&logoColor=white)
 ![Workbox](https://img.shields.io/badge/Workbox-service_worker-FF6D00?logo=googlechrome&logoColor=white)
 ![Dexie](https://img.shields.io/badge/Dexie.js-IndexedDB-0769AD?logoColor=white)
@@ -20,10 +22,11 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ![LangGraph](https://img.shields.io/badge/LangGraph.js-agent_orchestration-1C3C3C?logo=langchain&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-Llama_3.3_70B_%2B_Llama_4_Scout_%2B_Whisper-F55036?logoColor=white)
 ![Gemini](https://img.shields.io/badge/Gemini-text--embedding--004-4285F4?logo=google&logoColor=white)
-![Web Speech API](https://img.shields.io/badge/Web_Speech_API-TTS-orange?logo=googlechrome&logoColor=white)
+![Web Speech API](https://img.shields.io/badge/Web_Speech_API-STT_%2B_TTS-orange?logo=googlechrome&logoColor=white)
 
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_%2B_Auth-3ECF8E?logo=supabase&logoColor=white)
 ![Langfuse](https://img.shields.io/badge/Langfuse-observability-000000?logo=langfuse&logoColor=white)
+
 ![pnpm](https://img.shields.io/badge/pnpm-workspaces-F69220?logo=pnpm&logoColor=white)
 ![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-EF4444?logo=turborepo&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
