@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
+import { sendHabitStreakNudge, sendHabitCheckInNudge } from '@/lib/proactive-nudge'
 
 export const runtime = 'nodejs'
 
@@ -58,6 +59,30 @@ export async function GET(request: NextRequest) {
         totalSaved: totalMap[h.id] ?? 0,
       }
     })
+
+    // Send check-in reminders for habits not logged past the period midpoint
+    const today = new Date()
+    const dayOfWeek = today.getDay() || 7 // ISO: Mon=1 … Sun=7
+    const dayOfMonth = today.getDate()
+    for (const h of habitsWithStats) {
+      if (h.currentPeriodLogged) continue
+      const pastMidpoint = h.frequency === 'weekly' ? dayOfWeek >= 4 : dayOfMonth >= 15
+      if (!pastMidpoint) continue
+      try {
+        await sendHabitCheckInNudge({
+          userId,
+          habitId: h.id,
+          habitName: h.name,
+          habitEmoji: h.emoji,
+          frequency: h.frequency,
+          amount: h.amount,
+          period: getCurrentPeriod(h.frequency),
+          lastStreak: h.streak,
+        })
+      } catch (e) {
+        console.error(`Habit check-in nudge failed for "${h.name}":`, e)
+      }
+    }
 
     return NextResponse.json({ habits: habitsWithStats })
   } catch (error) {
@@ -119,6 +144,40 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error) throw error
+
+    // Check if a streak milestone was reached
+    const STREAK_MILESTONES = [3, 5, 7, 10, 15, 20, 30, 50, 100]
+    try {
+      const { data: allContribs } = await db
+        .from('habit_contributions')
+        .select('period')
+        .eq('habit_id', habitId)
+        .eq('user_id', userId)
+
+      const { data: habit } = await db
+        .from('savings_habits')
+        .select('name, emoji, frequency')
+        .eq('id', habitId)
+        .single()
+
+      if (habit && allContribs) {
+        const frequency = habit.frequency as 'weekly' | 'monthly'
+        const periods = allContribs.map((c) => c.period as string)
+        const streak = computeStreak(frequency, periods)
+        if (STREAK_MILESTONES.includes(streak)) {
+          await sendHabitStreakNudge({
+            userId,
+            habitId,
+            habitName: habit.name,
+            habitEmoji: habit.emoji,
+            streak,
+          })
+        }
+      }
+    } catch (e) {
+      console.error(`Habit streak nudge failed for habit ${habitId}:`, e)
+    }
+
     return NextResponse.json({ contribution: data })
   } catch (error) {
     console.error('PATCH habits error:', error)

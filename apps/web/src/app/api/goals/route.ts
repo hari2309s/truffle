@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import type { SavingsGoal } from '@truffle/types'
 import { recomputeSnapshot } from '@/lib/server-db'
-import { sendGoalMilestoneNudge } from '@/lib/proactive-nudge'
+import { sendGoalMilestoneNudge, sendGoalAtRiskNudge } from '@/lib/proactive-nudge'
 
 export const runtime = 'nodejs'
 
@@ -19,6 +19,34 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (error) throw error
+
+    // Check for at-risk goals (deadline within 30 days, not yet complete)
+    const today = new Date()
+    for (const row of data ?? []) {
+      if (!row.deadline) continue
+      const deadline = new Date(row.deadline)
+      const daysRemaining = Math.ceil((deadline.getTime() - today.getTime()) / 86400000)
+      if (daysRemaining <= 0 || daysRemaining > 30) continue
+      const remaining = Number(row.target_amount) - Number(row.saved_amount)
+      if (remaining <= 0) continue
+
+      const goal: SavingsGoal = {
+        id: row.id,
+        userId: row.user_id,
+        name: row.name,
+        targetAmount: Number(row.target_amount),
+        savedAmount: Number(row.saved_amount),
+        deadline: row.deadline,
+        emoji: row.emoji,
+        createdAt: row.created_at,
+      }
+      try {
+        await sendGoalAtRiskNudge({ userId, goal, daysRemaining, projectedShortfall: remaining })
+      } catch (e) {
+        console.error(`Goal at-risk nudge failed for "${goal.name}":`, e)
+      }
+    }
+
     return NextResponse.json({ goals: data })
   } catch (error) {
     console.error('GET goals error:', error)
