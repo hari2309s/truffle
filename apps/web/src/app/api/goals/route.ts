@@ -107,7 +107,7 @@ export async function PATCH(request: NextRequest) {
       await recomputeSnapshot(userId, db)
     }
 
-    // Fire proactive nudge if a milestone was crossed (non-blocking)
+    // Fire proactive nudge if a milestone was crossed
     if (data) {
       const targetAmount = Number(currentGoal.target_amount)
       if (targetAmount > 0) {
@@ -126,9 +126,11 @@ export async function PATCH(request: NextRequest) {
             emoji: data.emoji as string,
             createdAt: data.created_at as string,
           }
-          await sendGoalMilestoneNudge({ userId, goal, milestone: crossed, snapshot: null }).catch(
-            (e) => console.warn('Proactive goal nudge failed (non-fatal):', e)
-          )
+          try {
+            await sendGoalMilestoneNudge({ userId, goal, milestone: crossed, snapshot: null })
+          } catch (e) {
+            console.error(`Goal milestone nudge failed (${crossed}% of "${goal.name}"):`, e)
+          }
         }
       }
     }

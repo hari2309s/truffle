@@ -102,13 +102,15 @@ export async function POST(request: NextRequest) {
         const { sendAnomalyNudge } = await import('@/lib/proactive-nudge')
         const typedTxs = results.map((r) => ({ ...r }) as unknown as Transaction)
         for (const anomaly of anomalies) {
-          await sendAnomalyNudge({ userId, anomaly, transactions: typedTxs, snapshot: null }).catch(
-            (e) => console.warn('Proactive anomaly nudge failed (non-fatal):', e)
-          )
+          try {
+            await sendAnomalyNudge({ userId, anomaly, transactions: typedTxs, snapshot: null })
+          } catch (e) {
+            console.error(`Anomaly nudge failed for tx ${anomaly.transactionId}:`, e)
+          }
         }
       }
     } catch (e) {
-      console.warn('Anomaly detection failed (non-fatal):', e)
+      console.error('Anomaly detection failed:', e)
     }
 
     return NextResponse.json({ transactions: results })
@@ -123,7 +125,9 @@ async function detectAnomalies(
   newTxs: Record<string, unknown>[],
   db: ReturnType<typeof createServerClient>
 ): Promise<Anomaly[]> {
-  // Fetch last 90 days of history for statistical baseline
+  // Fetch last 90 days of history for statistical baseline, excluding the
+  // transactions we just inserted so the new amounts don't inflate the mean/σ.
+  const newIds = newTxs.map((tx) => tx.id as string)
   const since = new Date()
   since.setDate(since.getDate() - 90)
   const { data: history } = await db
@@ -132,6 +136,7 @@ async function detectAnomalies(
     .eq('user_id', userId)
     .gte('date', since.toISOString().slice(0, 10))
     .lt('amount', '0') // expenses only
+    .not('id', 'in', `(${newIds.join(',')})`)
 
   if (!history || history.length < 5) return [] // not enough history
 
