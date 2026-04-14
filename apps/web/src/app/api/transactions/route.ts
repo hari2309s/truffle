@@ -96,18 +96,20 @@ export async function POST(request: NextRequest) {
     await recomputeSnapshot(userId, db)
 
     // Run anomaly detection then fire proactive nudges (both non-fatal)
-    detectAnomalies(userId, results, db)
-      .then(async (anomalies) => {
-        if (!anomalies.length) return
+    try {
+      const anomalies = await detectAnomalies(userId, results, db)
+      if (anomalies.length) {
         const { sendAnomalyNudge } = await import('@/lib/proactive-nudge')
         const typedTxs = results.map((r) => ({ ...r }) as unknown as Transaction)
         for (const anomaly of anomalies) {
-          sendAnomalyNudge({ userId, anomaly, transactions: typedTxs, snapshot: null }).catch((e) =>
-            console.warn('Proactive anomaly nudge failed (non-fatal):', e)
+          await sendAnomalyNudge({ userId, anomaly, transactions: typedTxs, snapshot: null }).catch(
+            (e) => console.warn('Proactive anomaly nudge failed (non-fatal):', e)
           )
         }
-      })
-      .catch((e) => console.warn('Anomaly detection failed (non-fatal):', e))
+      }
+    } catch (e) {
+      console.warn('Anomaly detection failed (non-fatal):', e)
+    }
 
     return NextResponse.json({ transactions: results })
   } catch (error) {
