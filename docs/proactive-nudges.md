@@ -4,16 +4,14 @@
 
 Proactive nudges are assistant messages that Truffle initiates on its own — without the user asking anything. They appear in the chat thread and are indistinguishable from a normal reply, except they carry an `is_proactive` flag in the database and a `{ type: 'proactive' }` annotation when loaded into the chat.
 
-The system is **event-driven**: a nudge fires only when something actually happens (an anomaly is detected, a goal milestone is crossed). There are no scheduled cron jobs and no timed polling. Most events produce no nudge at all.
+The system is **event-driven**: a nudge fires only when something actually happens (an anomaly is detected, a goal milestone is crossed, a deadline approaches, or a habit streak hits a milestone). There are no scheduled cron jobs and no timed polling. Most events produce no nudge at all.
 
 ```
-User adds transaction
+Event occurs (transaction, goal update, habit log, page load)
         ↓
-POST /api/transactions
+API route handler (awaited before response)
         ↓
-Anomaly detection runs
-        ↓
-Anomaly found?
+Condition met?
     ├── No  → nothing
     └── Yes → dedup check (nudge_key unique index)
                   ├── Already sent → nothing
@@ -27,45 +25,87 @@ Anomaly found?
                       Unread badge on Chat tab
 ```
 
+> **Important:** All nudge calls are `await`-ed before the HTTP response is returned. Earlier fire-and-forget patterns were silently killed by the Vercel serverless runtime on response. The latency impact is minimal — the `alreadySent` dedup check short-circuits on subsequent requests, so the LLM call only happens once per nudge key.
+
 ---
 
 ## Triggers
+
+| # | Trigger | Route | Handler | Nudge key | Dedup scope |
+|---|---------|-------|---------|-----------|-------------|
+| 1 | Anomaly detected | `POST /api/transactions` | `sendAnomalyNudge` | `anomaly:{txId}` | Once per transaction, ever |
+| 2 | Goal milestone crossed | `PATCH /api/goals` | `sendGoalMilestoneNudge` | `goal:{goalId}:{pct}` | Once per goal per milestone |
+| 3 | Goal at risk | `GET /api/goals` | `sendGoalAtRiskNudge` | `goal-at-risk:{goalId}:{YYYY-MM}` | Once per goal per month |
+| 4 | Habit streak milestone | `PATCH /api/habits` | `sendHabitStreakNudge` | `habit-streak:{habitId}:{streak}` | Once per streak number |
+| 5 | Habit check-in reminder | `GET /api/habits` | `sendHabitCheckInNudge` | `habit-checkin:{habitId}:{period}` | Once per habit per period |
 
 ### 1. Anomaly detected on a new transaction
 
 **Where:** `apps/web/src/app/api/transactions/route.ts`
 
-After `detectAnomalies` runs and returns inserted anomaly rows, a non-blocking `.then()` fires `sendAnomalyNudge` for each anomaly. The response has already been sent to the client before the nudge even starts.
+After `detectAnomalies` runs and returns inserted anomaly rows, `sendAnomalyNudge` is awaited for each anomaly. The detection excludes the just-inserted transactions from the statistical baseline (via a `NOT IN` filter) so the new amount doesn't inflate its own mean/σ.
 
 ```ts
-detectAnomalies(userId, results, db)
-  .then(async (anomalies) => {
-    if (!anomalies.length) return
-    const typedTxs = results.map((r) => ({ ...r } as unknown as Transaction))
-    for (const anomaly of anomalies) {
-      sendAnomalyNudge({ userId, anomaly, transactions: typedTxs, snapshot: null })
-        .catch((e) => console.warn('Proactive anomaly nudge failed (non-fatal):', e))
-    }
-  })
-  .catch(...)
+const anomalies = await detectAnomalies(userId, results, db)
+if (anomalies.length) {
+  for (const anomaly of anomalies) {
+    await sendAnomalyNudge({ userId, anomaly, transactions: typedTxs, snapshot: null })
+  }
+}
 ```
-
-The `nudge_key` for an anomaly nudge is `anomaly:{transactionId}` — one nudge per anomalous transaction, ever.
 
 ### 2. Savings goal crosses a milestone
 
 **Where:** `apps/web/src/app/api/goals/route.ts` (PATCH handler)
 
-After the goal's `saved_amount` is updated, the handler computes the before/after percentages and checks if any milestone was crossed:
+After the goal's `saved_amount` is updated, the handler computes the before/after percentages and checks if any of the four milestones was crossed:
 
 ```ts
 const MILESTONES = [25, 50, 75, 100] as const
 const crossed = MILESTONES.find((m) => prevPct < m && newPct >= m)
 ```
 
-If a milestone is crossed, `sendGoalMilestoneNudge` fires non-blocking.
+Depositing €10 across four separate top-ups into a goal will still only produce one nudge when it crosses 50%.
 
-The `nudge_key` is `goal:{goalId}:{milestone}` — one nudge per goal per milestone, ever. Depositing €10 across four separate top-ups into a goal will still only produce one nudge when it crosses 50%.
+### 3. Goal at risk (deadline approaching)
+
+**Where:** `apps/web/src/app/api/goals/route.ts` (GET handler)
+
+When goals are fetched, any goal with a deadline within 30 days that is not yet complete triggers an at-risk nudge. The nudge key includes the current month, so the user gets at most one at-risk reminder per goal per month.
+
+```ts
+const daysRemaining = Math.ceil((deadline.getTime() - today.getTime()) / 86400000)
+if (daysRemaining > 0 && daysRemaining <= 30 && remaining > 0) {
+  await sendGoalAtRiskNudge({ userId, goal, daysRemaining, projectedShortfall: remaining })
+}
+```
+
+### 4. Habit streak milestone
+
+**Where:** `apps/web/src/app/api/habits/route.ts` (PATCH handler)
+
+After a contribution is logged, the full streak is recomputed. If it lands on a milestone number (3, 5, 7, 10, 15, 20, 30, 50, 100), a celebration nudge fires.
+
+```ts
+const STREAK_MILESTONES = [3, 5, 7, 10, 15, 20, 30, 50, 100]
+const streak = computeStreak(frequency, periods)
+if (STREAK_MILESTONES.includes(streak)) {
+  await sendHabitStreakNudge({ userId, habitId, habitName, habitEmoji, streak })
+}
+```
+
+### 5. Habit check-in reminder
+
+**Where:** `apps/web/src/app/api/habits/route.ts` (GET handler)
+
+When habits are fetched, any active habit that hasn't been logged for the current period gets a gentle reminder — but only past the period midpoint (Thursday for weekly, 15th for monthly). This prevents nagging users early in the period.
+
+```ts
+const pastMidpoint = h.frequency === 'weekly' ? dayOfWeek >= 4 : dayOfMonth >= 15
+if (!h.currentPeriodLogged && pastMidpoint) {
+  await sendHabitCheckInNudge({ userId, habitId, habitName, ..., period, lastStreak })
+}
+```
 
 ---
 
@@ -110,29 +150,24 @@ The proactive graph is a purpose-built LangGraph graph separate from the main co
 ```
 START
   │
-  ├── intent === 'anomaly_review'  →  anomalyNudge  →  END
+  ├── intent === 'anomaly_review'      →  anomalyNudge  →  END
   │
-  └── intent === 'savings_goal_check'  →  goalNudge  →  END
+  ├── intent === 'habit_setting'       →  habitNudge    →  END
+  │
+  └── (everything else)                →  goalNudge     →  END
 ```
 
-Both nodes call the same agent functions already used in the conversational graph:
+Each node calls a dedicated agent function:
 
-| Node | Agent function | Prompt template |
+| Node | Agent function | Used by triggers |
 |---|---|---|
-| `anomalyNudge` | `reviewAnomalies()` | `anomalyReviewer.prompt.ts` |
-| `goalNudge` | `adviseSavingsGoals()` | `savingsGoalAdvisor.prompt.ts` |
+| `anomalyNudge` | `reviewAnomalies()` | Anomaly detected |
+| `goalNudge` | `adviseSavingsGoals()` | Goal milestone, Goal at risk |
+| `habitNudge` | `adviseHabit()` | Habit streak, Habit check-in |
 
-The `userQuery` passed to each node is a synthetic prompt tailored for proactive context — not a real user message:
+The `userQuery` passed to each node is a synthetic prompt tailored for proactive context — not a real user message. All five triggers build their graph input via `buildGraphInput(trigger)`, which maps each trigger type to the appropriate intent, userQuery, and state fields.
 
-```ts
-// Anomaly
-userQuery: `You just detected an anomaly: "${anomaly.description}". Write a brief, warm proactive message for the user — no more than 2-3 sentences.`
-
-// Goal milestone
-userQuery: `The user just hit ${milestone}% of their "${goal.name}" goal. Celebrate this briefly and mention their momentum — 1-2 sentences.`
-```
-
-The graph shares `GraphAnnotation` from `graph.ts` (exported) so state shapes stay consistent.
+The graph shares `GraphAnnotation` from `graph.ts` (exported) so state shapes stay consistent. Habit triggers don't need structured state fields — all context is encoded in the `userQuery` prompt, keeping the shared annotation unchanged.
 
 ### Why not reuse the main graph?
 
@@ -144,31 +179,22 @@ The main `buildTruffleGraph()` always starts with `START → intentRouter`. The 
 
 **File:** `apps/web/src/lib/proactive-nudge.ts`
 
-Thin orchestration layer between the API routes and the AI package. Responsible for:
+Thin orchestration layer between the API routes and the AI package. Each function follows the same pattern:
 
-1. Dedup check against `chat_messages`
-2. Importing and calling `generateProactiveMessage`
-3. Writing the result to `chat_messages`
+1. Compute `nudge_key`
+2. `alreadySent` dedup check against `chat_messages`
+3. Dynamically import and call `generateProactiveMessage`
+4. Write the result to `chat_messages` via `writeNudge`
 
 ```ts
-export async function sendAnomalyNudge(params: {
-  userId: string
-  anomaly: Anomaly
-  transactions: Transaction[]
-  snapshot: MonthlySnapshot | null
-})
-
-export async function sendGoalMilestoneNudge(params: {
-  userId: string
-  goal: SavingsGoal
-  milestone: 25 | 50 | 75 | 100
-  snapshot: MonthlySnapshot | null
-})
+sendAnomalyNudge({ userId, anomaly, transactions, snapshot })
+sendGoalMilestoneNudge({ userId, goal, milestone, snapshot })
+sendGoalAtRiskNudge({ userId, goal, daysRemaining, projectedShortfall })
+sendHabitStreakNudge({ userId, habitId, habitName, habitEmoji, streak })
+sendHabitCheckInNudge({ userId, habitId, habitName, habitEmoji, frequency, amount, period, lastStreak })
 ```
 
-Both functions are `async` and are always called in a non-blocking `.catch()` chain — they must never block the API response.
-
-`snapshot` is `null` in current triggers because fetching the monthly snapshot would add a DB round-trip. The agent falls back to `emptySnapshot()` (zeroed values) which is fine — milestone celebrations don't depend on income/expense totals, and anomaly descriptions are self-contained.
+All five are `async` and **must be `await`-ed** in route handlers. Fire-and-forget patterns are killed by the Vercel serverless runtime before they complete. Each call site wraps the await in `try/catch` with `console.error` so failures are visible in function logs without crashing the response.
 
 ---
 
@@ -182,7 +208,7 @@ Three columns added to `chat_messages`:
 |---|---|---|
 | `is_proactive` | `boolean NOT NULL DEFAULT false` | Distinguishes proactive messages from conversational ones |
 | `read_at` | `timestamptz` | Null = unread; set when user opens Chat tab |
-| `nudge_key` | `text` | Dedup key, e.g. `anomaly:uuid` or `goal:uuid:50` |
+| `nudge_key` | `text` | Dedup key, e.g. `anomaly:uuid`, `goal:uuid:50`, `goal-at-risk:uuid:2026-04`, `habit-streak:uuid:5`, `habit-checkin:uuid:2026-W15` |
 
 Two indexes:
 
@@ -256,22 +282,26 @@ This means:
 
 ## Extending
 
-### Add a new trigger
+### Add a new trigger (using an existing graph node)
 
-1. Identify the API route where the event occurs
-2. Implement a `sendXxxNudge` function in `proactive-nudge.ts` with a unique `nudge_key` scheme
-3. Call it non-blocking at the end of the relevant route handler:
+1. Add a new interface to the `ProactiveTrigger` union in `proactive.ts`
+2. Add a case to `getNudgeKey()` and `buildGraphInput()` — pick an existing `intent` that routes to the right node
+3. Implement a `sendXxxNudge` function in `proactive-nudge.ts` following the existing pattern
+4. `await` it in the relevant route handler, wrapped in `try/catch`:
    ```ts
-   sendXxxNudge({ userId, ... })
-     .catch((e) => console.warn('Proactive xxx nudge failed (non-fatal):', e))
+   try {
+     await sendXxxNudge({ userId, ... })
+   } catch (e) {
+     console.error('Xxx nudge failed:', e)
+   }
    ```
 
 ### Add a new nudge type (new agent node)
 
-1. Add a node function in `proactive.ts` that calls the relevant agent
-2. Add it to the graph with `.addNode()` and a new branch in `routeByIntent`
-3. Add the new intent to `GraphAnnotation` state if needed
-4. Pass `intent: 'your_new_intent'` from the trigger
+1. Create an agent function in `packages/ai/src/agents/` (see `habitAdvisor.ts` for a minimal example)
+2. Add a node function in `buildProactiveGraph()` that calls the agent
+3. Wire it into the graph with `.addNode()`, a new branch in `routeByIntent`, and `.addEdge(nodeName, END)`
+4. Map the new `intent` value in `buildGraphInput()` for your trigger type
 
 ### Change the message cap or cooldown
 

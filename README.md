@@ -48,7 +48,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 - 🎯 **Savings goals** — set goals manually or let Truffle propose one mid-conversation; confirm with one tap, track progress and deposits in Insights
 - 💬 **Log transactions from chat** — say "I just paid €45 at Lidl" and Truffle shows a confirmation card before logging it to your history
 - 🔁 **Saving habits** — set up a recurring weekly or monthly saving habit in chat ("save €50 every week"); Truffle tracks your streak, logs contributions, and reminds you when a period is due
-- 🔔 **Proactive nudges** — Truffle messages you in chat when it spots something worth flagging (anomalous charge, goal milestone) without you having to ask; unread badge on the Chat tab
+- 🔔 **Proactive nudges** — Truffle messages you in chat when it spots something worth flagging (anomalous charge, goal milestone, at-risk deadline, habit streak celebration, habit check-in reminder) without you having to ask; unread badge on the Chat tab
 - 🔊 **Weekly audio summary** — spoken recap of your week, once per week
 - 💱 **Multi-currency** — EUR, GBP, USD converted to EUR for consistent totals
 - 📱 **PWA** — installs on iOS and Android, fully offline-capable

@@ -171,6 +171,8 @@ Returns all active habits with computed stats (streak, `currentPeriodLogged`, `t
 
 Stats are computed server-side: all contributions for the user's active habits are fetched in a single query, then grouped by `habit_id` to build period sets used for streak calculation.
 
+**Proactive check-in reminder:** After computing stats, the handler checks each habit. If the current period is not logged and the period midpoint has passed (Thursday for weekly, 15th for monthly), a gentle check-in nudge is sent via `sendHabitCheckInNudge`. Dedup key: `habit-checkin:{habitId}:{period}` — one reminder per habit per period. See [Proactive Nudges](./proactive-nudges.md) for details.
+
 ### `POST /api/habits`
 
 Creates a new savings habit.
@@ -199,6 +201,8 @@ Logs a contribution for a specific period. Uses `upsert` on the `(habit_id, peri
   "amount": 50
 }
 ```
+
+**Proactive streak celebration:** After the upsert, the handler recomputes the full streak. If it lands on a milestone (3, 5, 7, 10, 15, 20, 30, 50, 100), a celebration nudge is sent via `sendHabitStreakNudge`. Dedup key: `habit-streak:{habitId}:{streak}` — one nudge per streak number per habit. See [Proactive Nudges](./proactive-nudges.md) for details.
 
 ---
 
@@ -356,12 +360,13 @@ LLM streams follow-up: "Great — €50 every week is now set up. I'll remind yo
 User opens Insights → "Saving Habits" section
   ↓
 GET /api/habits → habits with streak + currentPeriodLogged
-  ↓
+  ↓                ↳ check-in nudge fires if period midpoint passed and not logged
 HabitCard shows "+ Log" button (currentPeriodLogged = false)
   ↓
 User taps "+ Log"
   ↓
 PATCH /api/habits → upsert into habit_contributions (habit_id, period)
+  ↓                  ↳ streak milestone nudge fires if streak hits 3/5/7/10/…
 queryClient.invalidateQueries(['habits'])
   ↓
 HabitCard re-renders with "✓ done" chip, streak increments
