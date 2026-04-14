@@ -88,3 +88,83 @@ export async function sendGoalMilestoneNudge(params: {
 
   await writeNudge(db, userId, message, nudgeKey)
 }
+
+export async function sendGoalAtRiskNudge(params: {
+  userId: string
+  goal: SavingsGoal
+  daysRemaining: number
+  projectedShortfall: number
+}) {
+  const { userId, goal, daysRemaining, projectedShortfall } = params
+  const nudgeKey = `goal-at-risk:${goal.id}:${new Date().toISOString().slice(0, 7)}`
+  const db = createServerClient()
+
+  if (await alreadySent(db, userId, nudgeKey)) return
+
+  const { generateProactiveMessage } = await import('@truffle/ai')
+  const message = await generateProactiveMessage(
+    { type: 'goal_at_risk', goal, daysRemaining, projectedShortfall },
+    userId
+  )
+  if (!message) return
+
+  await writeNudge(db, userId, message, nudgeKey)
+}
+
+export async function sendHabitStreakNudge(params: {
+  userId: string
+  habitId: string
+  habitName: string
+  habitEmoji: string
+  streak: number
+}) {
+  const { userId, habitId, habitName, habitEmoji, streak } = params
+  const nudgeKey = `habit-streak:${habitId}:${streak}`
+  const db = createServerClient()
+
+  if (await alreadySent(db, userId, nudgeKey)) return
+
+  const { generateProactiveMessage } = await import('@truffle/ai')
+  const message = await generateProactiveMessage(
+    { type: 'habit_streak', habitId, habitName, habitEmoji, streak },
+    userId
+  )
+  if (!message) return
+
+  await writeNudge(db, userId, message, nudgeKey)
+}
+
+export async function sendHabitCheckInNudge(params: {
+  userId: string
+  habitId: string
+  habitName: string
+  habitEmoji: string
+  frequency: 'weekly' | 'monthly'
+  amount: number
+  period: string
+  lastStreak: number
+}) {
+  const { userId, habitId, habitName, habitEmoji, frequency, amount, period, lastStreak } = params
+  const nudgeKey = `habit-checkin:${habitId}:${period}`
+  const db = createServerClient()
+
+  if (await alreadySent(db, userId, nudgeKey)) return
+
+  const { generateProactiveMessage } = await import('@truffle/ai')
+  const message = await generateProactiveMessage(
+    {
+      type: 'habit_check_in',
+      habitId,
+      habitName,
+      habitEmoji,
+      frequency,
+      amount,
+      period,
+      lastStreak,
+    },
+    userId
+  )
+  if (!message) return
+
+  await writeNudge(db, userId, message, nudgeKey)
+}
