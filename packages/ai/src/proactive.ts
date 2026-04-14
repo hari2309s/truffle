@@ -2,6 +2,7 @@ import { StateGraph, END, START } from '@langchain/langgraph'
 import type { Transaction, Anomaly, SavingsGoal, MonthlySnapshot } from '@truffle/types'
 import { reviewAnomalies } from './agents/anomalyReviewer'
 import { adviseSavingsGoals } from './agents/savingsGoalAdvisor'
+import { adviseHabit } from './agents/habitAdvisor'
 import { GraphAnnotation } from './graph'
 import { langfuse } from './langfuse'
 
@@ -19,7 +20,9 @@ function emptySnapshot(): MonthlySnapshot {
 }
 
 function routeByIntent(state: ProactiveState): string {
-  return state.intent === 'anomaly_review' ? 'anomalyNudge' : 'goalNudge'
+  if (state.intent === 'anomaly_review') return 'anomalyNudge'
+  if (state.intent === 'habit_setting') return 'habitNudge'
+  return 'goalNudge'
 }
 
 /**
@@ -49,15 +52,23 @@ function buildProactiveGraph(traceId: string) {
     return { agentResponse: response }
   }
 
+  async function habitNudgeNode(state: ProactiveState): Promise<Partial<ProactiveState>> {
+    const response = await adviseHabit(state.userQuery, traceId)
+    return { agentResponse: response }
+  }
+
   return new StateGraph(GraphAnnotation)
     .addNode('anomalyNudge', anomalyNudgeNode)
     .addNode('goalNudge', goalNudgeNode)
+    .addNode('habitNudge', habitNudgeNode)
     .addConditionalEdges(START, routeByIntent, {
       anomalyNudge: 'anomalyNudge',
       goalNudge: 'goalNudge',
+      habitNudge: 'habitNudge',
     })
     .addEdge('anomalyNudge', END)
     .addEdge('goalNudge', END)
+    .addEdge('habitNudge', END)
     .compile()
 }
 
@@ -75,33 +86,61 @@ export interface GoalMilestoneTrigger {
   snapshot: MonthlySnapshot | null
 }
 
+export interface GoalAtRiskTrigger {
+  type: 'goal_at_risk'
+  goal: SavingsGoal
+  daysRemaining: number
+  projectedShortfall: number
+}
+
+export interface HabitStreakTrigger {
+  type: 'habit_streak'
+  habitId: string
+  habitName: string
+  habitEmoji: string
+  streak: number
+}
+
+export interface HabitCheckInTrigger {
+  type: 'habit_check_in'
+  habitId: string
+  habitName: string
+  habitEmoji: string
+  frequency: 'weekly' | 'monthly'
+  amount: number
+  period: string
+  lastStreak: number
+}
+
+type ProactiveTrigger =
+  | AnomalyTrigger
+  | GoalMilestoneTrigger
+  | GoalAtRiskTrigger
+  | HabitStreakTrigger
+  | HabitCheckInTrigger
+
+function getNudgeKey(trigger: ProactiveTrigger): string {
+  switch (trigger.type) {
+    case 'anomaly':
+      return `anomaly:${trigger.anomaly.transactionId}`
+    case 'goal_milestone':
+      return `goal:${trigger.goal.id}:${trigger.milestone}`
+    case 'goal_at_risk':
+      return `goal-at-risk:${trigger.goal.id}:${new Date().toISOString().slice(0, 7)}`
+    case 'habit_streak':
+      return `habit-streak:${trigger.habitId}:${trigger.streak}`
+    case 'habit_check_in':
+      return `habit-checkin:${trigger.habitId}:${trigger.period}`
+  }
+}
+
 export async function generateProactiveMessage(
-  trigger: AnomalyTrigger | GoalMilestoneTrigger,
+  trigger: ProactiveTrigger,
   userId?: string
 ): Promise<string | null> {
-  const nudgeKey =
-    trigger.type === 'anomaly'
-      ? `anomaly:${trigger.anomaly.transactionId}`
-      : `goal:${trigger.goal.id}:${trigger.milestone}`
+  const nudgeKey = getNudgeKey(trigger)
 
-  const input =
-    trigger.type === 'anomaly'
-      ? {
-          userQuery: `You just detected an anomaly: "${trigger.anomaly.description}". Write a brief, warm proactive message for the user — no more than 2-3 sentences.`,
-          intent: 'anomaly_review' as const,
-          transactions: trigger.transactions,
-          anomalies: [trigger.anomaly],
-          savingsGoals: [] as SavingsGoal[],
-          currentMonth: trigger.snapshot,
-        }
-      : {
-          userQuery: `The user just hit ${trigger.milestone}% of their "${trigger.goal.name}" goal (${trigger.goal.emoji}). Celebrate this briefly and mention their momentum — 1-2 sentences.`,
-          intent: 'savings_goal_check' as const,
-          transactions: [] as Transaction[],
-          anomalies: [] as Anomaly[],
-          savingsGoals: [trigger.goal],
-          currentMonth: trigger.snapshot,
-        }
+  const input = buildGraphInput(trigger)
 
   const trace = langfuse.trace({
     name: 'proactive_nudge',
@@ -116,6 +155,53 @@ export async function generateProactiveMessage(
 
   trace.update({ output: message ?? '' })
   await langfuse.flushAsync()
-
   return message
+}
+
+function buildGraphInput(trigger: ProactiveTrigger) {
+  const empty = {
+    transactions: [] as Transaction[],
+    anomalies: [] as Anomaly[],
+    savingsGoals: [] as SavingsGoal[],
+    currentMonth: null as MonthlySnapshot | null,
+  }
+
+  switch (trigger.type) {
+    case 'anomaly':
+      return {
+        ...empty,
+        userQuery: `You just detected an anomaly: "${trigger.anomaly.description}". Write a brief, warm proactive message for the user — no more than 2-3 sentences.`,
+        intent: 'anomaly_review' as const,
+        transactions: trigger.transactions,
+        anomalies: [trigger.anomaly],
+        currentMonth: trigger.snapshot,
+      }
+    case 'goal_milestone':
+      return {
+        ...empty,
+        userQuery: `The user just hit ${trigger.milestone}% of their "${trigger.goal.name}" goal (${trigger.goal.emoji}). Celebrate this briefly and mention their momentum — 1-2 sentences.`,
+        intent: 'savings_goal_check' as const,
+        savingsGoals: [trigger.goal],
+        currentMonth: trigger.snapshot,
+      }
+    case 'goal_at_risk':
+      return {
+        ...empty,
+        userQuery: `The user's "${trigger.goal.name}" savings goal (${trigger.goal.emoji}) has ${trigger.daysRemaining} days until its deadline, but they still need €${trigger.projectedShortfall.toFixed(0)} to reach their €${trigger.goal.targetAmount} target. They've saved €${trigger.goal.savedAmount} so far. Write a brief, encouraging nudge — 1-2 sentences. Motivate without being preachy.`,
+        intent: 'savings_goal_check' as const,
+        savingsGoals: [trigger.goal],
+      }
+    case 'habit_streak':
+      return {
+        ...empty,
+        userQuery: `The user just logged their "${trigger.habitName}" (${trigger.habitEmoji}) savings habit and hit a ${trigger.streak}-period streak! Write a brief, warm celebration — 1-2 sentences. Acknowledge the consistency.`,
+        intent: 'habit_setting' as const,
+      }
+    case 'habit_check_in':
+      return {
+        ...empty,
+        userQuery: `The user's "${trigger.habitName}" (${trigger.habitEmoji}) savings habit hasn't been logged yet this ${trigger.frequency === 'weekly' ? 'week' : 'month'}. They save €${trigger.amount} per ${trigger.frequency === 'weekly' ? 'week' : 'month'}${trigger.lastStreak > 0 ? ` and had a ${trigger.lastStreak}-period streak going` : ''}. Write a gentle, non-judgmental reminder — 1-2 sentences. Don't be pushy.`,
+        intent: 'habit_setting' as const,
+      }
+  }
 }
