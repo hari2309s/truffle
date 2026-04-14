@@ -126,8 +126,8 @@ export async function PATCH(request: NextRequest) {
             emoji: data.emoji as string,
             createdAt: data.created_at as string,
           }
-          sendGoalMilestoneNudge({ userId, goal, milestone: crossed, snapshot: null }).catch((e) =>
-            console.warn('Proactive goal nudge failed (non-fatal):', e)
+          await sendGoalMilestoneNudge({ userId, goal, milestone: crossed, snapshot: null }).catch(
+            (e) => console.warn('Proactive goal nudge failed (non-fatal):', e)
           )
         }
       }
