@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { usePostHog } from 'posthog-js/react'
 import type { Transaction, TransactionCategory } from '@truffle/types'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -28,6 +29,7 @@ interface AddTransactionFormProps {
 
 export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps) {
   const queryClient = useQueryClient()
+  const posthog = usePostHog()
   const [isLoading, setIsLoading] = useState(false)
   const [queued, setQueued] = useState(false)
   const { isOnline } = useNetworkStatus()
@@ -75,6 +77,11 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
         })
         await registerBackgroundSync()
         await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
+        posthog.capture('transaction_added', {
+          category: form.category,
+          is_expense: form.isExpense,
+          is_offline: true,
+        })
         setQueued(true)
         setTimeout(() => onClose?.(), 1200)
         return
@@ -87,6 +94,12 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
       })
 
       if (!res.ok) throw new Error('Failed to save')
+
+      posthog.capture('transaction_added', {
+        category: form.category,
+        is_expense: form.isExpense,
+        is_offline: false,
+      })
 
       await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
       await queryClient.invalidateQueries({ queryKey: ['insights', userId] })

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { usePostHog } from 'posthog-js/react'
 import type { TransactionCategory } from '@truffle/types'
 
 interface ParsedTransaction {
@@ -21,6 +22,7 @@ const CURRENCY_SYMBOL: Record<string, string> = { EUR: '€', GBP: '£', USD: '$
 
 export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
   const queryClient = useQueryClient()
+  const posthog = usePostHog()
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<{ file: File; objectUrl: string } | null>(null)
   const [parsed, setParsed] = useState<ParsedTransaction[] | null>(null)
@@ -76,6 +78,11 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
         return
       }
 
+      posthog.capture('receipt_scanned', {
+        transaction_count: json.transactions.length,
+        file_type: preview.file.type,
+      })
+
       setParsed(json.transactions as ParsedTransaction[])
     } catch {
       setError('Something went wrong. Please try again.')
@@ -104,6 +111,11 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
       if (!res.ok) throw new Error('Import failed')
 
       await queryClient.refetchQueries({ queryKey: ['transactions', userId] })
+
+      posthog.capture('receipt_imported', {
+        transaction_count: parsed.length,
+      })
+
       setImported(true)
     } catch {
       setError('Import failed. Please try again.')

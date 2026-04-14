@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { SkeletonPulse } from './PageMotion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { usePostHog } from 'posthog-js/react'
 import type { SavingsGoal } from '@truffle/types'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 
@@ -263,6 +264,7 @@ function GoalCard({
 
 function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void }) {
   const queryClient = useQueryClient()
+  const posthog = usePostHog()
   const [form, setForm] = useState({
     name: '',
     targetAmount: '',
@@ -303,6 +305,11 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
         })
         await registerBackgroundSync()
         await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
+        posthog.capture('goal_created', {
+          target_amount: parseFloat(form.targetAmount),
+          has_deadline: Boolean(form.deadline),
+          is_offline: true,
+        })
         onDone()
         return
       }
@@ -312,6 +319,13 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
+
+      posthog.capture('goal_created', {
+        target_amount: parseFloat(form.targetAmount),
+        has_deadline: Boolean(form.deadline),
+        is_offline: false,
+      })
+
       onDone()
     } finally {
       setIsLoading(false)

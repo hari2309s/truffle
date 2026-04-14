@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { memo, useState } from 'react'
+import { usePostHog } from 'posthog-js/react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -30,6 +31,7 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
   onResult,
 }: TransactionProposalCardProps) {
   const queryClient = useQueryClient()
+  const posthog = usePostHog()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
   const [error, setError] = useState<string | null>(null)
 
@@ -68,6 +70,13 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
         }),
       })
       if (!res.ok) throw new Error('Failed to log transaction')
+
+      posthog.capture('transaction_added', {
+        category: proposal.category,
+        is_expense: proposal.amount < 0,
+        source: 'voice',
+      })
+
       await queryClient.refetchQueries({ queryKey: ['transactions', userId] })
       await supabase.from('chat_messages').insert({
         user_id: userId,

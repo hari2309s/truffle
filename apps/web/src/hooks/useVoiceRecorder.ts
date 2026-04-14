@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import posthog from 'posthog-js'
 
 interface UseVoiceRecorderReturn {
   isRecording: boolean
@@ -79,6 +80,8 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
 
       const json = await response.json()
       if (!response.ok) throw new Error(json.error ?? 'Transcription failed')
+
+      posthog.capture('voice_input_used', { mime_type: mime })
 
       setTranscript(json.transcript)
     } catch (err) {

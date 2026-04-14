@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { memo, useState } from 'react'
+import { usePostHog } from 'posthog-js/react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -26,6 +27,7 @@ export const GoalProposalCard = memo(function GoalProposalCard({
   onResult,
 }: GoalProposalCardProps) {
   const queryClient = useQueryClient()
+  const posthog = usePostHog()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
   const [error, setError] = useState<string | null>(null)
 
@@ -46,6 +48,13 @@ export const GoalProposalCard = memo(function GoalProposalCard({
         }),
       })
       if (!res.ok) throw new Error('Failed to save goal')
+
+      posthog.capture('goal_created', {
+        target_amount: proposal.targetAmount,
+        has_deadline: Boolean(proposal.deadline),
+        source: 'voice',
+      })
+
       await queryClient.refetchQueries({ queryKey: ['goals', userId] })
       await supabase.from('chat_messages').insert({
         user_id: userId,
