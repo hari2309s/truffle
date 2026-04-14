@@ -1,7 +1,9 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { PostHogProvider } from './posthog-provider'
+import { PostHogPageView } from './posthog-pageview'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -29,5 +31,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return () => navigator.serviceWorker.removeEventListener('message', handler)
   }, [queryClient])
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <PostHogProvider>
+      <Suspense fallback={null}>
+        <PostHogPageView />
+      </Suspense>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </PostHogProvider>
+  )
 }
