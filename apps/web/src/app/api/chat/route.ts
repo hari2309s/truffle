@@ -11,7 +11,8 @@ import {
   buildSystemPrompt,
 } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
-import type { MonthlySnapshot, TransactionCategory } from '@truffle/types'
+import type { MonthlySnapshot, TransactionCategory, QueryIntent } from '@truffle/types'
+import { INTENT, TRANSACTION_CATEGORIES } from '@truffle/types'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
 import { currentYearMonth } from '@/lib/date'
 
@@ -42,6 +43,30 @@ function buildEmptySnapshot(): MonthlySnapshot {
   }
 }
 
+// Detects whether the previous assistant message was asking for follow-up details
+// in a multi-turn collection flow, so we can force the correct intent even when
+// the user's reply (e.g. "20000 euros") doesn't contain intent keywords.
+function detectFollowUpIntent(prevText: string, hasToolInvocations: boolean): QueryIntent | null {
+  if (hasToolInvocations) return null
+  const has = (...words: string[]) => words.some((w) => prevText.includes(w))
+  if (
+    has('how much', 'amount', 'cost', 'budget', 'target') &&
+    has('goal', 'save', 'saving', 'plan', 'trip', 'buy', 'purchase', 'afford')
+  )
+    return INTENT.GOAL_SETTING
+  if (
+    has('how much', 'amount', 'what did', 'which category', 'what category') &&
+    has('transaction', 'expense', 'purchase', 'payment', 'spent', 'paid', 'log')
+  )
+    return INTENT.ADD_TRANSACTION
+  if (
+    has('how much', 'amount', 'often', 'weekly', 'monthly') &&
+    has('habit', 'save', 'saving', 'set aside', 'put away', 'regularly')
+  )
+    return INTENT.HABIT_SETTING
+  return null
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { messages: clientMessages, userId } = await request.json()
@@ -70,7 +95,9 @@ export async function POST(request: NextRequest) {
     ] = await Promise.all([
       db
         .from('transactions')
-        .select('*')
+        .select(
+          'id, user_id, amount, currency, description, category, merchant, date, is_recurring'
+        )
         .eq('user_id', userId)
         .order('date', { ascending: false })
         .limit(50),
@@ -254,63 +281,11 @@ export async function POST(request: NextRequest) {
     // Detect this and force the intent so tools stay enabled for this turn.
     const prevAssistantText =
       typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : ''
-    const prevWasAskingForGoalAmount =
-      !lastAssistant?.toolInvocations?.length &&
-      (prevAssistantText.includes('how much') ||
-        prevAssistantText.includes('amount') ||
-        prevAssistantText.includes('cost') ||
-        prevAssistantText.includes('budget') ||
-        prevAssistantText.includes('target')) &&
-      (prevAssistantText.includes('goal') ||
-        prevAssistantText.includes('save') ||
-        prevAssistantText.includes('saving') ||
-        prevAssistantText.includes('plan') ||
-        prevAssistantText.includes('trip') ||
-        prevAssistantText.includes('buy') ||
-        prevAssistantText.includes('purchase') ||
-        prevAssistantText.includes('afford'))
-    if (prevWasAskingForGoalAmount) {
-      intent = 'goal_setting'
-    }
-
-    // Same detection for transaction follow-ups — if Truffle asked for transaction
-    // details and the user replies with an amount/description, keep tools enabled.
-    const prevWasAskingForTransactionDetails =
-      !lastAssistant?.toolInvocations?.length &&
-      (prevAssistantText.includes('how much') ||
-        prevAssistantText.includes('amount') ||
-        prevAssistantText.includes('what did') ||
-        prevAssistantText.includes('which category') ||
-        prevAssistantText.includes('what category')) &&
-      (prevAssistantText.includes('transaction') ||
-        prevAssistantText.includes('expense') ||
-        prevAssistantText.includes('purchase') ||
-        prevAssistantText.includes('payment') ||
-        prevAssistantText.includes('spent') ||
-        prevAssistantText.includes('paid') ||
-        prevAssistantText.includes('log'))
-    if (prevWasAskingForTransactionDetails) {
-      intent = 'add_transaction'
-    }
-
-    // Detect habit follow-up — if Truffle asked for a habit amount/frequency and
-    // the user replies with a number, keep tools enabled for habit_setting.
-    const prevWasAskingForHabitDetails =
-      !lastAssistant?.toolInvocations?.length &&
-      (prevAssistantText.includes('how much') ||
-        prevAssistantText.includes('amount') ||
-        prevAssistantText.includes('often') ||
-        prevAssistantText.includes('weekly') ||
-        prevAssistantText.includes('monthly')) &&
-      (prevAssistantText.includes('habit') ||
-        prevAssistantText.includes('save') ||
-        prevAssistantText.includes('saving') ||
-        prevAssistantText.includes('set aside') ||
-        prevAssistantText.includes('put away') ||
-        prevAssistantText.includes('regularly'))
-    if (prevWasAskingForHabitDetails) {
-      intent = 'habit_setting'
-    }
+    const followUpIntent = detectFollowUpIntent(
+      prevAssistantText,
+      !!lastAssistant?.toolInvocations?.length
+    )
+    if (followUpIntent) intent = followUpIntent
 
     const proposeGoalTool = {
       proposeGoal: tool({
@@ -353,20 +328,7 @@ export async function POST(request: NextRequest) {
               'Transaction amount. Negative for expenses (e.g. -4.50), positive for income (e.g. 1500).'
             ),
           category: z
-            .enum([
-              'food_groceries',
-              'food_delivery',
-              'transport',
-              'housing',
-              'utilities',
-              'subscriptions',
-              'health',
-              'entertainment',
-              'shopping',
-              'income',
-              'savings',
-              'other',
-            ])
+            .enum(TRANSACTION_CATEGORIES)
             .describe('The most appropriate category for this transaction.'),
           merchant: z.string().optional().describe('Optional merchant or payee name.'),
           date: z
@@ -429,7 +391,9 @@ export async function POST(request: NextRequest) {
     const enableTools =
       historyHasToolResults ||
       (!isFollowUpAfterTool &&
-        (intent === 'goal_setting' || intent === 'add_transaction' || intent === 'habit_setting'))
+        (intent === INTENT.GOAL_SETTING ||
+          intent === INTENT.ADD_TRANSACTION ||
+          intent === INTENT.HABIT_SETTING))
 
     // Scope tools strictly by intent. Groq/LLaMA does not reliably honour
     // toolChoice: { type: 'tool', toolName } when multiple tools are available —
@@ -444,9 +408,9 @@ export async function POST(request: NextRequest) {
       if (historyHasToolResults) {
         return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
       }
-      if (intent === 'habit_setting') return { ...proposeHabitTool }
-      if (intent === 'goal_setting') return { ...proposeGoalTool }
-      if (intent === 'add_transaction') return { ...proposeTransactionTool }
+      if (intent === INTENT.HABIT_SETTING) return { ...proposeHabitTool }
+      if (intent === INTENT.GOAL_SETTING) return { ...proposeGoalTool }
+      if (intent === INTENT.ADD_TRANSACTION) return { ...proposeTransactionTool }
       return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
     })()
 
@@ -455,7 +419,8 @@ export async function POST(request: NextRequest) {
     // goal_setting uses 'auto' so the model can ask for the amount first.
     const toolChoice = (() => {
       if (!activeTools) return undefined
-      if (intent === 'add_transaction' || intent === 'habit_setting') return 'required' as const
+      if (intent === INTENT.ADD_TRANSACTION || intent === INTENT.HABIT_SETTING)
+        return 'required' as const
       return 'auto' as const
     })()
 
