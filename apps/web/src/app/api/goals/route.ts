@@ -118,7 +118,7 @@ export async function PATCH(request: NextRequest) {
     // Insert a transaction to deduct the deposit from balance
     if (depositAmount > 0) {
       const today = new Date().toISOString().slice(0, 10)
-      await db.from('transactions').insert({
+      const { error: txError } = await db.from('transactions').insert({
         id: crypto.randomUUID(),
         user_id: userId,
         amount: -depositAmount,
@@ -130,6 +130,16 @@ export async function PATCH(request: NextRequest) {
         is_recurring: false,
         embedding: null,
       })
+
+      if (txError) {
+        // Roll back the goal update so state stays consistent
+        await db
+          .from('savings_goals')
+          .update({ saved_amount: currentGoal.saved_amount })
+          .eq('id', goalId)
+          .eq('user_id', userId)
+        throw txError
+      }
 
       // Recompute monthly snapshot so balance reflects the deduction
       await recomputeSnapshot(userId, db)

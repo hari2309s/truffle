@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
+import { embedTransaction, upsertTransaction } from '@truffle/ai'
 import type { Transaction, Anomaly } from '@truffle/types'
 import { recomputeSnapshot } from '@/lib/server-db'
 
@@ -43,29 +44,35 @@ export async function POST(request: NextRequest) {
     }
 
     const db = createServerClient()
-    const results: Record<string, unknown>[] = []
 
-    for (const tx of transactions) {
-      // Generate embedding
-      const txWithId: Transaction = {
-        ...tx,
-        id: crypto.randomUUID(),
-        userId,
-      }
-      let embedding: number[] = []
-      try {
-        const { embedTransaction } = await import('@truffle/ai')
-        embedding = await embedTransaction(txWithId)
-        txWithId.embedding = embedding
-      } catch (e) {
-        console.warn('Embedding failed (non-fatal):', e)
-      }
+    // Assign IDs upfront so embeddings and DB rows share the same ID
+    const txsWithIds: Transaction[] = transactions.map((tx) => ({
+      ...tx,
+      id: crypto.randomUUID(),
+      userId,
+    }))
 
-      // Store in Supabase
-      const { data, error } = await db
-        .from('transactions')
-        .insert({
-          id: txWithId.id,
+    // Generate all embeddings in parallel (non-fatal per transaction)
+    const embeddings = await Promise.all(
+      txsWithIds.map((tx) =>
+        embedTransaction(tx).catch((e) => {
+          console.warn('Embedding failed (non-fatal):', e)
+          return [] as number[]
+        })
+      )
+    )
+
+    // Apply embeddings so ChromaDB upserts have the vector attached
+    txsWithIds.forEach((tx, i) => {
+      if (embeddings[i]!.length > 0) tx.embedding = embeddings[i]
+    })
+
+    // Batch insert all transactions in a single round-trip
+    const { data: insertedRows, error: insertError } = await db
+      .from('transactions')
+      .insert(
+        txsWithIds.map((tx, i) => ({
+          id: tx.id,
           user_id: userId,
           amount: tx.amount,
           currency: tx.currency,
@@ -74,23 +81,21 @@ export async function POST(request: NextRequest) {
           merchant: tx.merchant,
           date: tx.date,
           is_recurring: tx.isRecurring,
-          embedding: embedding.length > 0 ? embedding : null,
-        })
-        .select()
-        .single()
+          embedding: embeddings[i]!.length > 0 ? embeddings[i] : null,
+        }))
+      )
+      .select()
 
-      if (error) throw error
+    if (insertError) throw insertError
 
-      // Store in ChromaDB (non-fatal)
-      try {
-        const { upsertTransaction } = await import('@truffle/ai')
-        await upsertTransaction(txWithId)
-      } catch (e) {
-        console.warn('ChromaDB upsert failed (non-fatal):', e)
-      }
+    const results = (insertedRows ?? []) as Record<string, unknown>[]
 
-      results.push(data as Record<string, unknown>)
-    }
+    // Upsert all to ChromaDB in parallel (non-fatal)
+    await Promise.all(
+      txsWithIds.map((tx) =>
+        upsertTransaction(tx).catch((e) => console.warn('ChromaDB upsert failed (non-fatal):', e))
+      )
+    )
 
     // Recompute monthly snapshot
     await recomputeSnapshot(userId, db)
