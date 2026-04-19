@@ -26,6 +26,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_%2B_Auth-3ECF8E?logo=supabase&logoColor=white)
 ![Langfuse](https://img.shields.io/badge/Langfuse-observability-000000?logo=langfuse&logoColor=white)
+![PostHog](https://img.shields.io/badge/PostHog-analytics-F54E00?logo=posthog&logoColor=white)
 
 ![pnpm](https://img.shields.io/badge/pnpm-workspaces-F69220?logo=pnpm&logoColor=white)
 ![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-EF4444?logo=turborepo&logoColor=white)
@@ -87,6 +88,7 @@ Your recent transactions are passed directly as context to the model on every qu
 | Embeddings | Gemini text-embedding-004 (Google AI Studio) |
 | Database | Supabase (PostgreSQL + Auth + Storage) |
 | Observability | Langfuse (traces, generations, token usage) |
+| Analytics | PostHog (pageviews, event tracking) |
 | State | TanStack Query (`networkMode: always`) |
 | Monorepo | pnpm workspaces + Turborepo |
 | Deployment | Vercel |
@@ -142,6 +144,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 LANGFUSE_SECRET_KEY=                 # Langfuse — free tier (observability)
 LANGFUSE_PUBLIC_KEY=
 LANGFUSE_BASE_URL=https://cloud.langfuse.com
+NEXT_PUBLIC_POSTHOG_KEY=             # PostHog — free tier (analytics)
+NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 ```
 
 ### Database setup
