@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     try {
       const { data, error } = await db
         .from('anomalies')
-        .select('*')
+        .select('id, transaction_id, type, severity, description, detected_at, dismissed')
         .eq('user_id', userId)
         .order('detected_at', { ascending: false })
         .limit(10)

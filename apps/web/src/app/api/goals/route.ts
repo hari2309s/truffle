@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const db = createServerClient()
     const { data, error } = await db
       .from('savings_goals')
-      .select('*')
+      .select('id, user_id, name, target_amount, saved_amount, deadline, emoji, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
 

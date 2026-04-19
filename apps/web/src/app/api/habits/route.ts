@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     const { data: habits, error } = await db
       .from('savings_habits')
-      .select('*')
+      .select('id, user_id, name, amount, frequency, emoji, is_active, created_at')
       .eq('user_id', userId)
       .eq('is_active', true)
       .order('created_at', { ascending: true })
@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
       .select('habit_id, period, amount')
       .in('habit_id', habitIds)
       .eq('user_id', userId)
+      .order('logged_at', { ascending: false })
+      .limit(500)
 
     const contribMap: Record<string, string[]> = {}
     const totalMap: Record<string, number> = {}
@@ -153,6 +155,8 @@ export async function PATCH(request: NextRequest) {
         .select('period')
         .eq('habit_id', habitId)
         .eq('user_id', userId)
+        .order('logged_at', { ascending: false })
+        .limit(500)
 
       const { data: habit } = await db
         .from('savings_habits')

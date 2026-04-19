@@ -17,7 +17,9 @@ export async function GET(request: NextRequest) {
     const db = createServerClient()
     const { data, error } = await db
       .from('transactions')
-      .select('*')
+      .select(
+        'id, user_id, amount, currency, description, category, merchant, date, is_recurring, created_at'
+      )
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })
