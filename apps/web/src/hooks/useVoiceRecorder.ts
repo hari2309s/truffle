@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import posthog from 'posthog-js'
 
 interface UseVoiceRecorderReturn {
@@ -20,12 +20,14 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
 
   const startRecording = useCallback(async () => {
     try {
       // getUserMedia must be first — Safari revokes the user gesture after any other async op
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
       setError(null)
       setTranscript(null)
 
@@ -63,6 +65,16 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
     if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
+    }
+  }, [])
+
+  // Stop microphone track if the component unmounts while recording is in progress
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop()
+      }
     }
   }, [])
 

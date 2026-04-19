@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { liveQuery } from 'dexie'
 import { useQueryClient } from '@tanstack/react-query'
 import { flushQueuedActions, offlineDb } from '@/lib/offline-db'
 
@@ -52,14 +53,11 @@ export function useNetworkStatus(onOnline?: () => void) {
   }, [sync, onOnline])
 
   useEffect(() => {
-    const refresh = () =>
-      offlineDb.queuedActions
-        .count()
-        .then(setPendingCount)
-        .catch(() => {})
-    refresh()
-    const id = setInterval(refresh, 5000)
-    return () => clearInterval(id)
+    const subscription = liveQuery(() => offlineDb.queuedActions.count()).subscribe({
+      next: (count) => setPendingCount(count),
+      error: () => {},
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   return { isOnline, isSyncing, pendingCount, sync }
