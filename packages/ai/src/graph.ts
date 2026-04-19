@@ -13,6 +13,7 @@ import { checkAffordability } from './agents/affordabilityChecker'
 import { reviewAnomalies } from './agents/anomalyReviewer'
 import { adviseSavingsGoals } from './agents/savingsGoalAdvisor'
 import { queryTransactions } from './vectorStore'
+import { currentYearMonth } from './date'
 
 export const GraphAnnotation = Annotation.Root({
   userQuery: Annotation<string>({ reducer: (x, y) => y ?? x, default: () => '' }),
@@ -22,6 +23,11 @@ export const GraphAnnotation = Annotation.Root({
     default: () => 'general_advice' as QueryIntent,
   }),
   transactions: Annotation<Transaction[]>({ reducer: (x, y) => y ?? x, default: () => [] }),
+  // Populated once by ragRetrievalNode; all agent nodes read from here instead of querying separately
+  retrievedTransactions: Annotation<Transaction[]>({
+    reducer: (x, y) => y ?? x,
+    default: () => [],
+  }),
   anomalies: Annotation<Anomaly[]>({ reducer: (x, y) => y ?? x, default: () => [] }),
   savingsGoals: Annotation<SavingsGoal[]>({
     reducer: (x, y) => y ?? x,
@@ -37,7 +43,7 @@ type GraphState = typeof GraphAnnotation.State
 
 function emptySnapshot(): MonthlySnapshot {
   return {
-    month: new Date().toISOString().slice(0, 7),
+    month: currentYearMonth(),
     totalIncome: 0,
     totalExpenses: 0,
     byCategory: {} as MonthlySnapshot['byCategory'],
@@ -46,15 +52,23 @@ function emptySnapshot(): MonthlySnapshot {
   }
 }
 
+// Runs once per request — fetches relevant transactions via RAG and stores them
+// in state so downstream agent nodes never call queryTransactions independently.
+async function ragRetrievalNode(state: GraphState): Promise<Partial<GraphState>> {
+  const userId = state.transactions[0]?.userId ?? ''
+  if (!userId || !state.userQuery) return {}
+  const retrieved = await queryTransactions(userId, state.userQuery, 20).catch(() => [])
+  return { retrievedTransactions: retrieved.length > 0 ? retrieved : state.transactions }
+}
+
 async function intentRouterNode(state: GraphState): Promise<Partial<GraphState>> {
   const intent = await routeIntent(state.userQuery)
   return { intent }
 }
 
 async function spendingAnalystNode(state: GraphState): Promise<Partial<GraphState>> {
-  const userId = state.transactions[0]?.userId ?? ''
-  const retrieved = await queryTransactions(userId, state.userQuery, 20).catch(() => [])
-  const transactions = retrieved.length > 0 ? retrieved : state.transactions
+  const transactions =
+    state.retrievedTransactions.length > 0 ? state.retrievedTransactions : state.transactions
   const analysis = await analyseSpending(
     state.userQuery,
     transactions,
@@ -64,9 +78,8 @@ async function spendingAnalystNode(state: GraphState): Promise<Partial<GraphStat
 }
 
 async function forecasterNode(state: GraphState): Promise<Partial<GraphState>> {
-  const userId = state.transactions[0]?.userId ?? ''
-  const retrieved = await queryTransactions(userId, state.userQuery, 20).catch(() => [])
-  const transactions = retrieved.length > 0 ? retrieved : state.transactions
+  const transactions =
+    state.retrievedTransactions.length > 0 ? state.retrievedTransactions : state.transactions
   const response = await forecastSpending(
     state.userQuery,
     transactions,
@@ -76,9 +89,8 @@ async function forecasterNode(state: GraphState): Promise<Partial<GraphState>> {
 }
 
 async function affordabilityCheckerNode(state: GraphState): Promise<Partial<GraphState>> {
-  const userId = state.transactions[0]?.userId ?? ''
-  const retrieved = await queryTransactions(userId, state.userQuery, 20).catch(() => [])
-  const transactions = retrieved.length > 0 ? retrieved : state.transactions
+  const transactions =
+    state.retrievedTransactions.length > 0 ? state.retrievedTransactions : state.transactions
   const response = await checkAffordability(
     state.userQuery,
     transactions,
@@ -88,9 +100,8 @@ async function affordabilityCheckerNode(state: GraphState): Promise<Partial<Grap
 }
 
 async function anomalyReviewerNode(state: GraphState): Promise<Partial<GraphState>> {
-  const userId = state.transactions[0]?.userId ?? ''
-  const retrieved = await queryTransactions(userId, state.userQuery, 20).catch(() => [])
-  const transactions = retrieved.length > 0 ? retrieved : state.transactions
+  const transactions =
+    state.retrievedTransactions.length > 0 ? state.retrievedTransactions : state.transactions
   const response = await reviewAnomalies(state.userQuery, transactions, state.anomalies)
   return { agentResponse: response }
 }
@@ -124,13 +135,15 @@ function routeAfterIntent(state: GraphState): string {
 
 export function buildTruffleGraph() {
   return new StateGraph(GraphAnnotation)
+    .addNode('ragRetrieval', ragRetrievalNode)
     .addNode('intentRouter', intentRouterNode)
     .addNode('spendingAnalyst', spendingAnalystNode)
     .addNode('forecaster', forecasterNode)
     .addNode('affordabilityChecker', affordabilityCheckerNode)
     .addNode('anomalyReviewer', anomalyReviewerNode)
     .addNode('savingsGoalAdvisor', savingsGoalAdvisorNode)
-    .addEdge(START, 'intentRouter')
+    .addEdge(START, 'ragRetrieval')
+    .addEdge('ragRetrieval', 'intentRouter')
     .addConditionalEdges('intentRouter', routeAfterIntent, {
       spendingAnalyst: 'spendingAnalyst',
       forecaster: 'forecaster',

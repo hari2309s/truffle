@@ -5,12 +5,13 @@ import { adviseSavingsGoals } from './agents/savingsGoalAdvisor'
 import { adviseHabit } from './agents/habitAdvisor'
 import { GraphAnnotation } from './graph'
 import { langfuse } from './langfuse'
+import { currentYearMonth } from './date'
 
 type ProactiveState = typeof GraphAnnotation.State
 
 function emptySnapshot(): MonthlySnapshot {
   return {
-    month: new Date().toISOString().slice(0, 7),
+    month: currentYearMonth(),
     totalIncome: 0,
     totalExpenses: 0,
     byCategory: {} as MonthlySnapshot['byCategory'],
@@ -126,7 +127,7 @@ function getNudgeKey(trigger: ProactiveTrigger): string {
     case 'goal_milestone':
       return `goal:${trigger.goal.id}:${trigger.milestone}`
     case 'goal_at_risk':
-      return `goal-at-risk:${trigger.goal.id}:${new Date().toISOString().slice(0, 7)}`
+      return `goal-at-risk:${trigger.goal.id}:${currentYearMonth()}`
     case 'habit_streak':
       return `habit-streak:${trigger.habitId}:${trigger.streak}`
     case 'habit_check_in':
