@@ -1,5 +1,6 @@
 import { createServerClient } from '@truffle/db'
 import type { Anomaly, SavingsGoal, Transaction, MonthlySnapshot } from '@truffle/types'
+import { currentYearMonth } from './date'
 
 /**
  * Checks whether a nudge with this key has already been sent to this user.
@@ -96,7 +97,7 @@ export async function sendGoalAtRiskNudge(params: {
   projectedShortfall: number
 }) {
   const { userId, goal, daysRemaining, projectedShortfall } = params
-  const nudgeKey = `goal-at-risk:${goal.id}:${new Date().toISOString().slice(0, 7)}`
+  const nudgeKey = `goal-at-risk:${goal.id}:${currentYearMonth()}`
   const db = createServerClient()
 
   if (await alreadySent(db, userId, nudgeKey)) return

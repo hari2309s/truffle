@@ -1,4 +1,5 @@
 import { toEur } from './currency'
+import { currentYearMonth } from './date'
 
 export interface Forecast {
   currentBalance: number
@@ -10,7 +11,7 @@ export interface Forecast {
 export function computeForecast(
   transactions: { amount: number | string; currency?: string; date: string }[]
 ): Forecast | null {
-  const currentMonth = new Date().toISOString().slice(0, 7)
+  const currentMonth = currentYearMonth()
   const txs = transactions.filter((t) => String(t.date).startsWith(currentMonth))
   if (txs.length === 0) return null
 

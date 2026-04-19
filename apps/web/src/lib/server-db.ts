@@ -1,11 +1,12 @@
 import { createServerClient } from '@truffle/db'
+import { currentYearMonth } from './date'
 
 /**
  * Recomputes the monthly snapshot for a given user from the transactions table.
  * Called after any write that affects balance (new transactions, goal deposits).
  */
 export async function recomputeSnapshot(userId: string, db: ReturnType<typeof createServerClient>) {
-  const currentMonth = new Date().toISOString().slice(0, 7)
+  const currentMonth = currentYearMonth()
   const startDate = `${currentMonth}-01`
 
   const { data: txs } = await db
