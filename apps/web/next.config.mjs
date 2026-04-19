@@ -28,7 +28,7 @@ const withPWA = withPWAInit({
       handler: 'NetworkFirst',
       options: {
         cacheName: 'api-transactions',
-        expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
+        expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 2 },
         networkTimeoutSeconds: 10,
       },
     },
@@ -45,7 +45,7 @@ const withPWA = withPWAInit({
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'api-goals',
-        expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 },
+        expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 2 },
       },
     },
     {
@@ -53,7 +53,7 @@ const withPWA = withPWAInit({
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'api-habits',
-        expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 },
+        expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 2 },
       },
     },
   ],
