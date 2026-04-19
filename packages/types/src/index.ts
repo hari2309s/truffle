@@ -26,6 +26,21 @@ export type TransactionCategory =
   | 'savings'
   | 'other'
 
+export const TRANSACTION_CATEGORIES = [
+  'food_groceries',
+  'food_delivery',
+  'transport',
+  'housing',
+  'utilities',
+  'subscriptions',
+  'health',
+  'entertainment',
+  'shopping',
+  'income',
+  'savings',
+  'other',
+] as const satisfies readonly TransactionCategory[]
+
 export interface MonthlySnapshot {
   month: string // YYYY-MM
   totalIncome: number
@@ -104,6 +119,20 @@ export type QueryIntent =
   | 'habit_setting'
   | 'greeting'
   | 'general_advice'
+
+export const INTENT = {
+  SPENDING_SUMMARY: 'spending_summary',
+  AFFORDABILITY_CHECK: 'affordability_check',
+  ANOMALY_REVIEW: 'anomaly_review',
+  FORECAST_REQUEST: 'forecast_request',
+  CATEGORY_BREAKDOWN: 'category_breakdown',
+  SAVINGS_GOAL_CHECK: 'savings_goal_check',
+  GOAL_SETTING: 'goal_setting',
+  ADD_TRANSACTION: 'add_transaction',
+  HABIT_SETTING: 'habit_setting',
+  GREETING: 'greeting',
+  GENERAL_ADVICE: 'general_advice',
+} as const satisfies Record<string, QueryIntent>
 
 export interface SavingsHabit {
   id: string
