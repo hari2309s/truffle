@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { computeForecast } from '@/lib/forecast'
 import { truffleEase } from '@/lib/motion'
@@ -35,9 +36,15 @@ function computeAllTimeSummary(
 export function FinancialBrief({ userId }: FinancialBriefProps) {
   const { data, isLoading } = useTransactionsQuery(userId)
 
-  const forecast = data?.transactions ? computeForecast(data.transactions) : null
-  const allTime =
-    !forecast && data?.transactions?.length ? computeAllTimeSummary(data.transactions) : null
+  const forecast = useMemo(
+    () => (data?.transactions ? computeForecast(data.transactions) : null),
+    [data?.transactions]
+  )
+  const allTime = useMemo(
+    () =>
+      !forecast && data?.transactions?.length ? computeAllTimeSummary(data.transactions) : null,
+    [forecast, data?.transactions]
+  )
 
   if (isLoading) {
     return (
