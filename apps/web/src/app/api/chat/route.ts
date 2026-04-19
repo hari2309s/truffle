@@ -57,13 +57,46 @@ export async function POST(request: NextRequest) {
 
     const db = createDbClient()
 
-    // Fetch transactions
-    const { data: txRows } = await db
-      .from('transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false })
-      .limit(50)
+    const currentMonth = new Date().toISOString().slice(0, 7)
+
+    // Run all independent queries in parallel — contributions depends on habit IDs so runs after
+    const [
+      { data: txRows },
+      { data: snapshotRow },
+      { data: anomalyRows },
+      { data: goalRows },
+      { data: rawHabitRows },
+    ] = await Promise.all([
+      db
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+        .limit(50),
+      db
+        .from('monthly_snapshots')
+        .select('data')
+        .eq('user_id', userId)
+        .eq('month', currentMonth)
+        .single(),
+      db
+        .from('anomalies')
+        .select('description, severity, type')
+        .eq('user_id', userId)
+        .order('detected_at', { ascending: false })
+        .limit(5),
+      db
+        .from('savings_goals')
+        .select('name, target_amount, saved_amount, deadline, emoji')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true }),
+      db
+        .from('savings_habits')
+        .select('id, name, amount, frequency, emoji')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true }),
+    ])
 
     const transactions = ((txRows ?? []) as Record<string, unknown>[]).map((row) => ({
       id: row.id as string,
@@ -77,43 +110,11 @@ export async function POST(request: NextRequest) {
       isRecurring: row.is_recurring as boolean,
     }))
 
-    // Fetch monthly snapshot
-    const currentMonth = new Date().toISOString().slice(0, 7)
-    const { data: snapshotRow } = await db
-      .from('monthly_snapshots')
-      .select('data')
-      .eq('user_id', userId)
-      .eq('month', currentMonth)
-      .single()
-
     const snapshot: MonthlySnapshot =
       ((snapshotRow as Record<string, unknown> | null)?.data as unknown as MonthlySnapshot) ??
       buildEmptySnapshot()
 
-    // Fetch recent anomalies for context
-    const { data: anomalyRows } = await db
-      .from('anomalies')
-      .select('description, severity, type')
-      .eq('user_id', userId)
-      .order('detected_at', { ascending: false })
-      .limit(5)
-
-    // Fetch savings goals for context
-    const { data: goalRows } = await db
-      .from('savings_goals')
-      .select('name, target_amount, saved_amount, deadline, emoji')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-
-    // Fetch active savings habits for context
-    const { data: rawHabitRows } = await db
-      .from('savings_habits')
-      .select('id, name, amount, frequency, emoji')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: true })
-
-    // Fetch contributions to compute currentPeriodLogged and streak per habit
+    // Contributions query depends on habit IDs from the parallel batch above
     const habitIds = (rawHabitRows ?? []).map((h: Record<string, unknown>) => h.id as string)
     const { data: habitContribRows } =
       habitIds.length > 0
