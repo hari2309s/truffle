@@ -47,7 +47,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ goals: data })
+    return NextResponse.json(
+      { goals: data },
+      { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
+    )
   } catch (error) {
     console.error('GET goals error:', error)
     return NextResponse.json({ error: 'Failed to fetch goals' }, { status: 500 })

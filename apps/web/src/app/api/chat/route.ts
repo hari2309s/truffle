@@ -13,13 +13,14 @@ import {
 import { createServerClient as createDbClient } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory } from '@truffle/types'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
+import { currentYearMonth } from '@/lib/date'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
 function buildEmptySnapshot(): MonthlySnapshot {
   return {
-    month: new Date().toISOString().slice(0, 7),
+    month: currentYearMonth(),
     totalIncome: 0,
     totalExpenses: 0,
     byCategory: {
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const db = createDbClient()
 
-    const currentMonth = new Date().toISOString().slice(0, 7)
+    const currentMonth = currentYearMonth()
 
     // Run all independent queries in parallel — contributions depends on habit IDs so runs after
     const [

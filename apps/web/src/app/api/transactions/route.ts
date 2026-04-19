@@ -3,6 +3,7 @@ import { createServerClient } from '@truffle/db'
 import { embedTransaction, upsertTransaction } from '@truffle/ai'
 import type { Transaction, Anomaly } from '@truffle/types'
 import { recomputeSnapshot } from '@/lib/server-db'
+import { sendAnomalyNudge } from '@/lib/proactive-nudge'
 
 export const runtime = 'nodejs'
 
@@ -24,7 +25,10 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ transactions: data })
+    return NextResponse.json(
+      { transactions: data },
+      { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
+    )
   } catch (error) {
     console.error('GET transactions error:', error)
     return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
@@ -104,7 +108,6 @@ export async function POST(request: NextRequest) {
     try {
       const anomalies = await detectAnomalies(userId, results, db)
       if (anomalies.length) {
-        const { sendAnomalyNudge } = await import('@/lib/proactive-nudge')
         const typedTxs = results.map((r) => ({ ...r }) as unknown as Transaction)
         for (const anomaly of anomalies) {
           try {

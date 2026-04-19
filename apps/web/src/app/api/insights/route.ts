@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import type { Forecast } from '@truffle/types'
+import { currentYearMonth } from '@/lib/date'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     const db = createServerClient()
-    const currentMonth = new Date().toISOString().slice(0, 7)
+    const currentMonth = currentYearMonth()
 
     // Anomalies — isolated so a missing table never breaks the forecast
     let anomalies: unknown[] = []
@@ -85,7 +86,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ anomalies, forecast })
+    return NextResponse.json(
+      { anomalies, forecast },
+      { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
+    )
   } catch (error) {
     console.error('Insights error:', error)
     return NextResponse.json({ error: 'Failed to get insights' }, { status: 500 })
