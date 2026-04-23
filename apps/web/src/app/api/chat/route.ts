@@ -212,6 +212,7 @@ export async function POST(request: NextRequest) {
 
     const streamData = new StreamData()
     streamData.append({ type: 'speech_tone', tone: speechTone })
+    streamData.append({ type: 'trace_id', traceId: trace.id })
 
     const systemPrompt = buildSystemPrompt({
       intent,
