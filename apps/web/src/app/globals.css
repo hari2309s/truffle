@@ -72,6 +72,13 @@
   }
 }
 
+/* Spending heatmap — 5 intensity levels, auto-adapt to dark/light via CSS vars */
+.heat-0 { background-color: var(--t-surface); }
+.heat-1 { background-color: color-mix(in srgb, var(--t-green) 30%, var(--t-surface)); }
+.heat-2 { background-color: color-mix(in srgb, var(--t-green) 65%, var(--t-surface)); }
+.heat-3 { background-color: color-mix(in srgb, var(--t-amber) 60%, var(--t-surface)); }
+.heat-4 { background-color: color-mix(in srgb, var(--t-red) 70%, var(--t-surface)); }
+
 @layer components {
   .card {
     @apply bg-truffle-card border border-truffle-border rounded-2xl p-4;
