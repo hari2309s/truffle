@@ -159,3 +159,11 @@ export interface HabitWithStats extends SavingsHabit {
   currentPeriodLogged: boolean
   totalSaved: number
 }
+
+export interface CategoryBudget {
+  id: string
+  userId: string
+  category: TransactionCategory
+  amount: number // monthly spending limit in EUR
+  createdAt: string
+}
