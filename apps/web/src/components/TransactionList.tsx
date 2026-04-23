@@ -7,6 +7,29 @@ import { CATEGORY_EMOJI, formatCategory } from '@/lib/categories'
 import { useTransactionFilters } from '@/hooks/useTransactionFilters'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { TransactionFilterPanel } from './TransactionFilterPanel'
+import type { Transaction } from '@truffle/types'
+
+function exportToCSV(transactions: Transaction[]) {
+  const header = ['Date', 'Description', 'Category', 'Merchant', 'Amount', 'Currency']
+  const rows = transactions.map((tx) => [
+    tx.date,
+    `"${tx.description.replace(/"/g, '""')}"`,
+    formatCategory(tx.category),
+    `"${(tx.merchant ?? '').replace(/"/g, '""')}"`,
+    tx.amount.toFixed(2),
+    tx.currency,
+  ])
+  const csv = [header.join(','), ...rows.map((r) => r.join(','))].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `truffle-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
 
 interface TransactionListProps {
   userId: string
@@ -58,20 +81,30 @@ export function TransactionList({ userId }: TransactionListProps) {
 
       <TransactionFilterPanel {...filters} />
 
-      {/* Result count + clear */}
-      {isFiltered && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-truffle-muted">
-            {filtered.length} of {allTransactions.length} transactions
-          </p>
+      {/* Count row — always shown when there are transactions */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-truffle-muted">
+          {isFiltered
+            ? `${filtered.length} of ${allTransactions.length} transactions`
+            : `${allTransactions.length} transactions`}
+        </p>
+        <div className="flex items-center gap-3">
+          {isFiltered && (
+            <button
+              onClick={clearFilters}
+              className="text-xs text-truffle-muted hover:text-truffle-text underline underline-offset-2"
+            >
+              Clear
+            </button>
+          )}
           <button
-            onClick={clearFilters}
-            className="text-xs text-truffle-muted hover:text-truffle-text underline underline-offset-2"
+            onClick={() => exportToCSV(filtered)}
+            className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
           >
-            Clear filters
+            Export CSV
           </button>
         </div>
-      )}
+      </div>
 
       {/* List */}
       <AnimatePresence mode="wait">

@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
 import type { Message } from 'ai/react'
 import { useFinancialChat } from '@/hooks/useFinancialChat'
@@ -27,6 +27,19 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
   const voice = useVoiceRecorder(userId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const processedTranscriptRef = useRef<string | null>(null)
+  const reactedRef = useRef<Set<string>>(new Set())
+  const [reactions, setReactions] = useState<Record<string, 1 | -1>>({})
+
+  const handleReact = useCallback(async (traceId: string, score: 1 | -1, messageId: string) => {
+    if (reactedRef.current.has(messageId)) return
+    reactedRef.current.add(messageId)
+    setReactions((prev) => ({ ...prev, [messageId]: score }))
+    fetch('/api/chat/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ traceId, score }),
+    }).catch((e) => console.warn('Failed to send feedback:', e))
+  }, [])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -218,9 +231,12 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                 const clean = message.content
                   .replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '')
                   .trim()
-                const annotations = message.annotations as { type: string }[] | undefined
+                const annotations = message.annotations as
+                  | { type: string; traceId?: string }[]
+                  | undefined
                 const isOfflineFallback = annotations?.some((a) => a.type === 'offline_fallback')
                 const isAnsweredJustNow = annotations?.some((a) => a.type === 'answered_just_now')
+                const traceId = annotations?.find((a) => a.type === 'trace_id')?.traceId
                 return clean ? (
                   <ChatBubble
                     role={message.role as 'user' | 'assistant'}
@@ -229,6 +245,9 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                     timestamp={message.createdAt?.toISOString()}
                     isOfflineFallback={isOfflineFallback}
                     isAnsweredJustNow={isAnsweredJustNow}
+                    traceId={traceId}
+                    reaction={reactions[message.id] ?? null}
+                    onReact={(tid, score) => handleReact(tid, score, message.id)}
                   />
                 ) : null
               })()}
