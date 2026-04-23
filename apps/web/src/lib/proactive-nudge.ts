@@ -169,3 +169,37 @@ export async function sendHabitCheckInNudge(params: {
 
   await writeNudge(db, userId, message, nudgeKey)
 }
+
+export async function sendBudgetNudge(params: {
+  userId: string
+  category: string
+  categoryEmoji: string
+  spentAmount: number
+  budgetAmount: number
+  percentUsed: number
+  month: string
+}) {
+  const { userId, category, categoryEmoji, spentAmount, budgetAmount, percentUsed, month } = params
+  const threshold = percentUsed >= 100 ? '100' : '80'
+  const nudgeKey = `budget-warning:${category}:${month}:${threshold}`
+  const db = createServerClient()
+
+  if (await alreadySent(db, userId, nudgeKey)) return
+
+  const { generateProactiveMessage } = await import('@truffle/ai')
+  const message = await generateProactiveMessage(
+    {
+      type: 'budget_warning',
+      category,
+      categoryEmoji,
+      spentAmount,
+      budgetAmount,
+      percentUsed,
+      month,
+    },
+    userId
+  )
+  if (!message) return
+
+  await writeNudge(db, userId, message, nudgeKey)
+}

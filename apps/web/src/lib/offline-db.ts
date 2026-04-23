@@ -1,5 +1,11 @@
 import Dexie, { type Table } from 'dexie'
-import type { Transaction, SavingsGoal, HabitWithStats, Anomaly } from '@truffle/types'
+import type {
+  Transaction,
+  SavingsGoal,
+  HabitWithStats,
+  Anomaly,
+  CategoryBudget,
+} from '@truffle/types'
 
 export interface QueuedAction {
   id?: number
@@ -10,6 +16,8 @@ export interface QueuedAction {
     | 'delete_goal'
     | 'create_habit'
     | 'log_habit_contribution'
+    | 'upsert_budget'
+    | 'delete_budget'
   payload: unknown
   createdAt: number
 }
@@ -33,6 +41,7 @@ class TruffleOfflineDB extends Dexie {
   goals!: Table<SavingsGoal>
   habitsWithStats!: Table<HabitWithStats>
   anomalies!: Table<StoredAnomaly>
+  budgets!: Table<CategoryBudget>
 
   constructor() {
     super('truffle-offline')
@@ -52,6 +61,15 @@ class TruffleOfflineDB extends Dexie {
       goals: 'id, userId',
       habitsWithStats: 'id, userId',
       anomalies: 'id, userId',
+    })
+    this.version(4).stores({
+      transactions: 'id, userId, date, category',
+      queuedActions: '++id, type, createdAt',
+      pendingChatMessages: '++id, userId, createdAt',
+      goals: 'id, userId',
+      habitsWithStats: 'id, userId',
+      anomalies: 'id, userId',
+      budgets: 'id, userId, category',
     })
   }
 }
@@ -127,6 +145,17 @@ export async function flushQueuedActions(): Promise<number> {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(action.payload),
+        })
+      } else if (action.type === 'upsert_budget') {
+        res = await fetch('/api/budgets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(action.payload),
+        })
+      } else if (action.type === 'delete_budget') {
+        const { userId, budgetId } = action.payload as { userId: string; budgetId: string }
+        res = await fetch(`/api/budgets?userId=${userId}&budgetId=${budgetId}`, {
+          method: 'DELETE',
         })
       }
 
