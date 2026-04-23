@@ -113,12 +113,23 @@ export interface HabitCheckInTrigger {
   lastStreak: number
 }
 
+export interface BudgetWarningTrigger {
+  type: 'budget_warning'
+  category: string
+  categoryEmoji: string
+  spentAmount: number
+  budgetAmount: number
+  percentUsed: number // 80 = 80%, 100+ = over budget
+  month: string // YYYY-MM
+}
+
 type ProactiveTrigger =
   | AnomalyTrigger
   | GoalMilestoneTrigger
   | GoalAtRiskTrigger
   | HabitStreakTrigger
   | HabitCheckInTrigger
+  | BudgetWarningTrigger
 
 function getNudgeKey(trigger: ProactiveTrigger): string {
   switch (trigger.type) {
@@ -132,6 +143,8 @@ function getNudgeKey(trigger: ProactiveTrigger): string {
       return `habit-streak:${trigger.habitId}:${trigger.streak}`
     case 'habit_check_in':
       return `habit-checkin:${trigger.habitId}:${trigger.period}`
+    case 'budget_warning':
+      return `budget-warning:${trigger.category}:${trigger.month}:${trigger.percentUsed >= 100 ? '100' : '80'}`
   }
 }
 
@@ -204,5 +217,16 @@ function buildGraphInput(trigger: ProactiveTrigger) {
         userQuery: `The user's "${trigger.habitName}" (${trigger.habitEmoji}) savings habit hasn't been logged yet this ${trigger.frequency === 'weekly' ? 'week' : 'month'}. They save €${trigger.amount} per ${trigger.frequency === 'weekly' ? 'week' : 'month'}${trigger.lastStreak > 0 ? ` and had a ${trigger.lastStreak}-period streak going` : ''}. Write a gentle, non-judgmental reminder — 1-2 sentences. Don't be pushy.`,
         intent: 'habit_setting' as const,
       }
+    case 'budget_warning': {
+      const catLabel = trigger.category.replace(/_/g, ' ')
+      const isOver = trigger.percentUsed >= 100
+      return {
+        ...empty,
+        userQuery: isOver
+          ? `The user has exceeded their ${trigger.categoryEmoji} ${catLabel} budget this month — they've spent €${trigger.spentAmount.toFixed(0)} against a €${trigger.budgetAmount.toFixed(0)} limit (${trigger.percentUsed.toFixed(0)}% used). Write a brief, calm, non-judgmental heads-up — 1-2 sentences. Don't lecture.`
+          : `The user has used ${trigger.percentUsed.toFixed(0)}% of their ${trigger.categoryEmoji} ${catLabel} budget this month — €${trigger.spentAmount.toFixed(0)} of €${trigger.budgetAmount.toFixed(0)}. Write a brief, friendly heads-up noting they're getting close — 1-2 sentences.`,
+        intent: 'spending_summary' as const,
+      }
+    }
   }
 }

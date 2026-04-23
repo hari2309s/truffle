@@ -24,6 +24,31 @@ type HabitRow = {
   currentPeriodLogged: unknown
 }
 
+type BudgetRow = {
+  category: unknown
+  amount: unknown
+  spentAmount: unknown // computed by caller — current month spend in that category
+}
+
+function buildBudgetContext(budgetRows: BudgetRow[] | null): string {
+  const budgets = (budgetRows ?? []).slice(0, 12)
+  if (!budgets.length) return ''
+  return (
+    '\nMonthly budgets:\n' +
+    budgets
+      .map((b) => {
+        const limit = b.amount as number
+        const spent = b.spentAmount as number
+        const pct = limit > 0 ? ((spent / limit) * 100).toFixed(0) : '0'
+        const cat = sanitize(String(b.category).replace(/_/g, ' '))
+        const status =
+          spent > limit ? ' ⚠️ over budget' : spent / limit >= 0.8 ? ' (near limit)' : ''
+        return `- ${cat}: €${spent.toFixed(0)} / €${limit.toFixed(0)} (${pct}% used${status})`
+      })
+      .join('\n')
+  )
+}
+
 // Intents that need full transaction data
 const NEEDS_TRANSACTIONS: QueryIntent[] = [
   'spending_summary',
@@ -145,6 +170,7 @@ export function buildSystemPrompt(params: {
   anomalyRows: AnomalyRow[] | null
   goalRows: GoalRow[] | null
   habitRows: HabitRow[] | null
+  budgetRows: BudgetRow[] | null
   projectedBalance: number
   daysRemaining: number
   dailySpend: number
@@ -157,6 +183,7 @@ export function buildSystemPrompt(params: {
     anomalyRows,
     goalRows,
     habitRows,
+    budgetRows,
     projectedBalance,
     daysRemaining,
     dailySpend,
@@ -172,12 +199,13 @@ Respond with a single warm, brief greeting. Do not mention their finances, balan
   const goalsContext = buildGoalsContext(goalRows)
   const { context: habitsContext, pendingHabits } = buildHabitsContext(habitRows)
   const habitReminderContext = buildHabitReminderContext(intent, pendingHabits)
+  const budgetContext = buildBudgetContext(budgetRows)
   const toolRules = buildToolRules(intent)
 
   return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.
 
 Tone guidance for this conversation: ${toneGuidance}
-${transactionContext}${anomalyContext}${goalsContext}${habitsContext}${habitReminderContext}
+${transactionContext}${anomalyContext}${goalsContext}${habitsContext}${budgetContext}${habitReminderContext}
 
 Monthly summary (${snapshot.month}):
 - Income: €${snapshot.totalIncome.toFixed(2)}
