@@ -15,6 +15,7 @@ import { PageEnter, SkeletonPulse } from './PageMotion'
 import { SavingsGoals } from './SavingsGoals'
 import { SavingsHabits } from './SavingsHabits'
 import { SpendingHeatmap } from './SpendingHeatmap'
+import { MonthlyBudgets } from './MonthlyBudgets'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
 
@@ -25,6 +26,7 @@ interface InsightsPageProps {
 export function InsightsPage({ userId }: InsightsPageProps) {
   const mainRef = useRef<HTMLElement>(null)
   const [addGoalOpen, setAddGoalOpen] = useState(false)
+  const [addBudgetOpen, setAddBudgetOpen] = useState(false)
 
   const handleSavingsGoalsLeaveViewport = useCallback(() => {
     setAddGoalOpen(false)
@@ -88,6 +90,31 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               <SkeletonPulse className="card h-64" />
             ) : (
               <SpendingHeatmap transactions={txData?.transactions ?? []} />
+            )}
+          </InsightsAccordionSection>
+
+          <InsightsAccordionSection
+            title="Monthly Budgets"
+            scrollRootRef={mainRef}
+            headerRight={
+              <button
+                type="button"
+                onClick={() => setAddBudgetOpen((v) => !v)}
+                className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+              >
+                {addBudgetOpen ? 'Cancel' : '+ New budget'}
+              </button>
+            }
+          >
+            {isLoading ? (
+              <SkeletonPulse className="card h-24" />
+            ) : (
+              <MonthlyBudgets
+                userId={userId}
+                transactions={txData?.transactions ?? []}
+                addBudgetOpen={addBudgetOpen}
+                onAddBudgetOpenChange={setAddBudgetOpen}
+              />
             )}
           </InsightsAccordionSection>
 
