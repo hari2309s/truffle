@@ -3,7 +3,7 @@ import { createServerClient } from '@truffle/db'
 import { embedTransaction, upsertTransaction } from '@truffle/ai'
 import type { Transaction, Anomaly } from '@truffle/types'
 import { recomputeSnapshot } from '@/lib/server-db'
-import { sendAnomalyNudge } from '@/lib/proactive-nudge'
+import { sendAnomalyNudge, sendBudgetNudge } from '@/lib/proactive-nudge'
 
 export const runtime = 'nodejs'
 
@@ -121,6 +121,63 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) {
       console.error('Anomaly detection failed:', e)
+    }
+
+    // Check budget thresholds and fire nudges when a category hits 80% or 100% (non-fatal)
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7)
+      const { data: budgets } = await db
+        .from('monthly_budgets')
+        .select('category, amount')
+        .eq('user_id', userId)
+      if (budgets?.length) {
+        const { data: monthTxs } = await db
+          .from('transactions')
+          .select('category, amount')
+          .eq('user_id', userId)
+          .like('date', `${currentMonth}%`)
+          .lt('amount', '0')
+        const spendByCategory: Record<string, number> = {}
+        for (const tx of (monthTxs ?? []) as { category: string; amount: number }[]) {
+          spendByCategory[tx.category] =
+            (spendByCategory[tx.category] ?? 0) + Math.abs(Number(tx.amount))
+        }
+        const CATEGORY_EMOJI: Record<string, string> = {
+          food_groceries: '🛒',
+          food_delivery: '🍕',
+          transport: '🚇',
+          housing: '🏠',
+          utilities: '💡',
+          subscriptions: '📱',
+          health: '💊',
+          entertainment: '🎬',
+          shopping: '🛍️',
+          income: '💰',
+          savings: '🏦',
+          other: '📦',
+        }
+        for (const b of budgets as { category: string; amount: number }[]) {
+          const spent = spendByCategory[b.category] ?? 0
+          const pct = (spent / b.amount) * 100
+          if (pct >= 80) {
+            try {
+              await sendBudgetNudge({
+                userId,
+                category: b.category,
+                categoryEmoji: CATEGORY_EMOJI[b.category] ?? '📦',
+                spentAmount: spent,
+                budgetAmount: b.amount,
+                percentUsed: pct,
+                month: currentMonth,
+              })
+            } catch (e) {
+              console.error(`Budget nudge failed for ${b.category}:`, e)
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Budget nudge check failed:', e)
     }
 
     return NextResponse.json({ transactions: results })

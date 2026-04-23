@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       { data: anomalyRows },
       { data: goalRows },
       { data: rawHabitRows },
+      { data: rawBudgetRows },
     ] = await Promise.all([
       db
         .from('transactions')
@@ -124,6 +125,7 @@ export async function POST(request: NextRequest) {
         .eq('user_id', userId)
         .eq('is_active', true)
         .order('created_at', { ascending: true }),
+      db.from('monthly_budgets').select('category, amount').eq('user_id', userId),
     ])
 
     const transactions = ((txRows ?? []) as Record<string, unknown>[]).map((row) => ({
@@ -175,6 +177,19 @@ export async function POST(request: NextRequest) {
         currentPeriodLogged,
       }
     })
+
+    // Compute current-month spend per category for budget context
+    const spendByCategory: Record<string, number> = {}
+    for (const tx of transactions) {
+      if (tx.amount < 0 && tx.date.startsWith(currentMonth)) {
+        spendByCategory[tx.category] = (spendByCategory[tx.category] ?? 0) + Math.abs(tx.amount)
+      }
+    }
+    const budgetRows = (rawBudgetRows ?? []).map((b: Record<string, unknown>) => ({
+      category: b.category,
+      amount: b.amount,
+      spentAmount: spendByCategory[b.category as string] ?? 0,
+    }))
 
     // Langfuse trace for the full request
     const trace = langfuse.trace({
@@ -230,6 +245,7 @@ export async function POST(request: NextRequest) {
           }[]
         | null,
       habitRows,
+      budgetRows,
       projectedBalance,
       daysRemaining,
       dailySpend,
