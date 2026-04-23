@@ -14,6 +14,7 @@ import { InsightsAccordionSection } from './InsightsAccordionSection'
 import { PageEnter, SkeletonPulse } from './PageMotion'
 import { SavingsGoals } from './SavingsGoals'
 import { SavingsHabits } from './SavingsHabits'
+import { SpendingHeatmap } from './SpendingHeatmap'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
 
@@ -82,6 +83,14 @@ export function InsightsPage({ userId }: InsightsPageProps) {
         </div>
 
         <main ref={mainRef} className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6 min-h-0">
+          <InsightsAccordionSection title="Spending Calendar" scrollRootRef={mainRef}>
+            {isLoading ? (
+              <SkeletonPulse className="card h-64" />
+            ) : (
+              <SpendingHeatmap transactions={txData?.transactions ?? []} />
+            )}
+          </InsightsAccordionSection>
+
           <InsightsAccordionSection
             title="Savings Goals"
             scrollRootRef={mainRef}
