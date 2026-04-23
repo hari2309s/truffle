@@ -60,7 +60,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
   return (
     <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
-      <TopBar title="Insights" subtitle="" />
+      <TopBar title="Insights" subtitle="" showControls />
 
       <PageEnter className="flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Forecast stays above the scroll region so it never scrolls away */}

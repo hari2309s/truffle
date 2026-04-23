@@ -56,7 +56,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
 
   return (
     <PageEnter className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden">
-      <TopBar>
+      <TopBar showControls>
         {chat.isSpeaking && (
           <button
             onClick={chat.cancelSpeech}
