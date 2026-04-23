@@ -50,6 +50,7 @@ export function InsightsAccordionSection({
   const panelId = useId()
   const sectionRef = useRef<HTMLElement>(null)
   const wasIntersectingRef = useRef<boolean | null>(null)
+  const scrollTopAtCollapseRef = useRef<number | null>(null)
   const onLeaveRef = useRef(onLeaveViewport)
   onLeaveRef.current = onLeaveViewport
 
@@ -71,8 +72,20 @@ export function InsightsAccordionSection({
           return
         }
         if (prev && !now) {
+          // Section left viewport — record scroll position and auto-collapse
+          scrollTopAtCollapseRef.current = root.scrollTop
           setOpen(false)
           onLeaveRef.current?.()
+        } else if (!prev && now) {
+          // Section re-entered viewport — only expand if the user actually scrolled
+          // (scroll position changed). If another accordion collapsed and caused a
+          // reflow that pushed this section back into view, scrollTop is unchanged.
+          const scrollDelta = Math.abs(
+            root.scrollTop - (scrollTopAtCollapseRef.current ?? root.scrollTop)
+          )
+          if (scrollDelta > 20) {
+            setOpen(true)
+          }
         }
         wasIntersectingRef.current = now
       },
