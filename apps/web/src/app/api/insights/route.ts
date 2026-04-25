@@ -46,8 +46,6 @@ export async function GET(request: NextRequest) {
     const txs = allTxs.filter((t) => String(t.date).startsWith(currentMonth))
     const transactionCount = txs.length
 
-    console.log(`[insights] userId=${userId} month=${currentMonth} txCount=${transactionCount}`)
-
     const totalIncome = txs
       .filter((t) => Number(t.amount) > 0)
       .reduce((s, t) => s + Number(t.amount), 0)
