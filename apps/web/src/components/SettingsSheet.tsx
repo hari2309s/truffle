@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { supabase } from '@/lib/supabase'
+import { signOut } from '@/lib/auth'
 
 interface SettingsSheetProps {
   userId: string
@@ -62,8 +62,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
         body: JSON.stringify({ userId }),
       })
       if (!res.ok) throw new Error('server error')
-      await supabase.auth.signOut()
-      window.location.reload()
+      await signOut()
     } catch {
       setDeleteError('Failed to delete account. Please try again.')
       setIsDeleting(false)

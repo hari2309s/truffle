@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { ThemeToggle } from './ThemeToggle'
 import { SettingsSheet } from './SettingsSheet'
-import { supabase } from '@/lib/supabase'
+import { signOut } from '@/lib/auth'
 
 interface TopBarProps {
   subtitle?: string
@@ -23,11 +23,6 @@ export function TopBar({
   children,
 }: TopBarProps) {
   const [showSettings, setShowSettings] = useState(false)
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    window.location.reload()
-  }
 
   return (
     <>
@@ -52,7 +47,7 @@ export function TopBar({
                 <GearIcon />
               </button>
             )}
-            <button onClick={handleSignOut} className="btn-ghost text-xs">
+            <button onClick={signOut} className="btn-ghost text-xs">
               Sign out
             </button>
           </div>

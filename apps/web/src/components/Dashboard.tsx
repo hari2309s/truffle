@@ -13,7 +13,7 @@ import { WeeklySummary } from './WeeklySummary'
 import { BottomNav } from './BottomNav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { SettingsSheet } from './SettingsSheet'
-import { supabase } from '@/lib/supabase'
+import { signOut } from '@/lib/auth'
 import { PageEnter } from './PageMotion'
 
 interface DashboardProps {
@@ -32,11 +32,6 @@ export function Dashboard({ userId, name }: DashboardProps) {
   const [showCSVImport, setShowCSVImport] = useState(false)
   const [showReceiptUpload, setShowReceiptUpload] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    window.location.reload()
-  }
 
   return (
     <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
@@ -60,7 +55,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
           >
             <GearIcon />
           </button>
-          <button onClick={handleSignOut} className="btn-ghost text-xs">
+          <button onClick={signOut} className="btn-ghost text-xs">
             Sign out
           </button>
         </div>
