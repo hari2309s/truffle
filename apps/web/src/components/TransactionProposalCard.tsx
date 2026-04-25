@@ -9,8 +9,6 @@ import { supabase } from '@/lib/supabase'
 import type { TransactionCategory } from '@truffle/types'
 import { CATEGORY_EMOJI } from '@/lib/categories'
 
-export { CATEGORY_EMOJI }
-
 export interface TransactionProposal {
   description: string
   amount: number
