@@ -18,6 +18,7 @@ import { SpendingHeatmap } from './SpendingHeatmap'
 import { MonthlyBudgets } from './MonthlyBudgets'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
+import { ErrorBoundary } from './ErrorBoundary'
 
 interface InsightsPageProps {
   userId: string
@@ -60,7 +61,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
   return (
     <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
-      <TopBar title="Insights" subtitle="" showControls />
+      <TopBar title="Insights" subtitle="" showControls userId={userId} />
 
       <PageEnter className="flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Forecast stays above the scroll region so it never scrolls away */}
@@ -85,123 +86,125 @@ export function InsightsPage({ userId }: InsightsPageProps) {
         </div>
 
         <main ref={mainRef} className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6 min-h-0">
-          <InsightsAccordionSection title="Spending Calendar" scrollRootRef={mainRef}>
-            {isLoading ? (
-              <SkeletonPulse className="card h-64" />
-            ) : (
-              <SpendingHeatmap transactions={txData?.transactions ?? []} />
-            )}
-          </InsightsAccordionSection>
-
-          <InsightsAccordionSection
-            title="Monthly Budgets"
-            scrollRootRef={mainRef}
-            headerRight={
-              <button
-                type="button"
-                onClick={() => setAddBudgetOpen((v) => !v)}
-                className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-              >
-                {addBudgetOpen ? 'Cancel' : '+ New budget'}
-              </button>
-            }
-          >
-            {isLoading ? (
-              <SkeletonPulse className="card h-24" />
-            ) : (
-              <MonthlyBudgets
-                userId={userId}
-                transactions={txData?.transactions ?? []}
-                addBudgetOpen={addBudgetOpen}
-                onAddBudgetOpenChange={setAddBudgetOpen}
-              />
-            )}
-          </InsightsAccordionSection>
-
-          <InsightsAccordionSection
-            title="Savings Goals"
-            scrollRootRef={mainRef}
-            onLeaveViewport={handleSavingsGoalsLeaveViewport}
-            headerRight={
-              <button
-                type="button"
-                onClick={() => setAddGoalOpen((v) => !v)}
-                className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-              >
-                {addGoalOpen ? 'Cancel' : '+ New goal'}
-              </button>
-            }
-          >
-            <SavingsGoals
-              userId={userId}
-              embedded
-              addGoalOpen={addGoalOpen}
-              onAddGoalOpenChange={setAddGoalOpen}
-            />
-          </InsightsAccordionSection>
-
-          <InsightsAccordionSection title="Saving Habits" scrollRootRef={mainRef}>
-            <SavingsHabits userId={userId} />
-          </InsightsAccordionSection>
-
-          {/* Subscriptions */}
-          {subscriptions.length > 0 && (
-            <InsightsAccordionSection title="Recurring Subscriptions" scrollRootRef={mainRef}>
-              <div className="space-y-2">
-                {subscriptions.map((sub) => (
-                  <div key={sub.key} className="card flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-truffle-text">{sub.displayName}</p>
-                      <p className="text-xs text-truffle-muted">
-                        Last charged{' '}
-                        {new Date(sub.lastCharged).toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'short',
-                        })}
-                        {' · '}detected {sub.monthsDetected} month
-                        {sub.monthsDetected !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                    <span className="text-sm font-semibold text-truffle-red">
-                      -€{sub.monthlyAmount.toFixed(2)}/mo
-                    </span>
-                  </div>
-                ))}
-              </div>
+          <ErrorBoundary>
+            <InsightsAccordionSection title="Spending Calendar" scrollRootRef={mainRef}>
+              {isLoading ? (
+                <SkeletonPulse className="card h-64" />
+              ) : (
+                <SpendingHeatmap transactions={txData?.transactions ?? []} />
+              )}
             </InsightsAccordionSection>
-          )}
 
-          <InsightsAccordionSection title="Things to Review" scrollRootRef={mainRef}>
-            {anomalyLoading ? (
-              <div className="space-y-2">
-                {[1, 2].map((i) => (
-                  <SkeletonPulse key={i} className="card h-16" />
-                ))}
-              </div>
-            ) : anomalies.length ? (
-              <motion.div
-                className="space-y-2"
-                initial="hidden"
-                animate="show"
-                variants={staggerListVariants}
-              >
-                {anomalies.map((a) => (
-                  <motion.div key={a.id} variants={staggerItemVariants}>
-                    <AnomalyCard anomaly={a} />
-                  </motion.div>
-                ))}
-              </motion.div>
-            ) : (
-              <motion.div
-                className="card border-dashed text-center text-truffle-muted text-sm py-6"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.34, ease: truffleEase }}
-              >
-                No unusual activity detected
-              </motion.div>
+            <InsightsAccordionSection
+              title="Monthly Budgets"
+              scrollRootRef={mainRef}
+              headerRight={
+                <button
+                  type="button"
+                  onClick={() => setAddBudgetOpen((v) => !v)}
+                  className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+                >
+                  {addBudgetOpen ? 'Cancel' : '+ New budget'}
+                </button>
+              }
+            >
+              {isLoading ? (
+                <SkeletonPulse className="card h-24" />
+              ) : (
+                <MonthlyBudgets
+                  userId={userId}
+                  transactions={txData?.transactions ?? []}
+                  addBudgetOpen={addBudgetOpen}
+                  onAddBudgetOpenChange={setAddBudgetOpen}
+                />
+              )}
+            </InsightsAccordionSection>
+
+            <InsightsAccordionSection
+              title="Savings Goals"
+              scrollRootRef={mainRef}
+              onLeaveViewport={handleSavingsGoalsLeaveViewport}
+              headerRight={
+                <button
+                  type="button"
+                  onClick={() => setAddGoalOpen((v) => !v)}
+                  className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+                >
+                  {addGoalOpen ? 'Cancel' : '+ New goal'}
+                </button>
+              }
+            >
+              <SavingsGoals
+                userId={userId}
+                embedded
+                addGoalOpen={addGoalOpen}
+                onAddGoalOpenChange={setAddGoalOpen}
+              />
+            </InsightsAccordionSection>
+
+            <InsightsAccordionSection title="Saving Habits" scrollRootRef={mainRef}>
+              <SavingsHabits userId={userId} />
+            </InsightsAccordionSection>
+
+            {/* Subscriptions */}
+            {subscriptions.length > 0 && (
+              <InsightsAccordionSection title="Recurring Subscriptions" scrollRootRef={mainRef}>
+                <div className="space-y-2">
+                  {subscriptions.map((sub) => (
+                    <div key={sub.key} className="card flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-truffle-text">{sub.displayName}</p>
+                        <p className="text-xs text-truffle-muted">
+                          Last charged{' '}
+                          {new Date(sub.lastCharged).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                          {' · '}detected {sub.monthsDetected} month
+                          {sub.monthsDetected !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-truffle-red">
+                        -€{sub.monthlyAmount.toFixed(2)}/mo
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </InsightsAccordionSection>
             )}
-          </InsightsAccordionSection>
+
+            <InsightsAccordionSection title="Things to Review" scrollRootRef={mainRef}>
+              {anomalyLoading ? (
+                <div className="space-y-2">
+                  {[1, 2].map((i) => (
+                    <SkeletonPulse key={i} className="card h-16" />
+                  ))}
+                </div>
+              ) : anomalies.length ? (
+                <motion.div
+                  className="space-y-2"
+                  initial="hidden"
+                  animate="show"
+                  variants={staggerListVariants}
+                >
+                  {anomalies.map((a) => (
+                    <motion.div key={a.id} variants={staggerItemVariants}>
+                      <AnomalyCard anomaly={a} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              ) : (
+                <motion.div
+                  className="card border-dashed text-center text-truffle-muted text-sm py-6"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.34, ease: truffleEase }}
+                >
+                  No unusual activity detected
+                </motion.div>
+              )}
+            </InsightsAccordionSection>
+          </ErrorBoundary>
         </main>
       </PageEnter>
 

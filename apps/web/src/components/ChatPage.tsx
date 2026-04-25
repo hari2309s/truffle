@@ -15,6 +15,7 @@ import { VoiceButton } from './VoiceButton'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
 import { PageEnter, TypingDots } from './PageMotion'
+import { ErrorBoundary } from './ErrorBoundary'
 
 interface ChatPageProps {
   userId: string
@@ -56,7 +57,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
 
   return (
     <PageEnter className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden">
-      <TopBar showControls>
+      <TopBar showControls userId={userId}>
         {chat.isSpeaking && (
           <button
             onClick={chat.cancelSpeech}
@@ -68,235 +69,255 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
       </TopBar>
 
       {/* Messages */}
-      <main className="flex-1 overflow-y-auto px-4 py-4 pb-72">
-        {chat.messages.length === 0 && (
-          <div className="text-center py-12 space-y-3">
-            <motion.p
-              className="text-truffle-muted text-sm"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.36, ease: truffleEase }}
-            >
-              Hold the button and ask anything.
-            </motion.p>
-            <motion.div
-              className="flex flex-wrap gap-2 justify-center mt-6"
-              initial="hidden"
-              animate="show"
-              variants={staggerListVariants}
-            >
-              {[
-                'How am I doing this month?',
-                'What did I spend on food?',
-                'Can I afford a weekend trip?',
-              ].map((suggestion) => (
-                <motion.button
-                  key={suggestion}
-                  type="button"
-                  variants={staggerItemVariants}
-                  onClick={() => {
-                    chat.setInput(suggestion)
-                    const form = document.getElementById('chat-form') as HTMLFormElement | null
-                    form?.requestSubmit()
-                  }}
-                  className="text-xs bg-truffle-surface border border-truffle-border rounded-full px-3 py-1.5 text-truffle-text-secondary hover:border-truffle-amber hover:text-truffle-text transition-all"
-                >
-                  {suggestion}
-                </motion.button>
-              ))}
-            </motion.div>
-          </div>
-        )}
+      <ErrorBoundary>
+        <main className="flex-1 overflow-y-auto px-4 py-4 pb-72">
+          {chat.messages.length === 0 && (
+            <div className="text-center py-12 space-y-3">
+              <motion.p
+                className="text-truffle-muted text-sm"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.36, ease: truffleEase }}
+              >
+                Hold the button and ask anything.
+              </motion.p>
+              <motion.div
+                className="flex flex-wrap gap-2 justify-center mt-6"
+                initial="hidden"
+                animate="show"
+                variants={staggerListVariants}
+              >
+                {[
+                  'How am I doing this month?',
+                  'What did I spend on food?',
+                  'Can I afford a weekend trip?',
+                ].map((suggestion) => (
+                  <motion.button
+                    key={suggestion}
+                    type="button"
+                    variants={staggerItemVariants}
+                    onClick={() => {
+                      chat.setInput(suggestion)
+                      const form = document.getElementById('chat-form') as HTMLFormElement | null
+                      form?.requestSubmit()
+                    }}
+                    className="text-xs bg-truffle-surface border border-truffle-border rounded-full px-3 py-1.5 text-truffle-text-secondary hover:border-truffle-amber hover:text-truffle-text transition-all"
+                  >
+                    {suggestion}
+                  </motion.button>
+                ))}
+              </motion.div>
+            </div>
+          )}
 
-        {chat.messages.map((message, idx) => {
-          const isLastMessage = idx === chat.messages.length - 1
-          const showError = isLastMessage && !!chat.error && message.role === 'user'
-          return (
-            <div key={message.id}>
-              {/* Render goal proposal cards from tool invocations */}
-              {message.toolInvocations?.map((inv) => {
-                if (inv.toolName === 'proposeGoal') {
-                  const args = inv.args as {
-                    name: string
-                    targetAmount: number
-                    deadline?: string
-                    emoji: string
-                    pitch: string
-                  }
-                  if (inv.state === 'call') {
-                    return (
-                      <GoalProposalCard
-                        key={inv.toolCallId}
-                        proposal={args}
-                        userId={userId}
-                        onResult={(confirmed) =>
-                          chat.addToolResult({ toolCallId: inv.toolCallId, result: { confirmed } })
-                        }
-                      />
-                    )
-                  }
-                  if (inv.state === 'result' && (inv.result as { confirmed: boolean })?.confirmed) {
-                    return (
-                      <div key={inv.toolCallId} className="flex justify-start mb-3">
-                        <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
-                          <p className="text-sm text-truffle-text">
-                            {args.emoji} <span className="font-medium">{args.name}</span> added to
-                            your goals — find it in Insights.
-                          </p>
+          {chat.messages.map((message, idx) => {
+            const isLastMessage = idx === chat.messages.length - 1
+            const showError = isLastMessage && !!chat.error && message.role === 'user'
+            return (
+              <div key={message.id}>
+                {/* Render goal proposal cards from tool invocations */}
+                {message.toolInvocations?.map((inv) => {
+                  if (inv.toolName === 'proposeGoal') {
+                    const args = inv.args as {
+                      name: string
+                      targetAmount: number
+                      deadline?: string
+                      emoji: string
+                      pitch: string
+                    }
+                    if (inv.state === 'call') {
+                      return (
+                        <GoalProposalCard
+                          key={inv.toolCallId}
+                          proposal={args}
+                          userId={userId}
+                          onResult={(confirmed) =>
+                            chat.addToolResult({
+                              toolCallId: inv.toolCallId,
+                              result: { confirmed },
+                            })
+                          }
+                        />
+                      )
+                    }
+                    if (
+                      inv.state === 'result' &&
+                      (inv.result as { confirmed: boolean })?.confirmed
+                    ) {
+                      return (
+                        <div key={inv.toolCallId} className="flex justify-start mb-3">
+                          <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
+                            <p className="text-sm text-truffle-text">
+                              {args.emoji} <span className="font-medium">{args.name}</span> added to
+                              your goals — find it in Insights.
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )
+                      )
+                    }
                   }
-                }
-                if (inv.toolName === 'proposeTransaction') {
-                  const args = inv.args as {
-                    description: string
-                    amount: number
-                    category: TransactionCategory
-                    merchant?: string
-                    date: string
-                  }
-                  if (inv.state === 'call') {
-                    return (
-                      <TransactionProposalCard
-                        key={inv.toolCallId}
-                        proposal={args}
-                        userId={userId}
-                        onResult={(confirmed) =>
-                          chat.addToolResult({ toolCallId: inv.toolCallId, result: { confirmed } })
-                        }
-                      />
-                    )
-                  }
-                  if (inv.state === 'result' && (inv.result as { confirmed: boolean })?.confirmed) {
-                    const isExpense = args.amount < 0
-                    const formattedAmount = `${isExpense ? '-' : '+'}€${Math.abs(args.amount).toFixed(2)}`
-                    return (
-                      <div key={inv.toolCallId} className="flex justify-start mb-3">
-                        <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
-                          <p className="text-sm text-truffle-text">
-                            {CATEGORY_EMOJI[args.category] ?? '📝'}{' '}
-                            <span className="font-medium">{args.description}</span> logged —{' '}
-                            <span className={isExpense ? 'text-red-400' : 'text-green-400'}>
-                              {formattedAmount}
-                            </span>
-                          </p>
+                  if (inv.toolName === 'proposeTransaction') {
+                    const args = inv.args as {
+                      description: string
+                      amount: number
+                      category: TransactionCategory
+                      merchant?: string
+                      date: string
+                    }
+                    if (inv.state === 'call') {
+                      return (
+                        <TransactionProposalCard
+                          key={inv.toolCallId}
+                          proposal={args}
+                          userId={userId}
+                          onResult={(confirmed) =>
+                            chat.addToolResult({
+                              toolCallId: inv.toolCallId,
+                              result: { confirmed },
+                            })
+                          }
+                        />
+                      )
+                    }
+                    if (
+                      inv.state === 'result' &&
+                      (inv.result as { confirmed: boolean })?.confirmed
+                    ) {
+                      const isExpense = args.amount < 0
+                      const formattedAmount = `${isExpense ? '-' : '+'}€${Math.abs(args.amount).toFixed(2)}`
+                      return (
+                        <div key={inv.toolCallId} className="flex justify-start mb-3">
+                          <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
+                            <p className="text-sm text-truffle-text">
+                              {CATEGORY_EMOJI[args.category] ?? '📝'}{' '}
+                              <span className="font-medium">{args.description}</span> logged —{' '}
+                              <span className={isExpense ? 'text-red-400' : 'text-green-400'}>
+                                {formattedAmount}
+                              </span>
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )
+                      )
+                    }
                   }
-                }
-                if (inv.toolName === 'proposeHabit') {
-                  const args = inv.args as {
-                    name: string
-                    amount: number
-                    frequency: 'weekly' | 'monthly'
-                    emoji: string
-                    pitch: string
-                  }
-                  if (inv.state === 'call') {
-                    return (
-                      <HabitProposalCard
-                        key={inv.toolCallId}
-                        proposal={args}
-                        userId={userId}
-                        onResult={(confirmed) =>
-                          chat.addToolResult({ toolCallId: inv.toolCallId, result: { confirmed } })
-                        }
-                      />
-                    )
-                  }
-                  if (inv.state === 'result' && (inv.result as { confirmed: boolean })?.confirmed) {
-                    const periodLabel = args.frequency === 'weekly' ? 'week' : 'month'
-                    return (
-                      <div key={inv.toolCallId} className="flex justify-start mb-3">
-                        <div className="max-w-[85%] bg-truffle-card border border-truffle-green/40 rounded-2xl rounded-bl-sm px-4 py-3">
-                          <p className="text-sm text-truffle-text">
-                            {args.emoji} <span className="font-medium">{args.name}</span>{' '}
-                            <span className="text-truffle-green">habit started</span> — €
-                            {Number(args.amount).toFixed(0)}/{periodLabel}. Log each {periodLabel}{' '}
-                            in Insights.
-                          </p>
+                  if (inv.toolName === 'proposeHabit') {
+                    const args = inv.args as {
+                      name: string
+                      amount: number
+                      frequency: 'weekly' | 'monthly'
+                      emoji: string
+                      pitch: string
+                    }
+                    if (inv.state === 'call') {
+                      return (
+                        <HabitProposalCard
+                          key={inv.toolCallId}
+                          proposal={args}
+                          userId={userId}
+                          onResult={(confirmed) =>
+                            chat.addToolResult({
+                              toolCallId: inv.toolCallId,
+                              result: { confirmed },
+                            })
+                          }
+                        />
+                      )
+                    }
+                    if (
+                      inv.state === 'result' &&
+                      (inv.result as { confirmed: boolean })?.confirmed
+                    ) {
+                      const periodLabel = args.frequency === 'weekly' ? 'week' : 'month'
+                      return (
+                        <div key={inv.toolCallId} className="flex justify-start mb-3">
+                          <div className="max-w-[85%] bg-truffle-card border border-truffle-green/40 rounded-2xl rounded-bl-sm px-4 py-3">
+                            <p className="text-sm text-truffle-text">
+                              {args.emoji} <span className="font-medium">{args.name}</span>{' '}
+                              <span className="text-truffle-green">habit started</span> — €
+                              {Number(args.amount).toFixed(0)}/{periodLabel}. Log each {periodLabel}{' '}
+                              in Insights.
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )
+                      )
+                    }
                   }
-                }
-                return null
-              })}
-              {/* Strip leaked tool-call XML (Groq/LLaMA occasionally emits
+                  return null
+                })}
+                {/* Strip leaked tool-call XML (Groq/LLaMA occasionally emits
                   <function=...>...</function> as plain text instead of a
                   structured tool invocation) then render if content remains */}
-              {(() => {
-                const clean = message.content
-                  .replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '')
-                  .trim()
-                const annotations = message.annotations as
-                  | { type: string; traceId?: string }[]
-                  | undefined
-                const isOfflineFallback = annotations?.some((a) => a.type === 'offline_fallback')
-                const isAnsweredJustNow = annotations?.some((a) => a.type === 'answered_just_now')
-                const traceId = annotations?.find((a) => a.type === 'trace_id')?.traceId
-                return clean ? (
-                  <ChatBubble
-                    role={message.role as 'user' | 'assistant'}
-                    content={clean}
-                    name={name}
-                    timestamp={message.createdAt?.toISOString()}
-                    isOfflineFallback={isOfflineFallback}
-                    isAnsweredJustNow={isAnsweredJustNow}
-                    traceId={traceId}
-                    reaction={reactions[message.id] ?? null}
-                    onReact={(tid, score) => handleReact(tid, score, message.id)}
-                  />
-                ) : null
-              })()}
-              {/* Inline error + resend on the last user message */}
-              {showError && (
-                <div className="flex justify-end items-center gap-2 mb-3 pr-1">
-                  <span className="text-xs text-truffle-red">Failed to send</span>
-                  <button
-                    onClick={() => chat.reload()}
-                    className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-                  >
-                    Resend
-                  </button>
-                </div>
+                {(() => {
+                  const clean = message.content
+                    .replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '')
+                    .trim()
+                  const annotations = message.annotations as
+                    | { type: string; traceId?: string }[]
+                    | undefined
+                  const isOfflineFallback = annotations?.some((a) => a.type === 'offline_fallback')
+                  const isAnsweredJustNow = annotations?.some((a) => a.type === 'answered_just_now')
+                  const traceId = annotations?.find((a) => a.type === 'trace_id')?.traceId
+                  return clean ? (
+                    <ChatBubble
+                      role={message.role as 'user' | 'assistant'}
+                      content={clean}
+                      name={name}
+                      timestamp={message.createdAt?.toISOString()}
+                      isOfflineFallback={isOfflineFallback}
+                      isAnsweredJustNow={isAnsweredJustNow}
+                      traceId={traceId}
+                      reaction={reactions[message.id] ?? null}
+                      onReact={(tid, score) => handleReact(tid, score, message.id)}
+                    />
+                  ) : null
+                })()}
+                {/* Inline error + resend on the last user message */}
+                {showError && (
+                  <div className="flex justify-end items-center gap-2 mb-3 pr-1">
+                    <span className="text-xs text-truffle-red">Failed to send</span>
+                    <button
+                      onClick={() => chat.reload()}
+                      className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+                    >
+                      Resend
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {chat.isLoading && (
+            <motion.div
+              className="flex justify-start mb-3"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, ease: truffleEase }}
+            >
+              <div className="bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
+                <TypingDots />
+              </div>
+            </motion.div>
+          )}
+
+          {voice.error && (
+            <div className="text-center text-xs text-truffle-red py-2">{voice.error}</div>
+          )}
+
+          {chat.error && (
+            <div className="text-center text-xs text-truffle-red py-2">
+              {chat.error.message || 'An error occurred.'}
+              {process.env.NODE_ENV === 'development' && (
+                <pre className="text-left text-[10px] mt-1 opacity-70 whitespace-pre-wrap">
+                  {String(chat.error.cause ?? chat.error)}
+                </pre>
               )}
             </div>
-          )
-        })}
+          )}
 
-        {chat.isLoading && (
-          <motion.div
-            className="flex justify-start mb-3"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, ease: truffleEase }}
-          >
-            <div className="bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
-              <TypingDots />
-            </div>
-          </motion.div>
-        )}
-
-        {voice.error && (
-          <div className="text-center text-xs text-truffle-red py-2">{voice.error}</div>
-        )}
-
-        {chat.error && (
-          <div className="text-center text-xs text-truffle-red py-2">
-            {chat.error.message || 'An error occurred.'}
-            {process.env.NODE_ENV === 'development' && (
-              <pre className="text-left text-[10px] mt-1 opacity-70 whitespace-pre-wrap">
-                {String(chat.error.cause ?? chat.error)}
-              </pre>
-            )}
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </main>
+          <div ref={messagesEndRef} />
+        </main>
+      </ErrorBoundary>
 
       {/* Input area */}
       <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-lg bg-truffle-bg/95 backdrop-blur-sm border-t border-truffle-border px-4 py-4">
