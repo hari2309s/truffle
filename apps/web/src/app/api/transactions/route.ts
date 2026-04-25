@@ -187,6 +187,74 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { userId, transactionId, description, amount, category, merchant, date } = body as {
+      userId: string
+      transactionId: string
+      description: string
+      amount: number
+      category: string
+      merchant?: string
+      date: string
+    }
+
+    if (!userId || !transactionId) {
+      return NextResponse.json({ error: 'userId and transactionId required' }, { status: 400 })
+    }
+
+    const db = createServerClient()
+    const { data, error } = await db
+      .from('transactions')
+      .update({
+        description,
+        amount,
+        category,
+        merchant: merchant || null,
+        date,
+      })
+      .eq('id', transactionId)
+      .eq('user_id', userId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    await recomputeSnapshot(userId, db)
+    return NextResponse.json({ transaction: data })
+  } catch (error) {
+    console.error('PATCH transactions error:', error)
+    return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const userId = request.nextUrl.searchParams.get('userId')
+    const transactionId = request.nextUrl.searchParams.get('transactionId')
+
+    if (!userId || !transactionId) {
+      return NextResponse.json({ error: 'userId and transactionId required' }, { status: 400 })
+    }
+
+    const db = createServerClient()
+    const { error } = await db
+      .from('transactions')
+      .delete()
+      .eq('id', transactionId)
+      .eq('user_id', userId)
+
+    if (error) throw error
+
+    await recomputeSnapshot(userId, db)
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('DELETE transactions error:', error)
+    return NextResponse.json({ error: 'Failed to delete transaction' }, { status: 500 })
+  }
+}
+
 async function detectAnomalies(
   userId: string,
   newTxs: Record<string, unknown>[],
