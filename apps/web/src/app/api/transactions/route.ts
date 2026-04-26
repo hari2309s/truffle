@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(100)
+      .limit(500)
 
     if (error) throw error
 

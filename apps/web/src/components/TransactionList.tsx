@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { staggerItemVariants, staggerListVariants } from '@/lib/motion'
@@ -180,9 +180,37 @@ export function TransactionList({ userId }: TransactionListProps) {
 
   const allTransactions = data?.transactions ?? []
   const fromCache = data?.fromCache ?? false
+  const [visibleMonthCount, setVisibleMonthCount] = useState(1)
 
   const filters = useTransactionFilters(allTransactions)
   const { filtered, isFiltered, clearFilters } = filters
+
+  const cutoffDate = useMemo(() => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth() - (visibleMonthCount - 1), 1)
+      .toISOString()
+      .slice(0, 10)
+  }, [visibleMonthCount])
+
+  const windowed = useMemo(
+    () => allTransactions.filter((tx) => tx.date >= cutoffDate),
+    [allTransactions, cutoffDate]
+  )
+
+  const hasMore = useMemo(
+    () => !isFiltered && allTransactions.some((tx) => tx.date < cutoffDate),
+    [isFiltered, allTransactions, cutoffDate]
+  )
+
+  const nextMonthLabel = useMemo(() => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth() - visibleMonthCount, 1).toLocaleDateString(
+      'en-GB',
+      { month: 'long', year: 'numeric' }
+    )
+  }, [visibleMonthCount])
+
+  const displayed = isFiltered ? filtered : windowed
 
   const handleSaveEdit = async () => {
     setEditingId(null)
@@ -241,7 +269,7 @@ export function TransactionList({ userId }: TransactionListProps) {
         <p className="text-xs text-truffle-muted">
           {isFiltered
             ? `${filtered.length} of ${allTransactions.length} transactions`
-            : `${allTransactions.length} transactions`}
+            : `${windowed.length} transactions`}
         </p>
         <div className="flex items-center gap-3">
           {isFiltered && (
@@ -262,7 +290,7 @@ export function TransactionList({ userId }: TransactionListProps) {
       </div>
 
       <AnimatePresence mode="wait">
-        {filtered.length === 0 ? (
+        {displayed.length === 0 ? (
           <motion.div
             key="empty"
             className="card border-dashed text-center py-6"
@@ -275,13 +303,13 @@ export function TransactionList({ userId }: TransactionListProps) {
           </motion.div>
         ) : (
           <motion.div
-            key={`list-${filtered.length}`}
+            key="list"
             className="space-y-2"
             initial="hidden"
             animate="show"
             variants={staggerListVariants}
           >
-            {filtered.map((tx) => {
+            {displayed.map((tx) => {
               const isEditing = editingId === tx.id
               const isConfirmingDelete = confirmDeleteId === tx.id
               const isBeingDeleted = deletingId === tx.id
@@ -384,6 +412,15 @@ export function TransactionList({ userId }: TransactionListProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {hasMore && (
+        <button
+          onClick={() => setVisibleMonthCount((n) => n + 1)}
+          className="w-full py-2.5 text-xs text-truffle-muted hover:text-truffle-text border border-truffle-border hover:border-truffle-amber rounded-xl transition-colors"
+        >
+          Load {nextMonthLabel}
+        </button>
+      )}
     </div>
   )
 }
