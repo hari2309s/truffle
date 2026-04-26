@@ -45,16 +45,22 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 - 😌 **Emotionally aware** — calm, warm tone always. Never a lecture
 - 🧾 **Receipt & statement scanning** — photograph a receipt or upload a PDF bank statement; extracted by Groq Llama 4 Scout (vision-capable)
 - 📂 **CSV import** — drag-and-drop with column auto-detection and category guessing
+- ✏️ **Transaction edit & delete** — inline edit form and confirm-before-delete directly in the transaction list; changes sync immediately via TanStack Query cache invalidation
 - 🔄 **Subscription tracker** — automatically detects recurring charges from your history
 - 🎯 **Savings goals** — set goals manually or let Truffle propose one mid-conversation; confirm with one tap, track progress and deposits in Insights
 - 💬 **Log transactions from chat** — say "I just paid €45 at Lidl" and Truffle shows a confirmation card before logging it to your history
 - 🔁 **Saving habits** — set up a recurring weekly or monthly saving habit in chat ("save €50 every week"); Truffle tracks your streak, logs contributions, and reminds you when a period is due
-- 🔔 **Proactive nudges** — Truffle messages you in chat when it spots something worth flagging (anomalous charge, goal milestone, at-risk deadline, habit streak celebration, habit check-in reminder) without you having to ask; unread badge on the Chat tab
+- 📊 **Monthly budgets** — set per-category spending limits in Insights; colour-coded progress bars (green → amber at 80% → red at 100%); Truffle fires a proactive nudge when you hit 80% of a budget; budget context is injected into every chat for AI-aware answers
+- 🔔 **Proactive nudges** — Truffle messages you in chat when it spots something worth flagging (anomalous charge, goal milestone, at-risk deadline, budget warning, habit streak celebration, habit check-in reminder) without you having to ask; unread badge on the Chat tab
 - 🔊 **Weekly audio summary** — spoken recap of your week, once per week
 - 💱 **Multi-currency** — EUR, GBP, USD converted to EUR for consistent totals
+- 🌗 **Dark / light theme** — system-aware with manual override, available on all pages
 - 📱 **PWA** — installs on iOS and Android, fully offline-capable
-- 📡 **Offline-first** — browse transactions, goals, and insights with no connection; writes are queued via Background Sync and flushed automatically on reconnect
+- 📡 **Offline-first** — browse transactions, goals, budgets, and insights with no connection; writes are queued via Background Sync and flushed automatically on reconnect
 - 💬 **Offline chat** — Truffle responds from cached data when offline; queued messages are sent to the real AI the moment the connection returns, annotated "answered just now"
+- 🚀 **Onboarding tour** — new users are walked through the three core features (chat, tracking, nudges) immediately after sign-up
+- 📦 **Data export** — download all your transactions, goals, budgets, and habits as a single JSON file from the Settings sheet
+- 🗑️ **Account deletion** — self-serve data wipe from the Settings sheet; requires typing `DELETE` to confirm; cascades to all data via Supabase FK constraints
 
 ---
 
@@ -153,11 +159,13 @@ NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 Run all migrations in your Supabase project SQL editor in order:
 
 ```bash
-packages/db/src/migrations/001_initial.sql          # transactions, anomalies, snapshots, chat
-packages/db/src/migrations/002_savings_goals.sql    # savings_goals table + RLS
-packages/db/src/migrations/003_pgvector_gemini.sql  # pgvector extension + match_transactions RPC
-packages/db/src/migrations/004_savings_habits.sql   # savings_habits + habit_contributions + RLS
+packages/db/src/migrations/001_initial.sql             # transactions, anomalies, snapshots, chat
+packages/db/src/migrations/002_savings_goals.sql       # savings_goals table + RLS
+packages/db/src/migrations/003_pgvector_gemini.sql     # pgvector extension + match_transactions RPC
+packages/db/src/migrations/004_savings_habits.sql      # savings_habits + habit_contributions + RLS
 packages/db/src/migrations/005_proactive_messages.sql  # is_proactive, read_at, nudge_key on chat_messages
+packages/db/src/migrations/006_indexes.sql             # performance indexes for common query patterns
+packages/db/src/migrations/007_monthly_budgets.sql     # monthly_budgets table + RLS
 ```
 
 ### Run
@@ -202,8 +210,10 @@ Truffle is fully usable without a network connection.
 |---|---|
 | Transaction list | Served from IndexedDB cache |
 | Add transaction | Saved locally, synced on reconnect |
+| Transaction edit / delete | Queued and replayed on reconnect |
 | Savings goals | Read + write (optimistic UI), synced on reconnect |
 | Saving habits | Read + log contribution, synced on reconnect |
+| Monthly budgets | Read + upsert / delete (optimistic UI), synced on reconnect |
 | Insights / forecast | Computed from cached transactions |
 | Anomalies | Last-fetched results served from cache |
 | Chat | Warm contextual reply from cached data; real answer delivered on reconnect |
