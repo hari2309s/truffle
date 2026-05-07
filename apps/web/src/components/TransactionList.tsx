@@ -299,7 +299,9 @@ export function TransactionList({ userId }: TransactionListProps) {
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
           >
-            <p className="text-truffle-muted text-sm">No matching transactions.</p>
+            <p className="text-truffle-muted text-sm">
+              {isFiltered ? 'No matching transactions.' : 'No transactions this month yet.'}
+            </p>
           </motion.div>
         ) : (
           <motion.div
