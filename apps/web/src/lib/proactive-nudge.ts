@@ -1,6 +1,7 @@
 import { createServerClient } from '@truffle/db'
 import type { Anomaly, SavingsGoal, Transaction, MonthlySnapshot } from '@truffle/types'
 import { currentYearMonth } from './date'
+import { computeStreak } from './habits'
 
 /**
  * Checks whether a nudge with this key has already been sent to this user.
@@ -162,6 +163,103 @@ export async function sendHabitCheckInNudge(params: {
       amount,
       period,
       lastStreak,
+    },
+    userId
+  )
+  if (!message) return
+
+  await writeNudge(db, userId, message, nudgeKey)
+}
+
+export async function sendMonthlyReportNudge(userId: string): Promise<void> {
+  // Compute the previous month (YYYY-MM)
+  const now = new Date()
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
+
+  const nudgeKey = `monthly-report:${prevMonth}`
+  const db = createServerClient()
+
+  if (await alreadySent(db, userId, nudgeKey)) return
+
+  // Fetch previous month's snapshot — skip if no data exists
+  const { data: snapshotRow } = await db
+    .from('monthly_snapshots')
+    .select('data')
+    .eq('user_id', userId)
+    .eq('month', prevMonth)
+    .single()
+
+  const snapshot = snapshotRow?.data as MonthlySnapshot | null
+  if (!snapshot || (snapshot.totalIncome === 0 && snapshot.totalExpenses === 0)) return
+
+  // Top spending categories (expenses only, sorted largest first)
+  const topCategories = Object.entries(snapshot.byCategory)
+    .filter(([, amount]) => amount < 0)
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => a.amount - b.amount)
+    .slice(0, 5)
+
+  // Active goals
+  const { data: goalsData } = await db
+    .from('savings_goals')
+    .select('name, emoji, saved_amount, target_amount')
+    .eq('user_id', userId)
+
+  const goals = (goalsData ?? []).map((g) => ({
+    name: g.name,
+    emoji: g.emoji,
+    pct: Math.min(100, Math.round((Number(g.saved_amount) / Number(g.target_amount)) * 100)),
+  }))
+
+  // Active habits with streaks
+  const { data: habitsData } = await db
+    .from('savings_habits')
+    .select('id, name, emoji, frequency')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+
+  let habits: Array<{ name: string; emoji: string; streak: number }> = []
+  if (habitsData && habitsData.length > 0) {
+    const habitIds = habitsData.map((h) => h.id)
+    const { data: contributions } = await db
+      .from('habit_contributions')
+      .select('habit_id, period')
+      .in('habit_id', habitIds)
+      .eq('user_id', userId)
+
+    const contribMap: Record<string, string[]> = {}
+    for (const c of contributions ?? []) {
+      if (!contribMap[c.habit_id]) contribMap[c.habit_id] = []
+      contribMap[c.habit_id]!.push(c.period)
+    }
+
+    habits = habitsData.map((h) => ({
+      name: h.name,
+      emoji: h.emoji,
+      streak: computeStreak(h.frequency as 'weekly' | 'monthly', contribMap[h.id] ?? []),
+    }))
+  }
+
+  const [year, month] = prevMonth.split('-').map(Number)
+  const monthName = new Date(year!, month! - 1, 1).toLocaleString('en-GB', {
+    month: 'long',
+    year: 'numeric',
+  })
+
+  const { generateProactiveMessage } = await import('@truffle/ai')
+  const message = await generateProactiveMessage(
+    {
+      type: 'monthly_report',
+      month: prevMonth,
+      monthName,
+      totalIncome: snapshot.totalIncome,
+      totalExpenses: snapshot.totalExpenses,
+      balance: snapshot.balance,
+      savingsRate: snapshot.savingsRate,
+      topCategories,
+      goals,
+      habits,
     },
     userId
   )

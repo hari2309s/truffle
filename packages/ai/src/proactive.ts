@@ -1,9 +1,11 @@
+import { generateText } from 'ai'
 import { StateGraph, END, START } from '@langchain/langgraph'
 import type { Transaction, Anomaly, SavingsGoal, MonthlySnapshot } from '@truffle/types'
 import { reviewAnomalies } from './agents/anomalyReviewer'
 import { adviseSavingsGoals } from './agents/savingsGoalAdvisor'
 import { adviseHabit } from './agents/habitAdvisor'
 import { GraphAnnotation } from './graph'
+import { chatModel } from './llm'
 import { langfuse } from './langfuse'
 import { currentYearMonth } from './date'
 
@@ -123,6 +125,19 @@ export interface BudgetWarningTrigger {
   month: string // YYYY-MM
 }
 
+export interface MonthlyReportTrigger {
+  type: 'monthly_report'
+  month: string // YYYY-MM (the reported month)
+  monthName: string // e.g. "May 2026"
+  totalIncome: number
+  totalExpenses: number // negative value
+  balance: number
+  savingsRate: number
+  topCategories: Array<{ category: string; amount: number }> // amount is negative for expenses
+  goals: Array<{ name: string; emoji: string; pct: number }>
+  habits: Array<{ name: string; emoji: string; streak: number }>
+}
+
 type ProactiveTrigger =
   | AnomalyTrigger
   | GoalMilestoneTrigger
@@ -130,6 +145,7 @@ type ProactiveTrigger =
   | HabitStreakTrigger
   | HabitCheckInTrigger
   | BudgetWarningTrigger
+  | MonthlyReportTrigger
 
 function getNudgeKey(trigger: ProactiveTrigger): string {
   switch (trigger.type) {
@@ -145,13 +161,86 @@ function getNudgeKey(trigger: ProactiveTrigger): string {
       return `habit-checkin:${trigger.habitId}:${trigger.period}`
     case 'budget_warning':
       return `budget-warning:${trigger.category}:${trigger.month}:${trigger.percentUsed >= 100 ? '100' : '80'}`
+    case 'monthly_report':
+      return `monthly-report:${trigger.month}`
   }
+}
+
+async function generateMonthlyReport(
+  trigger: MonthlyReportTrigger,
+  userId?: string
+): Promise<string | null> {
+  const topCatsText = trigger.topCategories
+    .map((c) => `${c.category.replace(/_/g, ' ')}: €${Math.abs(c.amount).toFixed(0)}`)
+    .join(', ')
+
+  const goalsText =
+    trigger.goals.length > 0
+      ? trigger.goals.map((g) => `${g.emoji} ${g.name} at ${g.pct}%`).join(', ')
+      : 'no active goals'
+
+  const habitsText =
+    trigger.habits.length > 0
+      ? trigger.habits
+          .map((h) => `${h.emoji} ${h.name}${h.streak > 0 ? ` (${h.streak} streak)` : ''}`)
+          .join(', ')
+      : 'no active habits'
+
+  const net = trigger.balance
+  const netLabel = net >= 0 ? `+€${net.toFixed(0)}` : `-€${Math.abs(net).toFixed(0)}`
+
+  const prompt = `You are Truffle, a warm and direct AI finance assistant. Write a monthly finance summary message for the user covering ${trigger.monthName}.
+
+Data:
+- Income: €${trigger.totalIncome.toFixed(0)}
+- Expenses: €${Math.abs(trigger.totalExpenses).toFixed(0)}
+- Net: ${netLabel}
+- Savings rate: ${(trigger.savingsRate * 100).toFixed(0)}%
+- Top spending categories: ${topCatsText || 'none recorded'}
+- Savings goals: ${goalsText}
+- Saving habits: ${habitsText}
+
+Write 4–6 sentences in flowing prose (no bullet points). Lead with a one-line verdict on the month using the net figure. Call out 1–2 specific spending patterns by name and amount. Weave in a brief mention of goal or habit progress if relevant. Close with one concrete, forward-looking nudge for the coming month. Be specific, warm, and honest — not generic. Do not start with "I".`
+
+  const trace = langfuse.trace({
+    name: 'monthly_report_nudge',
+    userId,
+    metadata: { month: trigger.month },
+    input: prompt,
+  })
+
+  const gen = langfuse.generation({
+    traceId: trace.id,
+    name: 'generateMonthlyReport',
+    model: 'llama-3.3-70b-versatile',
+    input: prompt,
+  })
+
+  const { text, usage } = await generateText({
+    model: chatModel,
+    prompt,
+    maxTokens: 400,
+  })
+
+  gen.end({
+    output: text,
+    usage: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
+  })
+  trace.update({ output: text })
+  await langfuse.flushAsync()
+
+  return text.trim() || null
 }
 
 export async function generateProactiveMessage(
   trigger: ProactiveTrigger,
   userId?: string
 ): Promise<string | null> {
+  // Monthly report bypasses the LangGraph pipeline — no intent routing needed
+  if (trigger.type === 'monthly_report') {
+    return generateMonthlyReport(trigger, userId)
+  }
+
   const nudgeKey = getNudgeKey(trigger)
 
   const input = buildGraphInput(trigger)

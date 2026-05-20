@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import type { Forecast } from '@truffle/types'
 import { currentYearMonth } from '@/lib/date'
+import { sendMonthlyReportNudge } from '@/lib/proactive-nudge'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,11 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: 'userId required' }, { status: 400 })
     }
+
+    // Fire-and-forget: send monthly report nudge for the previous month if not yet sent
+    sendMonthlyReportNudge(userId).catch((e) =>
+      console.warn('Monthly report nudge failed (non-fatal):', e)
+    )
 
     const db = createServerClient()
     const currentMonth = currentYearMonth()
