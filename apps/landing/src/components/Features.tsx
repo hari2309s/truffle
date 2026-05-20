@@ -41,8 +41,8 @@ const container = {
 } as const
 
 const card = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0 },
+  hidden: { opacity: 0, y: 28, scale: 0.96 },
+  show: { opacity: 1, y: 0, scale: 1 },
 } as const
 
 export default function Features() {
@@ -59,11 +59,11 @@ export default function Features() {
         >
           <p className="section-label mb-4">Features</p>
           <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-truffle-text mb-5">
-            Everything you need,{' '}
-            <span className="text-truffle-amber">nothing you don't</span>
+            Everything you need, <span className="text-truffle-amber">nothing you don't</span>
           </h2>
           <p className="text-lg text-truffle-text-secondary max-w-xl mx-auto leading-relaxed">
-            Truffle is built for people who hate managing money — so it does the heavy lifting for you.
+            Truffle is built for people who hate managing money — so it does the heavy lifting for
+            you.
           </p>
         </motion.div>
 
@@ -79,10 +79,12 @@ export default function Features() {
             <motion.div
               key={f.title}
               variants={card}
-              transition={{ duration: 0.5 }}
-              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+              whileHover={{ y: -5, transition: { duration: 0.2 } }}
               className="group relative bg-truffle-card border border-truffle-border rounded-2xl p-6 overflow-hidden cursor-default"
             >
+              {/* Top edge accent line */}
+              <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-truffle-amber/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               {/* Hover glow */}
               <div className="absolute inset-0 bg-truffle-amber/0 group-hover:bg-truffle-amber/[0.03] transition-colors duration-300 rounded-2xl" />
 
@@ -93,7 +95,9 @@ export default function Features() {
 
               {/* Text */}
               <h3 className="relative font-bold text-truffle-text text-lg mb-2">{f.title}</h3>
-              <p className="relative text-sm text-truffle-text-secondary leading-relaxed">{f.desc}</p>
+              <p className="relative text-sm text-truffle-text-secondary leading-relaxed">
+                {f.desc}
+              </p>
             </motion.div>
           ))}
         </motion.div>
@@ -104,7 +108,16 @@ export default function Features() {
 
 function MicIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" />
       <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
       <line x1="12" y1="19" x2="12" y2="22" />
@@ -114,7 +127,16 @@ function MicIcon() {
 
 function CameraIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
       <circle cx="12" cy="13" r="4" />
     </svg>
@@ -123,7 +145,16 @@ function CameraIcon() {
 
 function ChartIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="18" y1="20" x2="18" y2="10" />
       <line x1="12" y1="20" x2="12" y2="4" />
       <line x1="6" y1="20" x2="6" y2="14" />
@@ -134,7 +165,16 @@ function ChartIcon() {
 
 function TargetIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="6" />
       <circle cx="12" cy="12" r="2" />
@@ -144,7 +184,16 @@ function TargetIcon() {
 
 function RepeatIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="17 1 21 5 17 9" />
       <path d="M3 11V9a4 4 0 0 1 4-4h14" />
       <polyline points="7 23 3 19 7 15" />
@@ -155,7 +204,16 @@ function RepeatIcon() {
 
 function ShieldIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   )

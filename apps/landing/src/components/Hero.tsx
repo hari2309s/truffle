@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '#'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
 const words = [
   { text: 'Your', amber: false },
@@ -23,31 +23,32 @@ export default function Hero() {
           <div className="flex flex-col items-start">
             {/* Badge */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
+              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.05, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
               className="mb-8 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-truffle-amber/40 bg-truffle-amber/10 text-truffle-amber text-xs font-semibold uppercase tracking-wider"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-truffle-amber animate-pulse-slow" />
               Voice-first · AI-powered
             </motion.div>
 
-            {/* Headline */}
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight mb-6">
+            {/* Headline — words clip-reveal from below */}
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight mb-6">
               {words.map((w, i) => (
-                <motion.span
-                  key={w.text}
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    delay: 0.2 + i * 0.12,
-                    duration: 0.6,
-                    ease: [0.25, 0.46, 0.45, 0.94],
-                  }}
-                  className={`inline-block mr-[0.22em] ${w.amber ? 'text-truffle-amber' : 'text-truffle-text'}`}
-                >
-                  {w.text}
-                </motion.span>
+                <span key={w.text} className="inline-block overflow-hidden mr-[0.22em]">
+                  <motion.span
+                    initial={{ y: '110%' }}
+                    animate={{ y: '0%' }}
+                    transition={{
+                      delay: 0.15 + i * 0.15,
+                      duration: 0.75,
+                      ease: [0.76, 0, 0.24, 1],
+                    }}
+                    className={`inline-block ${w.amber ? 'text-truffle-amber' : 'text-truffle-text'}`}
+                  >
+                    {w.text}
+                  </motion.span>
+                </span>
               ))}
             </h1>
 
@@ -119,11 +120,18 @@ export default function Hero() {
 function HeroBackground() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {/* Amber radial glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] rounded-full bg-truffle-amber/[0.06] blur-[120px]" />
+      {/* Primary amber radial glow — center */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] rounded-full bg-truffle-amber/[0.07] blur-[120px] animate-glow-pulse" />
+      {/* Secondary orb — top-right for depth */}
+      <div className="absolute top-0 right-0 w-[500px] h-[400px] rounded-full bg-truffle-amber/[0.04] blur-[100px]" />
+      {/* Tertiary orb — bottom-left */}
+      <div className="absolute bottom-1/4 left-0 w-[360px] h-[280px] rounded-full bg-truffle-amber/[0.03] blur-[90px]" />
       {/* Subtle grid */}
-      <div
-        className="absolute inset-0 opacity-[0.35]"
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.32 }}
+        transition={{ duration: 1.2, ease: 'easeOut' }}
+        className="absolute inset-0"
         style={{
           backgroundImage: `linear-gradient(var(--t-border) 1px, transparent 1px), linear-gradient(90deg, var(--t-border) 1px, transparent 1px)`,
           backgroundSize: '64px 64px',
@@ -131,6 +139,7 @@ function HeroBackground() {
       />
       {/* Vignette fade at edges */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-truffle-bg" />
+      <div className="absolute inset-0 bg-gradient-to-r from-truffle-bg/40 via-transparent to-truffle-bg/40" />
     </div>
   )
 }
@@ -194,10 +203,8 @@ function ChatMockup() {
           >
             <div className="bg-[#242220] border border-[#38362f] rounded-2xl rounded-tl-sm px-4 py-3 max-w-[90%]">
               <p className="text-sm text-[#f5ead2] leading-relaxed">
-                You spent{' '}
-                <span className="font-bold text-[#e8a84e]">$284</span> on food this week —{' '}
-                <span className="text-[#c4845e]">$47 over last week.</span> Most of it was
-                DoorDash{' '}
+                You spent <span className="font-bold text-[#e8a84e]">$284</span> on food this week —{' '}
+                <span className="text-[#c4845e]">$47 over last week.</span> Most of it was DoorDash{' '}
                 <span className="text-[#706a5e]">(5 orders)</span> and Whole Foods{' '}
                 <span className="text-[#706a5e]">(2 visits).</span>
               </p>
@@ -228,7 +235,16 @@ function ChatMockup() {
 
 function MicIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0e0d0c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#0e0d0c"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" />
       <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
       <line x1="12" y1="19" x2="12" y2="22" />
@@ -238,7 +254,16 @@ function MicIcon() {
 
 function ArrowRightIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M5 12h14M12 5l7 7-7 7" />
     </svg>
   )
@@ -246,7 +271,16 @@ function ArrowRightIcon() {
 
 function ChevronDownIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M6 9l6 6 6-6" />
     </svg>
   )

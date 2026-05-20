@@ -12,7 +12,7 @@ const steps = [
   {
     number: '02',
     title: 'Log your spending your way',
-    desc: "Type it, say it out loud, snap a receipt, or drop in a bank CSV. However you prefer — Truffle handles the rest.",
+    desc: 'Type it, say it out loud, snap a receipt, or drop in a bank CSV. However you prefer — Truffle handles the rest.',
     detail: 'Text · Voice · Receipt photo · CSV import',
   },
   {
@@ -37,8 +37,7 @@ export default function HowItWorks() {
         >
           <p className="section-label mb-4">How it works</p>
           <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-truffle-text mb-5">
-            Up and running in{' '}
-            <span className="text-truffle-amber">three steps</span>
+            Up and running in <span className="text-truffle-amber">three steps</span>
           </h2>
           <p className="text-lg text-truffle-text-secondary max-w-lg mx-auto">
             No onboarding call. No three-week integration. Just sign up and start talking.
@@ -52,30 +51,34 @@ export default function HowItWorks() {
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.4, duration: 0.8, ease: 'easeInOut' }}
-            className="hidden md:block absolute top-[52px] left-[calc(16.66%+24px)] right-[calc(16.66%+24px)] h-px bg-gradient-to-r from-truffle-amber/40 via-truffle-amber/70 to-truffle-amber/40 origin-left"
+            transition={{ delay: 0.3, duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="hidden md:block absolute top-[27px] left-[calc(16.66%+28px)] right-[calc(16.66%+28px)] h-px bg-gradient-to-r from-truffle-amber/30 via-truffle-amber/70 to-truffle-amber/30 origin-left"
           />
 
           {steps.map((step, i) => (
             <motion.div
               key={step.number}
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.15, duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="relative flex flex-col items-center text-center md:items-start md:text-left"
+              transition={{ delay: 0.1 + i * 0.18, duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="group relative flex flex-col items-center text-center md:items-start md:text-left"
             >
               {/* Number badge */}
-              <div className="relative mb-6 w-14 h-14 rounded-2xl bg-truffle-card border border-truffle-border flex items-center justify-center z-10">
+              <div className="relative mb-6 w-14 h-14 rounded-2xl bg-truffle-card border border-truffle-border group-hover:border-truffle-amber/40 flex items-center justify-center z-10 transition-colors duration-300 shadow-[0_0_0_0_rgba(232,168,78,0)] group-hover:shadow-[0_0_20px_-4px_rgba(232,168,78,0.3)]">
                 <span className="font-black text-xl text-truffle-amber">{step.number}</span>
               </div>
 
               {/* Content */}
-              <h3 className="font-bold text-xl text-truffle-text mb-3">{step.title}</h3>
-              <p className="text-truffle-text-secondary text-sm leading-relaxed mb-4">{step.desc}</p>
+              <h3 className="font-bold text-xl text-truffle-text mb-3 group-hover:text-truffle-amber/90 transition-colors duration-300">
+                {step.title}
+              </h3>
+              <p className="text-truffle-text-secondary text-sm leading-relaxed mb-4">
+                {step.desc}
+              </p>
 
               {/* Detail chip */}
-              <span className="inline-block text-xs text-truffle-amber/80 bg-truffle-amber/10 border border-truffle-amber/20 px-3 py-1 rounded-full font-medium">
+              <span className="inline-block text-xs text-truffle-amber/80 bg-truffle-amber/10 border border-truffle-amber/20 px-3 py-1 rounded-full font-medium group-hover:bg-truffle-amber/15 transition-colors duration-300">
                 {step.detail}
               </span>
             </motion.div>

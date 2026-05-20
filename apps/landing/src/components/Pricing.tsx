@@ -2,11 +2,11 @@
 
 import { motion } from 'framer-motion'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '#'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
 const free = {
   name: 'Free',
-  price: '$0',
+  price: '€0',
   period: 'forever',
   description: 'Everything you need to get started. No card required.',
   features: [
@@ -24,7 +24,7 @@ const free = {
 
 const pro = {
   name: 'Pro',
-  price: '$7',
+  price: '€9',
   period: '/month',
   description: 'For people serious about taking control of their money.',
   badge: 'Coming Soon',
@@ -36,7 +36,6 @@ const pro = {
     'Unlimited goals & habits',
     'Full history CSV export',
     'Monthly AI finance report',
-    'Net worth tracker',
   ],
   cta: 'Join Waitlist',
   href: '#',
@@ -102,7 +101,8 @@ export default function Pricing() {
           transition={{ delay: 0.4, duration: 0.5 }}
           className="text-center mt-10 text-sm text-truffle-muted"
         >
-          Pro tier in active development. Join the waitlist to be notified at launch and lock in early pricing.
+          Pro tier in active development. Join the waitlist to be notified at launch and lock in
+          early pricing.
         </motion.p>
       </div>
     </section>
@@ -129,7 +129,9 @@ function PricingCardContent({ tier }: { tier: typeof free | typeof pro }) {
 
       {/* Price */}
       <div className="flex items-baseline gap-1 mb-8">
-        <span className={`text-5xl font-black ${isPro ? 'text-truffle-amber' : 'text-truffle-text'}`}>
+        <span
+          className={`text-5xl font-black ${isPro ? 'text-truffle-amber' : 'text-truffle-text'}`}
+        >
           {tier.price}
         </span>
         <span className="text-truffle-muted text-sm">{tier.period}</span>

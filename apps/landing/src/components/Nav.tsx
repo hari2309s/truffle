@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import ThemeToggle from './ThemeToggle'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '#'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false)
@@ -42,9 +42,15 @@ export default function Nav() {
 
         {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-7 text-sm font-medium text-truffle-text-secondary">
-          <a href="#features" className="hover:text-truffle-text transition-colors">Features</a>
-          <a href="#how-it-works" className="hover:text-truffle-text transition-colors">How it works</a>
-          <a href="#pricing" className="hover:text-truffle-text transition-colors">Pricing</a>
+          <a href="#features" className="hover:text-truffle-text transition-colors">
+            Features
+          </a>
+          <a href="#how-it-works" className="hover:text-truffle-text transition-colors">
+            How it works
+          </a>
+          <a href="#pricing" className="hover:text-truffle-text transition-colors">
+            Pricing
+          </a>
         </div>
 
         {/* Actions */}

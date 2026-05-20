@@ -1,6 +1,6 @@
 import Image from 'next/image'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '#'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
 const links = {
   Product: [
@@ -26,7 +26,8 @@ export default function Footer() {
               <span className="font-black text-lg text-truffle-text tracking-tight">truffle</span>
             </a>
             <p className="text-sm text-truffle-text-secondary leading-relaxed max-w-xs">
-              Your finances, unearthed. A voice-first personal finance assistant that talks with you, not at you.
+              Your finances, unearthed. A voice-first personal finance assistant that talks with
+              you, not at you.
             </p>
             <a
               href={APP_URL}
@@ -72,9 +73,7 @@ export default function Footer() {
             </a>
             .
           </p>
-          <p className="text-xs text-truffle-muted">
-            No bank linking. No spreadsheets. Just talk.
-          </p>
+          <p className="text-xs text-truffle-muted">No bank linking. No spreadsheets. Just talk.</p>
         </div>
       </div>
     </footer>
