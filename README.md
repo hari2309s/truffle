@@ -32,6 +32,9 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-EF4444?logo=turborepo&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+![Vitest](https://img.shields.io/badge/Vitest-unit_tests-6E9F18?logo=vitest&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-e2e_tests-2EAD33?logo=playwright&logoColor=white)
+
 </div>
 
 ---
@@ -52,6 +55,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 - 🔁 **Saving habits** — set up a recurring weekly or monthly saving habit in chat ("save €50 every week"); Truffle tracks your streak, logs contributions, and reminds you when a period is due
 - 📊 **Monthly budgets** — set per-category spending limits in Insights; colour-coded progress bars (green → amber at 80% → red at 100%); Truffle fires a proactive nudge when you hit 80% of a budget; budget context is injected into every chat for AI-aware answers
 - 🔔 **Proactive nudges** — Truffle messages you in chat when it spots something worth flagging (anomalous charge, goal milestone, at-risk deadline, budget warning, habit streak celebration, habit check-in reminder) without you having to ask; unread badge on the Chat tab
+- 📅 **Monthly AI finance report** — on visiting Insights at the start of a new month, Truffle generates a prose summary of the previous month (income, expenses, top categories, goal and habit progress) and delivers it as a chat message; generated once per month per user
 - 🔊 **Weekly audio summary** — spoken recap of your week, once per week
 - 💱 **Multi-currency** — EUR, GBP, USD converted to EUR for consistent totals
 - 🌗 **Dark / light theme** — system-aware with manual override, available on all pages
@@ -225,6 +229,39 @@ Truffle is fully usable without a network connection.
 4. TanStack Query caches are invalidated so the UI reflects the synced state.
 
 For the full technical reference see [docs/offline-capability.md](docs/offline-capability.md).
+
+---
+
+## Testing
+
+### Unit tests (Vitest)
+
+Pure function tests across the `web` and `ai` packages — no DB or LLM calls.
+
+```bash
+pnpm test
+```
+
+| Package | Covered |
+|---|---|
+| `apps/web` | `currency` (toEur, formatCurrency), `habits` (getCurrentPeriod, previousPeriod, computeStreak), `forecast` (computeForecast) |
+| `packages/ai` | `toneDetection` (getSpeechTone, getToneGuidance) |
+
+### E2E tests (Playwright)
+
+Browser-level tests against the running Next.js dev server. Supabase network calls are intercepted so no real auth or data is needed.
+
+```bash
+cd apps/web
+pnpm test:e2e          # headless run
+pnpm test:e2e:ui       # interactive Playwright UI
+```
+
+| Suite | What's covered |
+|---|---|
+| `auth.spec.ts` | Auth page rendering, email form, OTP confirmation screen, expired-link error |
+| `offline.spec.ts` | Offline page message, try-again reload |
+| `navigation-guards.spec.ts` | `/chat` and `/insights` redirect to `/` when unauthenticated |
 
 ---
 

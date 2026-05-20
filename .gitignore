@@ -26,6 +26,11 @@ pnpm-debug.log*
 # TypeScript
 *.tsbuildinfo
 
+# Playwright
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/.playwright/
+
 # next-pwa generated service worker artifacts (regenerated at build time)
 apps/web/public/sw.js
 apps/web/public/sw.js.map
