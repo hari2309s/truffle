@@ -261,7 +261,7 @@ export async function generateProactiveMessage(
   return message
 }
 
-function buildGraphInput(trigger: ProactiveTrigger) {
+function buildGraphInput(trigger: Exclude<ProactiveTrigger, MonthlyReportTrigger>) {
   const empty = {
     transactions: [] as Transaction[],
     anomalies: [] as Anomaly[],
