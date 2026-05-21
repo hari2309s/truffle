@@ -14,7 +14,7 @@ import { createServerClient as createDbClient } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory, QueryIntent } from '@truffle/types'
 import { INTENT, TRANSACTION_CATEGORIES } from '@truffle/types'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
-import { currentYearMonth } from '@/lib/date'
+import { currentYearMonth, parseDateRange } from '@/lib/date'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -84,11 +84,12 @@ export async function POST(request: NextRequest) {
     const db = createDbClient()
 
     const currentMonth = currentYearMonth()
+    const dateRange = parseDateRange(message, new Date())
 
     // Run all independent queries in parallel — contributions depends on habit IDs so runs after
     const [
       { data: txRows },
-      { data: snapshotRow },
+      { data: snapshotRows },
       { data: anomalyRows },
       { data: goalRows },
       { data: rawHabitRows },
@@ -106,8 +107,9 @@ export async function POST(request: NextRequest) {
         .from('monthly_snapshots')
         .select('data')
         .eq('user_id', userId)
-        .eq('month', currentMonth)
-        .single(),
+        .gte('month', dateRange.from)
+        .lte('month', dateRange.to)
+        .order('month', { ascending: true }),
       db
         .from('anomalies')
         .select('description, severity, type')
@@ -140,8 +142,14 @@ export async function POST(request: NextRequest) {
       isRecurring: row.is_recurring as boolean,
     }))
 
-    const snapshot: MonthlySnapshot =
-      ((snapshotRow as Record<string, unknown> | null)?.data as unknown as MonthlySnapshot) ??
+    const snapshots: MonthlySnapshot[] = ((snapshotRows ?? []) as Record<string, unknown>[])
+      .map((row) => row.data as unknown as MonthlySnapshot)
+      .filter(Boolean)
+    if (snapshots.length === 0) snapshots.push(buildEmptySnapshot())
+
+    const currentMonthSnapshot =
+      snapshots.find((s) => s.month === currentMonth) ??
+      snapshots[snapshots.length - 1] ??
       buildEmptySnapshot()
 
     // Contributions query depends on habit IDs from the parallel batch above
@@ -208,8 +216,12 @@ export async function POST(request: NextRequest) {
     const relevantTransactions = await queryTransactions(userId, message, 100).catch(
       () => transactions
     )
-    const contextTransactions =
-      relevantTransactions.length > 0 ? relevantTransactions : transactions
+    const filteredRelevant = dateRange.explicit
+      ? relevantTransactions.filter(
+          (tx) => tx.date.slice(0, 7) >= dateRange.from && tx.date.slice(0, 7) <= dateRange.to
+        )
+      : relevantTransactions
+    const contextTransactions = filteredRelevant.length > 0 ? filteredRelevant : transactions
 
     // Compute forecast numbers for affordability / forecast intents
     const today = new Date()
@@ -217,13 +229,13 @@ export async function POST(request: NextRequest) {
     const daysElapsed = today.getDate()
     const daysRemaining = daysInMonth - daysElapsed
     const dailySpend =
-      daysElapsed > 0 && snapshot.totalExpenses < 0
-        ? Math.abs(snapshot.totalExpenses) / daysElapsed
+      daysElapsed > 0 && currentMonthSnapshot.totalExpenses < 0
+        ? Math.abs(currentMonthSnapshot.totalExpenses) / daysElapsed
         : 0
-    const projectedBalance = snapshot.balance - dailySpend * daysRemaining
+    const projectedBalance = currentMonthSnapshot.balance - dailySpend * daysRemaining
 
-    const speechTone = getSpeechTone(snapshot)
-    const toneGuidance = getToneGuidance(snapshot)
+    const speechTone = getSpeechTone(currentMonthSnapshot)
+    const toneGuidance = getToneGuidance(currentMonthSnapshot)
 
     const streamData = new StreamData()
     streamData.append({ type: 'speech_tone', tone: speechTone })
@@ -232,7 +244,8 @@ export async function POST(request: NextRequest) {
     const systemPrompt = buildSystemPrompt({
       intent,
       toneGuidance,
-      snapshot,
+      snapshots,
+      currentMonth,
       transactions: contextTransactions,
       anomalyRows: anomalyRows as { severity: unknown; description: unknown }[] | null,
       goalRows: goalRows as
