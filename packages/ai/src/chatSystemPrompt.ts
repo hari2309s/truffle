@@ -161,10 +161,47 @@ function buildToolRules(intent: QueryIntent): string {
   return ''
 }
 
+function buildSnapshotContext(
+  snapshots: MonthlySnapshot[],
+  projectedBalance: number,
+  daysRemaining: number,
+  dailySpend: number,
+  currentMonth: string
+): string {
+  if (snapshots.length === 1) {
+    const s = snapshots[0]!
+    const isCurrentMonth = s.month === currentMonth
+    const projectionLine = isCurrentMonth
+      ? `\n- Projected end of month: €${projectedBalance.toFixed(2)} (${daysRemaining} days remaining, spending ~€${dailySpend.toFixed(2)}/day)`
+      : ''
+    return `Monthly summary (${s.month}):
+- Income: €${s.totalIncome.toFixed(2)}
+- Expenses: €${Math.abs(s.totalExpenses).toFixed(2)}
+- Balance: €${s.balance.toFixed(2)}${projectionLine}`
+  }
+
+  const totalIncome = snapshots.reduce((sum, s) => sum + s.totalIncome, 0)
+  const totalExpenses = snapshots.reduce((sum, s) => sum + Math.abs(s.totalExpenses), 0)
+  const totalBalance = snapshots.reduce((sum, s) => sum + s.balance, 0)
+
+  const lines = snapshots.map((s) => {
+    const projectionNote =
+      s.month === currentMonth
+        ? ` (projected end: €${projectedBalance.toFixed(2)}, ${daysRemaining}d remaining)`
+        : ''
+    return `- ${s.month}: income €${s.totalIncome.toFixed(2)}, expenses €${Math.abs(s.totalExpenses).toFixed(2)}, balance €${s.balance.toFixed(2)}${projectionNote}`
+  })
+
+  return `Monthly summary (${snapshots[0]!.month} – ${snapshots[snapshots.length - 1]!.month}):
+${lines.join('\n')}
+- Totals: income €${totalIncome.toFixed(2)}, expenses €${totalExpenses.toFixed(2)}, net balance €${totalBalance.toFixed(2)}`
+}
+
 export function buildSystemPrompt(params: {
   intent: QueryIntent
   toneGuidance: string
-  snapshot: MonthlySnapshot
+  snapshots: MonthlySnapshot[]
+  currentMonth: string
   transactions: Transaction[]
   anomalyRows: AnomalyRow[] | null
   goalRows: GoalRow[] | null
@@ -177,7 +214,8 @@ export function buildSystemPrompt(params: {
   const {
     intent,
     toneGuidance,
-    snapshot,
+    snapshots,
+    currentMonth,
     transactions,
     anomalyRows,
     goalRows,
@@ -200,17 +238,20 @@ Respond with a single warm, brief greeting. Do not mention their finances, balan
   const habitReminderContext = buildHabitReminderContext(intent, pendingHabits)
   const budgetContext = buildBudgetContext(budgetRows)
   const toolRules = buildToolRules(intent)
+  const snapshotContext = buildSnapshotContext(
+    snapshots,
+    projectedBalance,
+    daysRemaining,
+    dailySpend,
+    currentMonth
+  )
 
   return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.
 
 Tone guidance for this conversation: ${toneGuidance}
 ${transactionContext}${anomalyContext}${goalsContext}${habitsContext}${budgetContext}${habitReminderContext}
 
-Monthly summary (${snapshot.month}):
-- Income: €${snapshot.totalIncome.toFixed(2)}
-- Expenses: €${Math.abs(snapshot.totalExpenses).toFixed(2)}
-- Balance: €${snapshot.balance.toFixed(2)}
-- Projected end of month: €${projectedBalance.toFixed(2)} (${daysRemaining} days remaining, spending ~€${dailySpend.toFixed(2)}/day)
+${snapshotContext}
 
 Intent detected: ${intent}
 
