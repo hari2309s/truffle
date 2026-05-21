@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
     intentSpan.end({ output: intent })
 
     // RAG retrieval — falls back to latest 25 if ChromaDB is unavailable
-    const relevantTransactions = await queryTransactions(userId, message, 20).catch(
+    const relevantTransactions = await queryTransactions(userId, message, 100).catch(
       () => transactions
     )
     const contextTransactions =
