@@ -80,7 +80,6 @@ function buildTransactionContext(intent: QueryIntent, transactions: Transaction[
   return (
     "\nThe user's recent transactions:\n" +
     transactions
-      .slice(0, 25)
       .map((t) => `${t.date}: ${sanitize(t.description)} (${t.category}) €${t.amount.toFixed(2)}`)
       .join('\n')
   )
@@ -220,6 +219,7 @@ Response guidelines:
 - Use actual numbers from the transaction data
 - No bullet points or lists — use natural spoken language
 - Never lecture or shame. Celebrate wins. Reassure when things are tight.
+- Do not give unsolicited tips, suggestions, or advice. Only advise if the user explicitly asks for it.
 
 ${toolRules}`
 }
