@@ -5,6 +5,8 @@
  *   weekly  → 'YYYY-WNN' (ISO week number, zero-padded to 2 digits)
  */
 
+import { formatYearMonth } from './date'
+
 export function getCurrentPeriod(frequency: 'weekly' | 'monthly', date = new Date()): string {
   if (frequency === 'monthly') {
     return date.toISOString().slice(0, 7) // 'YYYY-MM'
@@ -24,7 +26,7 @@ export function previousPeriod(frequency: 'weekly' | 'monthly', current: string)
     const year = Number(parts[0])
     const month = Number(parts[1])
     const prev = new Date(year, month - 2, 1) // month-1 is 0-indexed, so month-2 goes back one
-    return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`
+    return formatYearMonth(prev.getFullYear(), prev.getMonth() + 1)
   }
   // weekly: parse YYYY-WNN, subtract 7 days from a date in that week
   const wparts = current.split('-W')

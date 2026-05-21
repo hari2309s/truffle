@@ -1,6 +1,6 @@
 import { createServerClient } from '@truffle/db'
 import type { Anomaly, SavingsGoal, Transaction, MonthlySnapshot } from '@truffle/types'
-import { currentYearMonth } from './date'
+import { currentYearMonth, formatYearMonth } from './date'
 import { computeStreak } from './habits'
 
 /**
@@ -175,7 +175,7 @@ export async function sendMonthlyReportNudge(userId: string): Promise<void> {
   // Compute the previous month (YYYY-MM)
   const now = new Date()
   const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
+  const prevMonth = formatYearMonth(prevDate.getFullYear(), prevDate.getMonth() + 1)
 
   const nudgeKey = `monthly-report:${prevMonth}`
   const db = createServerClient()
