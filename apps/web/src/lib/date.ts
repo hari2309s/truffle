@@ -1,3 +1,7 @@
+export function toDateLocale(locale: string): string {
+  return locale === 'de' ? 'de-DE' : 'en-GB'
+}
+
 export function currentYearMonth(): string {
   return new Date().toISOString().slice(0, 7)
 }
