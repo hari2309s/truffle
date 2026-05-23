@@ -11,7 +11,7 @@ export function OfflineBanner() {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-50 text-center py-2 px-4 text-xs font-medium transition-colors ${
+      className={`fixed top-0 left-0 right-0 z-30 text-center py-2 px-4 text-xs font-medium transition-colors ${
         isOnline
           ? 'bg-truffle-amber/20 text-truffle-amber'
           : 'bg-truffle-surface text-truffle-muted'

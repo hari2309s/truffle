@@ -41,7 +41,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
   return (
     <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-4 border-b border-truffle-border flex-shrink-0">
+      <header className="sticky top-0 z-40 flex items-center justify-between px-4 py-4 border-b border-truffle-border flex-shrink-0 bg-truffle-bg">
         <div className="flex items-center gap-2">
           <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
           <div>
