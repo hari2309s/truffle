@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: 'Truffle — Your finances, unearthed',
   description:
     'The AI finance assistant that talks with you, not at you. Voice-first, no bank linking, no spreadsheets.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   openGraph: {
     title: 'Truffle — Your finances, unearthed',
     description:
