@@ -59,7 +59,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
   }, [voice.transcript, chat])
 
   return (
-    <PageEnter className="flex-1 bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden min-h-0">
+    <PageEnter className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden min-h-0">
       <TopBar showControls userId={userId}>
         {chat.isSpeaking && (
           <button

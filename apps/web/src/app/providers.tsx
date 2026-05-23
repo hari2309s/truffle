@@ -40,7 +40,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       </Suspense>
       <LanguageProvider>
         <QueryClientProvider client={queryClient}>
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-dvh overflow-hidden">
             <OfflineBanner />
             {children}
           </div>

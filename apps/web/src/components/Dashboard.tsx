@@ -39,7 +39,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
   const greeting = name ? `${timeGreeting}, ${name}` : timeGreeting
 
   return (
-    <div className="flex-1 bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
+    <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-4 border-b border-truffle-border flex-shrink-0">
         <div className="flex items-center gap-2">

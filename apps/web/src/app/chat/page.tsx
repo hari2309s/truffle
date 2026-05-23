@@ -65,7 +65,7 @@ export default function Chat() {
   // receives a stable initialMessages and never resets mid-conversation.
   if (!userId || initialMessages === undefined)
     return (
-      <div className="flex-1 bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden min-h-0">
+      <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden min-h-0">
         <TopBar />
         <main className="flex-1 flex items-center justify-center pb-14">
           <LoadingSpinner />

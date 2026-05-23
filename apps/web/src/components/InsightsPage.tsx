@@ -62,7 +62,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   const isLoading = txLoading
 
   return (
-    <div className="flex-1 bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
+    <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
       <TopBar title={t.insights.title} subtitle="" showControls userId={userId} />
 
       <PageEnter className="flex flex-col flex-1 min-h-0 overflow-hidden">
