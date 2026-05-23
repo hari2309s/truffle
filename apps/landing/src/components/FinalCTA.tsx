@@ -2,10 +2,13 @@
 
 import { motion } from 'framer-motion'
 import Image from 'next/image'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
 export default function FinalCTA() {
+  const { t } = useLanguage()
+
   return (
     <section className="py-28 px-6">
       <div className="max-w-3xl mx-auto">
@@ -19,7 +22,6 @@ export default function FinalCTA() {
           {/* Background glow */}
           <div className="absolute inset-0 bg-truffle-amber/[0.05]" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-truffle-amber/10 blur-3xl rounded-full animate-glow-pulse" />
-          {/* Corner accent orbs */}
           <div className="absolute top-0 left-0 w-[200px] h-[150px] bg-truffle-amber/[0.06] blur-2xl rounded-full" />
           <div className="absolute bottom-0 right-0 w-[200px] h-[150px] bg-truffle-amber/[0.06] blur-2xl rounded-full" />
 
@@ -35,13 +37,12 @@ export default function FinalCTA() {
             </div>
 
             <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-truffle-text mb-5">
-              Your finances are waiting <br className="hidden sm:block" />
-              <span className="text-truffle-amber">to be unearthed</span>
+              {t.finalCta.headline} <br className="hidden sm:block" />
+              <span className="text-truffle-amber">{t.finalCta.headlineAmber}</span>
             </h2>
 
             <p className="text-truffle-text-secondary text-lg leading-relaxed mb-10 max-w-lg mx-auto">
-              Stop guessing where your money went. Start asking. Truffle is free to try — no card,
-              no bank link, no catch.
+              {t.finalCta.subheadline}
             </p>
 
             <motion.a
@@ -51,13 +52,11 @@ export default function FinalCTA() {
               transition={{ duration: 0.15 }}
               className="inline-flex items-center gap-2.5 bg-truffle-amber text-truffle-bg font-black px-9 py-4 rounded-2xl hover:bg-truffle-amber-light transition-colors duration-150 text-lg"
             >
-              Get Started Free
+              {t.finalCta.cta}
               <ArrowRightIcon />
             </motion.a>
 
-            <p className="mt-6 text-sm text-truffle-muted">
-              Free forever · No credit card · Takes 30 seconds
-            </p>
+            <p className="mt-6 text-sm text-truffle-muted">{t.finalCta.finePrint}</p>
           </div>
         </motion.div>
       </div>

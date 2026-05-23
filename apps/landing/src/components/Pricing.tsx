@@ -1,48 +1,14 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useLanguage } from '@/contexts/LanguageContext'
+import type { LandingTranslations } from '@/lib/i18n'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
-const free = {
-  name: 'Free',
-  price: '€0',
-  period: 'forever',
-  description: 'Everything you need to get started. No card required.',
-  features: [
-    'Manual transaction entry',
-    'AI chat — 50 messages/month',
-    'Spending insights & heatmap',
-    '3 savings goals',
-    '2 savings habits',
-    'CSV export — last 30 days',
-  ],
-  cta: 'Get Started Free',
-  href: APP_URL,
-  highlight: false,
-}
-
-const pro = {
-  name: 'Pro',
-  price: '€9',
-  period: '/month',
-  description: 'For people serious about taking control of their money.',
-  badge: 'Coming Soon',
-  features: [
-    'Everything in Free',
-    'Unlimited AI chat',
-    'Receipt & PDF scanner',
-    'Voice transcription',
-    'Unlimited goals & habits',
-    'Full history CSV export',
-    'Monthly AI finance report',
-  ],
-  cta: 'Join Waitlist',
-  href: '#',
-  highlight: true,
-}
-
 export default function Pricing() {
+  const { t } = useLanguage()
+
   return (
     <section id="pricing" className="py-28 px-6">
       <div className="max-w-6xl mx-auto">
@@ -54,12 +20,12 @@ export default function Pricing() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <p className="section-label mb-4">Pricing</p>
+          <p className="section-label mb-4">{t.pricing.sectionLabel}</p>
           <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-truffle-text mb-5">
-            Simple, honest pricing
+            {t.pricing.headline}
           </h2>
           <p className="text-lg text-truffle-text-secondary max-w-md mx-auto">
-            Start free. Upgrade when Truffle earns it.
+            {t.pricing.subheadline}
           </p>
         </motion.div>
 
@@ -73,7 +39,7 @@ export default function Pricing() {
             transition={{ delay: 0.1, duration: 0.5 }}
             className="bg-truffle-card border border-truffle-border rounded-2xl p-8 flex flex-col"
           >
-            <PricingCardContent tier={free} />
+            <PricingCardContent tier={t.pricing.free} isPro={false} href={APP_URL} />
           </motion.div>
 
           {/* Pro */}
@@ -85,10 +51,9 @@ export default function Pricing() {
             whileHover={{ y: -4, transition: { duration: 0.2 } }}
             className="relative bg-truffle-card border border-truffle-amber/50 rounded-2xl p-8 flex flex-col shadow-[0_0_40px_-12px_rgba(232,168,78,0.25)]"
           >
-            {/* Glow ring */}
             <div className="absolute inset-0 rounded-2xl bg-truffle-amber/[0.04]" />
             <div className="relative">
-              <PricingCardContent tier={pro} />
+              <PricingCardContent tier={t.pricing.pro} isPro href="#" />
             </div>
           </motion.div>
         </div>
@@ -101,43 +66,47 @@ export default function Pricing() {
           transition={{ delay: 0.4, duration: 0.5 }}
           className="text-center mt-10 text-sm text-truffle-muted"
         >
-          Pro tier in active development. Join the waitlist to be notified at launch and lock in
-          early pricing.
+          {t.pricing.finePrint}
         </motion.p>
       </div>
     </section>
   )
 }
 
-function PricingCardContent({ tier }: { tier: typeof free | typeof pro }) {
-  const isPro = tier.highlight
+type FreeTier = LandingTranslations['pricing']['free']
+type ProTier = LandingTranslations['pricing']['pro']
 
+function PricingCardContent({
+  tier,
+  isPro,
+  href,
+}: {
+  tier: FreeTier | ProTier
+  isPro: boolean
+  href: string
+}) {
   return (
     <>
-      {/* Name + badge */}
       <div className="flex items-center gap-3 mb-2">
         <span className="font-black text-lg text-truffle-text">{tier.name}</span>
-        {isPro && (
+        {isPro && 'badge' in tier && (
           <span className="text-[11px] font-bold uppercase tracking-wider text-truffle-bg bg-truffle-amber px-2.5 py-0.5 rounded-full">
-            {(tier as typeof pro).badge}
+            {tier.badge}
           </span>
         )}
       </div>
 
-      {/* Description */}
       <p className="text-sm text-truffle-text-secondary mb-6 leading-relaxed">{tier.description}</p>
 
-      {/* Price */}
       <div className="flex items-baseline gap-1 mb-8">
         <span
           className={`text-5xl font-black ${isPro ? 'text-truffle-amber' : 'text-truffle-text'}`}
         >
-          {tier.price}
+          €{isPro ? '9' : '0'}
         </span>
         <span className="text-truffle-muted text-sm">{tier.period}</span>
       </div>
 
-      {/* Features */}
       <ul className="space-y-3 mb-8 flex-1">
         {tier.features.map((f) => (
           <li key={f} className="flex items-start gap-2.5 text-sm text-truffle-text-secondary">
@@ -147,9 +116,8 @@ function PricingCardContent({ tier }: { tier: typeof free | typeof pro }) {
         ))}
       </ul>
 
-      {/* CTA */}
       <a
-        href={tier.href}
+        href={href}
         className={`block text-center font-bold py-3.5 rounded-xl transition-all duration-150 active:scale-95 text-sm ${
           isPro
             ? 'bg-truffle-amber text-truffle-bg hover:bg-truffle-amber-light'

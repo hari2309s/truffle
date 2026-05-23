@@ -1,20 +1,14 @@
+'use client'
+
 import Image from 'next/image'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
-const links = {
-  Product: [
-    { label: 'Features', href: '#features' },
-    { label: 'How it works', href: '#how-it-works' },
-    { label: 'Pricing', href: '#pricing' },
-  ],
-  Legal: [
-    { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Terms of Service', href: '/terms' },
-  ],
-}
-
 export default function Footer() {
+  const { t } = useLanguage()
+  const { product, legal } = t.footer.groups
+
   return (
     <footer className="border-t border-truffle-border/60 bg-truffle-surface/20">
       <div className="max-w-6xl mx-auto px-6 py-14">
@@ -26,37 +20,53 @@ export default function Footer() {
               <span className="font-black text-lg text-truffle-text tracking-tight">truffle</span>
             </a>
             <p className="text-sm text-truffle-text-secondary leading-relaxed max-w-xs">
-              Your finances, unearthed. A voice-first personal finance assistant that talks with
-              you, not at you.
+              {t.footer.tagline}
             </p>
             <a
               href={APP_URL}
               className="inline-block mt-6 text-sm font-bold bg-truffle-amber text-truffle-bg px-5 py-2.5 rounded-xl hover:bg-truffle-amber-light active:scale-95 transition-all duration-150"
             >
-              Get started free →
+              {t.footer.getStartedFree}
             </a>
           </div>
 
-          {/* Links */}
-          {Object.entries(links).map(([group, items]) => (
-            <div key={group}>
-              <p className="text-xs font-semibold uppercase tracking-widest text-truffle-muted mb-4">
-                {group}
-              </p>
-              <ul className="space-y-2.5">
-                {items.map((item) => (
-                  <li key={item.label}>
-                    <a
-                      href={item.href}
-                      className="text-sm text-truffle-text-secondary hover:text-truffle-text transition-colors"
-                    >
-                      {item.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* Product links */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-truffle-muted mb-4">
+              {product.label}
+            </p>
+            <ul className="space-y-2.5">
+              {product.links.map((item) => (
+                <li key={item.href}>
+                  <a
+                    href={item.href}
+                    className="text-sm text-truffle-text-secondary hover:text-truffle-text transition-colors"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Legal links */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-truffle-muted mb-4">
+              {legal.label}
+            </p>
+            <ul className="space-y-2.5">
+              {legal.links.map((item) => (
+                <li key={item.href}>
+                  <a
+                    href={item.href}
+                    className="text-sm text-truffle-text-secondary hover:text-truffle-text transition-colors"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {/* Bottom bar */}
@@ -73,7 +83,7 @@ export default function Footer() {
             </a>
             .
           </p>
-          <p className="text-xs text-truffle-muted">No bank linking. No spreadsheets. Just talk.</p>
+          <p className="text-xs text-truffle-muted">{t.footer.bottomTagline}</p>
         </div>
       </div>
     </footer>

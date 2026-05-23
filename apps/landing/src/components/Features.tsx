@@ -1,38 +1,15 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useLanguage } from '@/contexts/LanguageContext'
 
-const features = [
-  {
-    icon: <MicIcon />,
-    title: 'Voice-First Chat',
-    desc: "Ask 'How much did I spend on food this week?' out loud. Truffle understands natural language and remembers your context.",
-  },
-  {
-    icon: <CameraIcon />,
-    title: 'Receipt Scanner',
-    desc: 'Snap a receipt or upload a PDF. Truffle extracts every line and categorizes it automatically — no manual entry needed.',
-  },
-  {
-    icon: <ChartIcon />,
-    title: 'AI Spending Insights',
-    desc: 'Anomalies, trends, and month-end forecasts — surfaced automatically. Know where your money goes before you run out.',
-  },
-  {
-    icon: <TargetIcon />,
-    title: 'Savings Goals',
-    desc: 'Set a goal with a deadline. Get nudged when you fall behind. Get celebrated when you hit milestones.',
-  },
-  {
-    icon: <RepeatIcon />,
-    title: 'Smart Habits',
-    desc: 'Build weekly saving streaks. Truffle tracks every contribution and rewards consistency with milestone celebrations.',
-  },
-  {
-    icon: <ShieldIcon />,
-    title: 'Privacy First',
-    desc: 'No bank linking. Ever. You enter your data — Truffle analyzes it. Nothing is sold, shared, or synced without you.',
-  },
+const ICONS = [
+  <MicIcon />,
+  <CameraIcon />,
+  <ChartIcon />,
+  <TargetIcon />,
+  <RepeatIcon />,
+  <ShieldIcon />,
 ]
 
 const container = {
@@ -46,6 +23,8 @@ const card = {
 } as const
 
 export default function Features() {
+  const { t } = useLanguage()
+
   return (
     <section id="features" className="py-28 px-6">
       <div className="max-w-6xl mx-auto">
@@ -57,13 +36,13 @@ export default function Features() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <p className="section-label mb-4">Features</p>
+          <p className="section-label mb-4">{t.features.sectionLabel}</p>
           <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-truffle-text mb-5">
-            Everything you need, <span className="text-truffle-amber">nothing you don't</span>
+            {t.features.headlineNormal}{' '}
+            <span className="text-truffle-amber">{t.features.headlineAmber}</span>
           </h2>
           <p className="text-lg text-truffle-text-secondary max-w-xl mx-auto leading-relaxed">
-            Truffle is built for people who hate managing money — so it does the heavy lifting for
-            you.
+            {t.features.subheadline}
           </p>
         </motion.div>
 
@@ -75,7 +54,7 @@ export default function Features() {
           viewport={{ once: true, margin: '-80px' }}
           className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
         >
-          {features.map((f) => (
+          {t.features.items.map((f, i) => (
             <motion.div
               key={f.title}
               variants={card}
@@ -83,17 +62,13 @@ export default function Features() {
               whileHover={{ y: -5, transition: { duration: 0.2 } }}
               className="group relative bg-truffle-card border border-truffle-border rounded-2xl p-6 overflow-hidden cursor-default"
             >
-              {/* Top edge accent line */}
               <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-truffle-amber/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              {/* Hover glow */}
               <div className="absolute inset-0 bg-truffle-amber/0 group-hover:bg-truffle-amber/[0.03] transition-colors duration-300 rounded-2xl" />
 
-              {/* Icon */}
               <div className="relative w-11 h-11 rounded-xl bg-truffle-amber/10 border border-truffle-amber/20 flex items-center justify-center mb-5 text-truffle-amber group-hover:bg-truffle-amber/20 transition-colors duration-300">
-                {f.icon}
+                {ICONS[i]}
               </div>
 
-              {/* Text */}
               <h3 className="relative font-bold text-truffle-text text-lg mb-2">{f.title}</h3>
               <p className="relative text-sm text-truffle-text-secondary leading-relaxed">
                 {f.desc}

@@ -2,16 +2,13 @@
 
 import { motion } from 'framer-motion'
 import Image from 'next/image'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
-const words = [
-  { text: 'Your', amber: false },
-  { text: 'finances,', amber: false },
-  { text: 'unearthed.', amber: true },
-]
-
 export default function Hero() {
+  const { t } = useLanguage()
+
   return (
     <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
       {/* Background */}
@@ -29,12 +26,12 @@ export default function Hero() {
               className="mb-8 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-truffle-amber/40 bg-truffle-amber/10 text-truffle-amber text-xs font-semibold uppercase tracking-wider"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-truffle-amber animate-pulse-slow" />
-              Voice-first · AI-powered
+              {t.hero.badge}
             </motion.div>
 
-            {/* Headline — words clip-reveal from below */}
+            {/* Headline */}
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight mb-6">
-              {words.map((w, i) => (
+              {t.hero.headlineWords.map((w, i) => (
                 <span key={w.text} className="inline-block overflow-hidden mr-[0.22em]">
                   <motion.span
                     initial={{ y: '110%' }}
@@ -59,9 +56,7 @@ export default function Hero() {
               transition={{ delay: 0.6, duration: 0.5 }}
               className="text-lg sm:text-xl text-truffle-text-secondary leading-relaxed mb-10 max-w-md"
             >
-              The AI finance assistant that talks{' '}
-              <em className="not-italic font-semibold text-truffle-text">with</em> you, not at you.
-              No spreadsheets. No bank linking. Just speak.
+              {t.hero.subheadline}
             </motion.p>
 
             {/* CTAs */}
@@ -72,11 +67,11 @@ export default function Hero() {
               className="flex flex-wrap gap-4"
             >
               <a href={APP_URL} className="btn-primary inline-flex items-center gap-2 text-base">
-                Get Started Free
+                {t.hero.getStartedFree}
                 <ArrowRightIcon />
               </a>
               <a href="#features" className="btn-outline inline-flex items-center gap-2 text-base">
-                See how it works
+                {t.hero.seeHowItWorks}
                 <ChevronDownIcon />
               </a>
             </motion.div>
@@ -88,7 +83,7 @@ export default function Hero() {
               transition={{ delay: 1.1 }}
               className="mt-8 text-sm text-truffle-muted"
             >
-              Free to start · No credit card · No bank credentials
+              {t.hero.socialProof}
             </motion.p>
           </div>
 
@@ -120,13 +115,9 @@ export default function Hero() {
 function HeroBackground() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {/* Primary amber radial glow — center */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] rounded-full bg-truffle-amber/[0.07] blur-[120px] animate-glow-pulse" />
-      {/* Secondary orb — top-right for depth */}
       <div className="absolute top-0 right-0 w-[500px] h-[400px] rounded-full bg-truffle-amber/[0.04] blur-[100px]" />
-      {/* Tertiary orb — bottom-left */}
       <div className="absolute bottom-1/4 left-0 w-[360px] h-[280px] rounded-full bg-truffle-amber/[0.03] blur-[90px]" />
-      {/* Subtle grid */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.32 }}
@@ -137,7 +128,6 @@ function HeroBackground() {
           backgroundSize: '64px 64px',
         }}
       />
-      {/* Vignette fade at edges */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-truffle-bg" />
       <div className="absolute inset-0 bg-gradient-to-r from-truffle-bg/40 via-transparent to-truffle-bg/40" />
     </div>
@@ -145,6 +135,8 @@ function HeroBackground() {
 }
 
 function ChatMockup() {
+  const { t } = useLanguage()
+
   return (
     <div className="relative max-w-sm mx-auto lg:max-w-none animate-float">
       {/* Glow */}
@@ -158,7 +150,7 @@ function ChatMockup() {
             <Image src="/icons/truffle.png" alt="Truffle" width={20} height={20} />
             <span className="text-sm font-black text-[#f5ead2] tracking-tight">truffle</span>
           </div>
-          <span className="text-[11px] text-[#706a5e] font-medium">AI assistant</span>
+          <span className="text-[11px] text-[#706a5e] font-medium">{t.hero.aiAssistant}</span>
         </div>
 
         {/* Chat area */}
@@ -171,9 +163,7 @@ function ChatMockup() {
             className="flex justify-end"
           >
             <div className="bg-truffle-amber/20 border border-truffle-amber/30 rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[82%]">
-              <p className="text-sm text-[#f5ead2] leading-relaxed">
-                How much did I spend on food this week?
-              </p>
+              <p className="text-sm text-[#f5ead2] leading-relaxed">{t.hero.mockupQuestion}</p>
             </div>
           </motion.div>
 
@@ -202,12 +192,7 @@ function ChatMockup() {
             className="flex justify-start"
           >
             <div className="bg-[#242220] border border-[#38362f] rounded-2xl rounded-tl-sm px-4 py-3 max-w-[90%]">
-              <p className="text-sm text-[#f5ead2] leading-relaxed">
-                You spent <span className="font-bold text-[#e8a84e]">$284</span> on food this week —{' '}
-                <span className="text-[#c4845e]">$47 over last week.</span> Most of it was DoorDash{' '}
-                <span className="text-[#706a5e]">(5 orders)</span> and Whole Foods{' '}
-                <span className="text-[#706a5e]">(2 visits).</span>
-              </p>
+              <p className="text-sm text-[#f5ead2] leading-relaxed">{t.hero.mockupAnswer}</p>
             </div>
           </motion.div>
         </div>
@@ -226,7 +211,7 @@ function ChatMockup() {
             />
             <MicIcon />
           </motion.div>
-          <p className="text-xs text-[#706a5e]">Hold to speak</p>
+          <p className="text-xs text-[#706a5e]">{t.hero.holdToSpeak}</p>
         </div>
       </div>
     </div>

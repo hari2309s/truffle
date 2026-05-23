@@ -1,16 +1,13 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useLanguage } from '@/contexts/LanguageContext'
 
-const badges = [
-  { icon: <NoBankIcon />, label: 'No bank linking required' },
-  { icon: <MicIcon />, label: 'Voice-first input' },
-  { icon: <LockIcon />, label: 'Your data stays yours' },
-  { icon: <NoSheetIcon />, label: 'Zero spreadsheets' },
-  { icon: <AiIcon />, label: 'Powered by AI' },
-]
+const ICONS = [<NoBankIcon />, <MicIcon />, <LockIcon />, <NoSheetIcon />, <AiIcon />]
 
 export default function TrustStrip() {
+  const { t } = useLanguage()
+
   return (
     <section className="border-y border-truffle-border/60 bg-truffle-surface/40">
       <div className="max-w-6xl mx-auto px-6 py-5 overflow-x-auto">
@@ -21,17 +18,17 @@ export default function TrustStrip() {
           transition={{ duration: 0.5 }}
           className="flex items-center justify-start md:justify-center gap-6 min-w-max md:min-w-0"
         >
-          {badges.map((b, i) => (
+          {t.trustStrip.badges.map((label, i) => (
             <motion.div
-              key={b.label}
+              key={label}
               initial={{ opacity: 0, y: 8 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.08, duration: 0.4 }}
               className="flex items-center gap-2 text-sm text-truffle-text-secondary whitespace-nowrap"
             >
-              <span className="text-truffle-amber">{b.icon}</span>
-              {b.label}
+              <span className="text-truffle-amber">{ICONS[i]}</span>
+              {label}
             </motion.div>
           ))}
         </motion.div>

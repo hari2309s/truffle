@@ -4,11 +4,17 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import ThemeToggle from './ThemeToggle'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { LOCALE_LABELS, type Locale } from '@/lib/i18n'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
 export default function Nav() {
+  const { t, locale, setLocale } = useLanguage()
   const [scrolled, setScrolled] = useState(false)
+
+  const otherLocale = (locale === 'en' ? 'de' : 'en') as Locale
+  const other = LOCALE_LABELS[otherLocale]
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 24)
@@ -43,30 +49,38 @@ export default function Nav() {
         {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-7 text-sm font-medium text-truffle-text-secondary">
           <a href="#features" className="hover:text-truffle-text transition-colors">
-            Features
+            {t.nav.features}
           </a>
           <a href="#how-it-works" className="hover:text-truffle-text transition-colors">
-            How it works
+            {t.nav.howItWorks}
           </a>
           <a href="#pricing" className="hover:text-truffle-text transition-colors">
-            Pricing
+            {t.nav.pricing}
           </a>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <button
+            onClick={() => setLocale(otherLocale)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-truffle-text-secondary hover:text-truffle-text hover:bg-truffle-surface transition-all"
+            aria-label={`Switch to ${other.label}`}
+          >
+            <span>{other.flag}</span>
+            <span className="hidden sm:inline">{other.label}</span>
+          </button>
           <a
             href={APP_URL}
             className="hidden sm:block text-sm font-medium text-truffle-text-secondary hover:text-truffle-text transition-colors px-3 py-2"
           >
-            Sign in
+            {t.nav.signIn}
           </a>
           <a
             href={APP_URL}
             className="text-sm font-bold bg-truffle-amber text-truffle-bg px-4 py-2 rounded-xl hover:bg-truffle-amber-light active:scale-95 transition-all duration-150"
           >
-            Get started
+            {t.nav.getStarted}
           </a>
         </div>
       </div>
