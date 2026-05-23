@@ -1,6 +1,10 @@
 'use client'
 
+import { useLanguage } from '@/contexts/LanguageContext'
+
 export default function OfflinePage() {
+  const { t } = useLanguage()
+
   return (
     <div className="h-dvh bg-truffle-bg flex flex-col items-center justify-center px-6 text-center">
       <div className="w-16 h-16 rounded-2xl bg-truffle-surface flex items-center justify-center mb-6">
@@ -26,13 +30,11 @@ export default function OfflinePage() {
         </svg>
       </div>
 
-      <h1 className="text-xl font-semibold text-truffle-text mb-2">You&apos;re offline</h1>
-      <p className="text-sm text-truffle-muted max-w-xs">
-        No internet connection detected. Check your connection and try again.
-      </p>
+      <h1 className="text-xl font-semibold text-truffle-text mb-2">{t.offline.title}</h1>
+      <p className="text-sm text-truffle-muted max-w-xs">{t.offline.description}</p>
 
       <button onClick={() => window.location.reload()} className="mt-8 btn-primary">
-        Try again
+        {t.offline.tryAgain}
       </button>
     </div>
   )
