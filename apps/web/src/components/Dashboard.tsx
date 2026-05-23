@@ -39,9 +39,9 @@ export function Dashboard({ userId, name }: DashboardProps) {
   const greeting = name ? `${timeGreeting}, ${name}` : timeGreeting
 
   return (
-    <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
+    <div className="flex-1 bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
       {/* Header */}
-      <header className="sticky top-0 z-40 flex items-center justify-between px-4 py-4 border-b border-truffle-border flex-shrink-0 bg-truffle-bg">
+      <header className="flex items-center justify-between px-4 py-4 border-b border-truffle-border flex-shrink-0">
         <div className="flex items-center gap-2">
           <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
           <div>

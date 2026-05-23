@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { PostHogProvider } from './posthog-provider'
 import { PostHogPageView } from './posthog-pageview'
 import { LanguageProvider } from '@/contexts/LanguageContext'
+import { OfflineBanner } from '@/components/OfflineBanner'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -38,7 +39,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <PostHogPageView />
       </Suspense>
       <LanguageProvider>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          <div className="flex flex-col h-full">
+            <OfflineBanner />
+            {children}
+          </div>
+        </QueryClientProvider>
       </LanguageProvider>
     </PostHogProvider>
   )
