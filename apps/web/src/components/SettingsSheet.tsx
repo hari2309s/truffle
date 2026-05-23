@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { signOut } from '@/lib/auth'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { type Locale } from '@/lib/i18n'
 import { LanguagePicker } from './LanguagePicker'
 import { supabase } from '@/lib/supabase'
 
