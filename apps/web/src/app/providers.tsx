@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState, useEffect, Suspense } from 'react'
 import { PostHogProvider } from './posthog-provider'
 import { PostHogPageView } from './posthog-pageview'
+import { LanguageProvider } from '@/contexts/LanguageContext'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -36,7 +37,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <Suspense fallback={null}>
         <PostHogPageView />
       </Suspense>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <LanguageProvider>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </LanguageProvider>
     </PostHogProvider>
   )
 }
