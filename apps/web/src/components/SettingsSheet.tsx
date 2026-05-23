@@ -90,7 +90,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
         exit={{ opacity: 0 }}
       />
       <motion.div
-        className="relative bg-truffle-bg rounded-t-2xl border-t border-truffle-border px-4 pt-4 pb-10 space-y-6"
+        className="relative bg-truffle-bg rounded-t-2xl border-t border-truffle-border px-4 pt-4 pb-10 space-y-6 overflow-y-auto max-h-[85dvh]"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
