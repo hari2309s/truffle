@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePostHog } from 'posthog-js/react'
 import type { TransactionCategory } from '@truffle/types'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ParsedTransaction {
   date: string
@@ -19,8 +20,10 @@ interface ReceiptUploadProps {
 }
 
 const CURRENCY_SYMBOL: Record<string, string> = { EUR: '€', GBP: '£', USD: '$' }
+const MAX_SIZE_MB = 10
 
 export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -41,13 +44,12 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
     const isPDF = file.type === 'application/pdf'
     const isImage = file.type.startsWith('image/')
     if (!isPDF && !isImage) {
-      setError('Please choose an image (JPEG, PNG, WEBP) or a PDF.')
+      setError(t.receiptUpload.invalidFile)
       return
     }
 
-    const MAX_SIZE_MB = 10
     if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      setError(`File is too large — maximum size is ${MAX_SIZE_MB} MB.`)
+      setError(t.receiptUpload.fileTooLarge(MAX_SIZE_MB))
       return
     }
 
@@ -69,12 +71,12 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
       const json = await res.json()
 
       if (!res.ok) {
-        setError(json.error ?? 'Could not parse the file. Try a clearer image.')
+        setError(json.error ?? t.receiptUpload.parseError)
         return
       }
 
       if (!json.transactions?.length) {
-        setError('No transactions found. Make sure the receipt or statement is legible.')
+        setError(t.receiptUpload.noTransactions)
         return
       }
 
@@ -85,7 +87,7 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
 
       setParsed(json.transactions as ParsedTransaction[])
     } catch {
-      setError('Something went wrong. Please try again.')
+      setError(t.receiptUpload.somethingWrong)
     } finally {
       setIsParsing(false)
     }
@@ -100,9 +102,9 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          transactions: parsed.map((t) => ({
-            ...t,
-            merchant: t.description,
+          transactions: parsed.map((tx) => ({
+            ...tx,
+            merchant: tx.description,
             isRecurring: false,
             userId,
           })),
@@ -112,13 +114,11 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
 
       await queryClient.refetchQueries({ queryKey: ['transactions', userId] })
 
-      posthog.capture('receipt_imported', {
-        transaction_count: parsed.length,
-      })
+      posthog.capture('receipt_imported', { transaction_count: parsed.length })
 
       setImported(true)
     } catch {
-      setError('Import failed. Please try again.')
+      setError(t.receiptUpload.importFailed)
     } finally {
       setIsImporting(false)
     }
@@ -138,10 +138,10 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
       <div className="card text-center space-y-3">
         <p className="text-2xl">✓</p>
         <p className="font-semibold text-truffle-text">
-          {parsed?.length} transaction{parsed?.length !== 1 ? 's' : ''} imported
+          {t.receiptUpload.imported(parsed?.length ?? 0)}
         </p>
         <button onClick={onClose} className="btn-primary w-full">
-          Done
+          {t.receiptUpload.done}
         </button>
       </div>
     )
@@ -150,19 +150,18 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
   return (
     <div className="card space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-truffle-text">Scan receipt / statement</h3>
-        <span className="text-xs text-truffle-muted">image or PDF</span>
+        <h3 className="font-semibold text-truffle-text">{t.receiptUpload.title}</h3>
+        <span className="text-xs text-truffle-muted">{t.receiptUpload.hint}</span>
       </div>
 
-      {/* File picker */}
       {!preview && (
         <div
           onClick={() => fileRef.current?.click()}
           className="border-2 border-dashed border-truffle-border rounded-xl py-8 flex flex-col items-center gap-2 cursor-pointer hover:border-truffle-amber transition-colors"
         >
           <span className="text-2xl">🧾</span>
-          <p className="text-sm text-truffle-muted">Tap to select a receipt or bank statement</p>
-          <p className="text-xs text-truffle-muted">JPEG · PNG · WEBP · PDF</p>
+          <p className="text-sm text-truffle-muted">{t.receiptUpload.tapToSelect}</p>
+          <p className="text-xs text-truffle-muted">{t.receiptUpload.fileTypes}</p>
           <input
             ref={fileRef}
             type="file"
@@ -173,7 +172,6 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
         </div>
       )}
 
-      {/* Preview + parse */}
       {preview && !parsed && (
         <div className="space-y-3">
           {preview.objectUrl ? (
@@ -192,46 +190,44 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
 
           <div className="flex gap-2">
             <button onClick={reset} className="btn-ghost flex-1 text-sm">
-              Change file
+              {t.receiptUpload.changeFile}
             </button>
             <button
               onClick={handleParse}
               disabled={isParsing}
               className="btn-primary flex-1 text-sm disabled:opacity-50"
             >
-              {isParsing ? 'Analysing…' : 'Extract transactions'}
+              {isParsing ? t.receiptUpload.analysing : t.receiptUpload.extractTransactions}
             </button>
           </div>
         </div>
       )}
 
-      {/* Parsed results */}
       {parsed && (
         <div className="space-y-3">
           <p className="text-sm text-truffle-muted">
-            {parsed.length} transaction{parsed.length !== 1 ? 's' : ''} found — review before
-            importing
+            {t.receiptUpload.transactionsFound(parsed.length)}
           </p>
           <div className="max-h-48 overflow-y-auto space-y-1">
-            {parsed.map((t, i) => {
-              const sym = CURRENCY_SYMBOL[t.currency] ?? t.currency
+            {parsed.map((tx, i) => {
+              const sym = CURRENCY_SYMBOL[tx.currency] ?? tx.currency
               return (
                 <div
                   key={i}
                   className="flex items-center justify-between text-xs py-1.5 border-b border-truffle-border last:border-0"
                 >
                   <div className="flex-1 min-w-0">
-                    <span className="text-truffle-text truncate block">{t.description}</span>
+                    <span className="text-truffle-text truncate block">{tx.description}</span>
                     <span className="text-truffle-muted">
-                      {t.date} · {t.category.replace(/_/g, ' ')}
+                      {tx.date} · {tx.category.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <span
-                    className={`ml-3 font-medium tabular-nums ${t.amount >= 0 ? 'text-truffle-green' : 'text-truffle-red'}`}
+                    className={`ml-3 font-medium tabular-nums ${tx.amount >= 0 ? 'text-truffle-green' : 'text-truffle-red'}`}
                   >
-                    {t.amount >= 0 ? '+' : ''}
+                    {tx.amount >= 0 ? '+' : ''}
                     {sym}
-                    {Math.abs(t.amount).toFixed(2)}
+                    {Math.abs(tx.amount).toFixed(2)}
                   </span>
                 </div>
               )
@@ -240,14 +236,14 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
 
           <div className="flex gap-2">
             <button onClick={reset} className="btn-ghost flex-1 text-sm">
-              Try again
+              {t.receiptUpload.tryAgain}
             </button>
             <button
               onClick={handleImport}
               disabled={isImporting}
               className="btn-primary flex-1 text-sm disabled:opacity-50"
             >
-              {isImporting ? 'Importing…' : `Import ${parsed.length}`}
+              {isImporting ? t.receiptUpload.importing : t.receiptUpload.import(parsed.length)}
             </button>
           </div>
         </div>

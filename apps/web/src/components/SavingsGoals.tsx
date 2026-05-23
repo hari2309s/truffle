@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePostHog } from 'posthog-js/react'
 import type { SavingsGoal } from '@truffle/types'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const GOAL_EMOJIS = ['🎯', '✈️', '🏠', '🚗', '💻', '🎓', '💍', '🏖️', '🎸', '📱', '🏋️', '🌍']
 
@@ -35,6 +36,7 @@ export function SavingsGoals({
   addGoalOpen,
   onAddGoalOpenChange,
 }: SavingsGoalsProps) {
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
   const [internalShowAdd, setInternalShowAdd] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -113,14 +115,14 @@ export function SavingsGoals({
       {!embedded && (
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide">
-            Savings Goals
+            {t.savingsGoals.title}
           </h2>
           <button
             type="button"
             onClick={() => setShowAdd(!showAdd)}
             className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
           >
-            {showAdd ? 'Cancel' : '+ New goal'}
+            {showAdd ? t.savingsGoals.cancel : t.savingsGoals.newGoal}
           </button>
         </div>
       )}
@@ -143,7 +145,7 @@ export function SavingsGoals({
         </div>
       ) : goals.length === 0 && !showAdd ? (
         <div className="card border-dashed text-center text-truffle-muted text-sm py-6">
-          No goals yet — set one to start saving towards something
+          {t.savingsGoals.noGoals}
         </div>
       ) : (
         <div className="space-y-3">
@@ -175,6 +177,7 @@ function GoalCard({
   onDelete: () => void
   isDeleting: boolean
 }) {
+  const { t } = useLanguage()
   const [showDeposit, setShowDeposit] = useState(false)
   const [depositAmount, setDepositAmount] = useState('')
 
@@ -197,13 +200,13 @@ function GoalCard({
             <p className="font-medium text-truffle-text text-sm">{goal.name}</p>
             <p className="text-xs text-truffle-muted">
               €{goal.savedAmount.toFixed(0)} / €{goal.targetAmount.toFixed(0)}
-              {daysLeft !== null && daysLeft > 0 && ` · ${daysLeft}d left`}
-              {daysLeft !== null && daysLeft <= 0 && ' · deadline passed'}
+              {daysLeft !== null && daysLeft > 0 && ` · ${t.savingsGoals.daysLeft(daysLeft)}`}
+              {daysLeft !== null && daysLeft <= 0 && ` · ${t.savingsGoals.deadlinePassed}`}
             </p>
           </div>
         </div>
         {done ? (
-          <span className="text-xs text-truffle-green font-medium">Complete!</span>
+          <span className="text-xs text-truffle-green font-medium">{t.savingsGoals.complete}</span>
         ) : (
           <button
             onClick={onDelete}
@@ -227,7 +230,7 @@ function GoalCard({
             <div className="flex gap-2">
               <input
                 type="number"
-                placeholder={`€0 — €${remaining.toFixed(0)} remaining`}
+                placeholder={`€0 — €${remaining.toFixed(0)} ${t.savingsGoals.deadlinePassed}`}
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 min="0"
@@ -245,7 +248,7 @@ function GoalCard({
                 }}
                 className="btn-primary text-xs px-3 py-2"
               >
-                Add
+                {t.savingsGoals.add}
               </button>
             </div>
           ) : (
@@ -253,7 +256,7 @@ function GoalCard({
               onClick={() => setShowDeposit(true)}
               className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
             >
-              + Add funds
+              {t.savingsGoals.addFunds}
             </button>
           )}
         </>
@@ -263,14 +266,10 @@ function GoalCard({
 }
 
 function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void }) {
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
-  const [form, setForm] = useState({
-    name: '',
-    targetAmount: '',
-    deadline: '',
-    emoji: '🎯',
-  })
+  const [form, setForm] = useState({ name: '', targetAmount: '', deadline: '', emoji: '🎯' })
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -298,11 +297,7 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
           createdAt: new Date().toISOString(),
         }
         await offlineDb.goals.add(optimisticGoal)
-        await offlineDb.queuedActions.add({
-          type: 'create_goal',
-          payload,
-          createdAt: Date.now(),
-        })
+        await offlineDb.queuedActions.add({ type: 'create_goal', payload, createdAt: Date.now() })
         await registerBackgroundSync()
         await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
         posthog.capture('goal_created', {
@@ -349,7 +344,7 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
 
       <input
         type="text"
-        placeholder="Goal name (e.g. Amsterdam trip)"
+        placeholder={t.savingsGoals.goalNamePlaceholder}
         value={form.name}
         onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
         className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
@@ -363,7 +358,7 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
           </span>
           <input
             type="number"
-            placeholder="Target amount"
+            placeholder={t.savingsGoals.targetAmount}
             value={form.targetAmount}
             onChange={(e) => setForm((f) => ({ ...f, targetAmount: e.target.value }))}
             min="1"
@@ -381,7 +376,7 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
       </div>
 
       <button type="submit" disabled={isLoading} className="btn-primary w-full disabled:opacity-50">
-        {isLoading ? 'Creating…' : 'Create goal'}
+        {isLoading ? t.savingsGoals.creating : t.savingsGoals.createGoal}
       </button>
     </form>
   )

@@ -1,9 +1,11 @@
 'use client'
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export function OfflineBanner() {
   const { isOnline, isSyncing, pendingCount } = useNetworkStatus()
+  const { t } = useLanguage()
 
   if (isOnline && pendingCount === 0) return null
 
@@ -15,12 +17,9 @@ export function OfflineBanner() {
           : 'bg-truffle-surface text-truffle-muted'
       }`}
     >
-      {!isOnline && 'Offline — changes will sync when reconnected'}
-      {isOnline && isSyncing && 'Syncing…'}
-      {isOnline &&
-        !isSyncing &&
-        pendingCount > 0 &&
-        `${pendingCount} pending change${pendingCount > 1 ? 's' : ''} — tap to sync`}
+      {!isOnline && t.offlineBanner.offline}
+      {isOnline && isSyncing && t.offlineBanner.syncing}
+      {isOnline && !isSyncing && pendingCount > 0 && t.offlineBanner.pendingChanges(pendingCount)}
     </div>
   )
 }

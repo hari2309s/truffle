@@ -8,12 +8,14 @@ import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/mot
 import { SkeletonPulse } from './PageMotion'
 import type { HabitWithStats } from '@truffle/types'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface SavingsHabitsProps {
   userId: string
 }
 
 export function SavingsHabits({ userId }: SavingsHabitsProps) {
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
   const [loggingId, setLoggingId] = useState<string | null>(null)
 
@@ -43,7 +45,6 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
       const payload = { userId, habitId: habit.id, period, amount: habit.amount }
 
       if (!navigator.onLine) {
-        // Optimistically mark as logged for this period in the cached record
         await offlineDb.habitsWithStats.update(habit.id, {
           currentPeriodLogged: true,
           totalSaved: habit.totalSaved + habit.amount,
@@ -87,7 +88,7 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.34, ease: truffleEase }}
       >
-        No saving habits yet — ask Truffle to set one up
+        {t.savingsHabits.noHabits}
       </motion.div>
     )
   }
@@ -121,7 +122,9 @@ function HabitCard({
   isLogging: boolean
   onLog: () => void
 }) {
-  const periodLabel = habit.frequency === 'weekly' ? 'week' : 'month'
+  const { t } = useLanguage()
+  const periodLabel =
+    habit.frequency === 'weekly' ? t.savingsHabits.periodWeek : t.savingsHabits.periodMonth
   const streakLabel = habit.streak > 0 ? `🔥 ${habit.streak} in a row` : null
 
   return (
@@ -136,14 +139,15 @@ function HabitCard({
           )}
         </div>
         <p className="text-xs text-truffle-muted">
-          €{habit.amount.toFixed(2)}/{periodLabel} · €{habit.totalSaved.toFixed(2)} total saved
+          €{habit.amount.toFixed(2)}/{periodLabel} ·{' '}
+          {t.savingsHabits.totalSaved(habit.totalSaved.toFixed(2))}
         </p>
       </div>
 
       <div className="flex-shrink-0">
         {habit.currentPeriodLogged ? (
           <span className="text-xs px-2 py-1 rounded-full bg-truffle-green/20 text-truffle-green">
-            ✓ done
+            {t.savingsHabits.done}
           </span>
         ) : (
           <button
@@ -151,7 +155,7 @@ function HabitCard({
             disabled={isLogging}
             className="text-xs px-3 py-1.5 rounded-full bg-truffle-amber/20 text-truffle-amber hover:bg-truffle-amber/30 transition-colors disabled:opacity-50"
           >
-            {isLogging ? '…' : `+ Log`}
+            {isLogging ? '…' : t.savingsHabits.log}
           </button>
         )}
       </div>

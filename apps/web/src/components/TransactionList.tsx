@@ -5,19 +5,21 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { staggerItemVariants, staggerListVariants } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
-import { CATEGORY_EMOJI, formatCategory } from '@/lib/categories'
+import { CATEGORY_EMOJI } from '@/lib/categories'
 import { useTransactionFilters } from '@/hooks/useTransactionFilters'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { TransactionFilterPanel } from './TransactionFilterPanel'
 import { TRANSACTION_CATEGORIES } from '@truffle/types'
 import type { Transaction, TransactionCategory } from '@truffle/types'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { toDateLocale } from '@/lib/date'
 
 function exportToCSV(transactions: Transaction[]) {
   const header = ['Date', 'Description', 'Category', 'Merchant', 'Amount', 'Currency']
   const rows = transactions.map((tx) => [
     tx.date,
     `"${tx.description.replace(/"/g, '""')}"`,
-    formatCategory(tx.category),
+    tx.category,
     `"${(tx.merchant ?? '').replace(/"/g, '""')}"`,
     tx.amount.toFixed(2),
     tx.currency,
@@ -38,7 +40,6 @@ interface TransactionListProps {
   userId: string
 }
 
-// Spendable categories exclude income/savings for the edit form category selector
 const EDIT_CATEGORIES = TRANSACTION_CATEGORIES
 
 interface EditFormState {
@@ -60,6 +61,7 @@ function EditForm({
   onSave: () => void
   onCancel: () => void
 }) {
+  const { t } = useLanguage()
   const [form, setForm] = useState<EditFormState>({
     description: tx.description,
     amount: tx.amount.toString(),
@@ -104,7 +106,7 @@ function EditForm({
           type="text"
           value={form.description}
           onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-          placeholder="Description"
+          placeholder={t.transactions.descriptionPlaceholder}
           required
           className="flex-1 bg-truffle-surface border border-truffle-border rounded-xl px-3 py-2 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
         />
@@ -134,7 +136,7 @@ function EditForm({
         >
           {EDIT_CATEGORIES.map((c) => (
             <option key={c} value={c}>
-              {CATEGORY_EMOJI[c]} {formatCategory(c)}
+              {CATEGORY_EMOJI[c]} {t.categories[c] ?? c}
             </option>
           ))}
         </select>
@@ -151,20 +153,20 @@ function EditForm({
         type="text"
         value={form.merchant}
         onChange={(e) => setForm((f) => ({ ...f, merchant: e.target.value }))}
-        placeholder="Merchant (optional)"
+        placeholder={t.transactions.merchantPlaceholder}
         className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-3 py-2 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
       />
 
       <div className="flex gap-2">
         <button type="button" onClick={onCancel} className="flex-1 btn-ghost text-xs py-2">
-          Cancel
+          {t.transactions.cancel}
         </button>
         <button
           type="submit"
           disabled={isSaving}
           className="flex-1 btn-primary text-xs py-2 disabled:opacity-50"
         >
-          {isSaving ? 'Saving…' : 'Save'}
+          {isSaving ? `${t.transactions.save}…` : t.transactions.save}
         </button>
       </div>
     </form>
@@ -172,6 +174,7 @@ function EditForm({
 }
 
 export function TransactionList({ userId }: TransactionListProps) {
+  const { t, locale } = useLanguage()
   const queryClient = useQueryClient()
   const { data, isLoading } = useTransactionsQuery(userId)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -205,10 +208,10 @@ export function TransactionList({ userId }: TransactionListProps) {
   const nextMonthLabel = useMemo(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth() - visibleMonthCount, 1).toLocaleDateString(
-      'en-GB',
+      toDateLocale(locale),
       { month: 'long', year: 'numeric' }
     )
-  }, [visibleMonthCount])
+  }, [visibleMonthCount, locale])
 
   const displayed = isFiltered ? filtered : windowed
 
@@ -253,23 +256,25 @@ export function TransactionList({ userId }: TransactionListProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.36, ease: [0.4, 0, 0.2, 1] }}
       >
-        <p className="text-truffle-muted text-sm">No transactions yet.</p>
-        <p className="text-truffle-muted text-xs mt-1">Add one below to get started.</p>
+        <p className="text-truffle-muted text-sm">{t.transactions.noTransactions}</p>
+        <p className="text-truffle-muted text-xs mt-1">{t.transactions.noTransactionsHint}</p>
       </motion.div>
     )
   }
 
   return (
     <div className="space-y-3">
-      {fromCache && <p className="text-xs text-truffle-muted text-center">Showing cached data</p>}
+      {fromCache && (
+        <p className="text-xs text-truffle-muted text-center">{t.transactions.fromCache}</p>
+      )}
 
       <TransactionFilterPanel {...filters} />
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-truffle-muted">
           {isFiltered
-            ? `${filtered.length} of ${allTransactions.length} transactions`
-            : `${windowed.length} transactions`}
+            ? t.transactions.filteredCount(filtered.length, allTransactions.length)
+            : t.transactions.count(windowed.length)}
         </p>
         <div className="flex items-center gap-3">
           {isFiltered && (
@@ -277,14 +282,14 @@ export function TransactionList({ userId }: TransactionListProps) {
               onClick={clearFilters}
               className="text-xs text-truffle-muted hover:text-truffle-text underline underline-offset-2"
             >
-              Clear
+              {t.transactions.clear}
             </button>
           )}
           <button
             onClick={() => exportToCSV(filtered)}
             className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
           >
-            Export CSV
+            {t.transactions.exportCSV}
           </button>
         </div>
       </div>
@@ -300,7 +305,7 @@ export function TransactionList({ userId }: TransactionListProps) {
             transition={{ duration: 0.2 }}
           >
             <p className="text-truffle-muted text-sm">
-              {isFiltered ? 'No matching transactions.' : 'No transactions this month yet.'}
+              {isFiltered ? t.transactions.noMatching : t.transactions.noThisMonth}
             </p>
           </motion.div>
         ) : (
@@ -344,8 +349,8 @@ export function TransactionList({ userId }: TransactionListProps) {
                         {tx.description}
                       </p>
                       <p className="text-xs text-truffle-muted">
-                        {formatCategory(tx.category)} ·{' '}
-                        {new Date(tx.date).toLocaleDateString('en-GB', {
+                        {t.categories[tx.category] ?? tx.category} ·{' '}
+                        {new Date(tx.date).toLocaleDateString(toDateLocale(locale), {
                           day: 'numeric',
                           month: 'short',
                         })}
@@ -378,7 +383,6 @@ export function TransactionList({ userId }: TransactionListProps) {
                     </div>
                   </div>
 
-                  {/* Inline delete confirmation */}
                   <AnimatePresence>
                     {isConfirmingDelete && (
                       <motion.div
@@ -389,19 +393,21 @@ export function TransactionList({ userId }: TransactionListProps) {
                         style={{ overflow: 'hidden' }}
                       >
                         <div className="flex items-center justify-between px-4 py-2 bg-truffle-surface rounded-xl border border-truffle-border">
-                          <p className="text-xs text-truffle-muted">Delete this transaction?</p>
+                          <p className="text-xs text-truffle-muted">
+                            {t.transactions.deleteConfirm}
+                          </p>
                           <div className="flex gap-2">
                             <button
                               onClick={() => setConfirmDeleteId(null)}
                               className="text-xs text-truffle-muted hover:text-truffle-text transition-colors px-2 py-1"
                             >
-                              Cancel
+                              {t.transactions.cancel}
                             </button>
                             <button
                               onClick={() => handleDelete(tx.id)}
                               className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors px-2 py-1"
                             >
-                              Delete
+                              {t.transactions.delete}
                             </button>
                           </div>
                         </div>
@@ -420,7 +426,7 @@ export function TransactionList({ userId }: TransactionListProps) {
           onClick={() => setVisibleMonthCount((n) => n + 1)}
           className="w-full py-2.5 text-xs text-truffle-muted hover:text-truffle-text border border-truffle-border hover:border-truffle-amber rounded-xl transition-colors"
         >
-          Load {nextMonthLabel}
+          {t.transactions.loadMonth(nextMonthLabel)}
         </button>
       )}
     </div>

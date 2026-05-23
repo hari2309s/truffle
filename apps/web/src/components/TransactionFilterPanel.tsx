@@ -2,15 +2,18 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import type { TransactionCategory } from '@truffle/types'
-import { CATEGORY_EMOJI, formatCategory } from '@/lib/categories'
+import { CATEGORY_EMOJI } from '@/lib/categories'
 import {
-  DATE_PRESETS,
   type TransactionFilters,
   type TypeFilter,
+  type DatePreset,
 } from '@/hooks/useTransactionFilters'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const pillActive = 'bg-truffle-amber text-truffle-bg'
 const pillIdle = 'bg-truffle-surface text-truffle-muted hover:text-truffle-text'
+
+const DATE_PRESET_KEYS: DatePreset[] = ['all', 'week', 'month', 'last_month', '3months']
 
 type Props = Pick<
   TransactionFilters,
@@ -42,9 +45,10 @@ export function TransactionFilterPanel({
   setFiltersOpen,
   activeFilterCount,
 }: Props) {
+  const { t } = useLanguage()
+
   return (
     <div className="space-y-3">
-      {/* Search + accordion trigger */}
       <div className="flex gap-2">
         <div className="relative flex-1">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-muted text-sm pointer-events-none">
@@ -54,7 +58,7 @@ export function TransactionFilterPanel({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search transactions…"
+            placeholder={t.filter.searchPlaceholder}
             className="w-full bg-truffle-surface border border-truffle-border rounded-xl pl-8 pr-4 py-2 text-sm text-truffle-text placeholder:text-truffle-muted focus:outline-none focus:border-truffle-amber"
           />
         </div>
@@ -67,7 +71,7 @@ export function TransactionFilterPanel({
               : 'bg-truffle-surface border-truffle-border text-truffle-muted hover:text-truffle-text'
           }`}
         >
-          <span>Filters</span>
+          <span>{t.filter.filters}</span>
           {activeFilterCount > 0 && (
             <span className="flex items-center justify-center w-4 h-4 rounded-full bg-truffle-bg text-truffle-amber text-[10px] font-bold">
               {activeFilterCount}
@@ -83,7 +87,6 @@ export function TransactionFilterPanel({
         </button>
       </div>
 
-      {/* Accordion body */}
       <AnimatePresence initial={false}>
         {filtersOpen && (
           <motion.div
@@ -97,22 +100,26 @@ export function TransactionFilterPanel({
             <div className="space-y-3 pt-1">
               {/* Type toggle */}
               <div className="flex gap-2">
-                {(['all', 'expenses', 'income'] as TypeFilter[]).map((t) => (
+                {(['all', 'expenses', 'income'] as TypeFilter[]).map((type) => (
                   <button
-                    key={t}
-                    onClick={() => setTypeFilter(t)}
+                    key={type}
+                    onClick={() => setTypeFilter(type)}
                     className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      typeFilter === t ? pillActive : pillIdle
+                      typeFilter === type ? pillActive : pillIdle
                     }`}
                   >
-                    {t === 'all' ? 'All' : t === 'expenses' ? 'Expenses' : 'Income'}
+                    {type === 'all'
+                      ? t.filter.all
+                      : type === 'expenses'
+                        ? t.filter.expenses
+                        : t.filter.income}
                   </button>
                 ))}
               </div>
 
               {/* Date presets */}
               <div className="flex gap-2 justify-between overflow-x-auto pb-1 scrollbar-none">
-                {DATE_PRESETS.map(({ value, label }) => (
+                {DATE_PRESET_KEYS.map((value) => (
                   <button
                     key={value}
                     onClick={() => setDatePreset(value)}
@@ -120,7 +127,7 @@ export function TransactionFilterPanel({
                       datePreset === value ? pillActive : pillIdle
                     }`}
                   >
-                    {label}
+                    {t.filter.datePresets[value] ?? value}
                   </button>
                 ))}
               </div>
@@ -139,7 +146,7 @@ export function TransactionFilterPanel({
                       }`}
                     >
                       <span>{CATEGORY_EMOJI[cat]}</span>
-                      <span>{formatCategory(cat)}</span>
+                      <span>{t.categories[cat] ?? cat}</span>
                     </button>
                   ))}
                 </div>

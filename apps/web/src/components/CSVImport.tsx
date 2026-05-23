@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { TransactionCategory } from '@truffle/types'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ParsedRow {
   date: string
@@ -99,6 +100,7 @@ interface CSVImportProps {
 const PREVIEW_LIMIT = 5
 
 export function CSVImport({ userId, onClose }: CSVImportProps) {
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<ParsedRow[] | null>(null)
@@ -122,7 +124,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       )
       if (rows.length === 0) {
-        setError('Could not parse the CSV. Make sure it has date, description, and amount columns.')
+        setError(t.csvImport.parseError)
         return
       }
       setPreview(rows)
@@ -185,7 +187,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       await queryClient.invalidateQueries({ queryKey: ['insights', userId] })
       setImported(true)
     } catch {
-      setError('Import failed. Please try again.')
+      setError(t.csvImport.importFailed)
     } finally {
       setIsLoading(false)
     }
@@ -195,11 +197,9 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
     return (
       <div className="card text-center space-y-3">
         <p className="text-2xl">✓</p>
-        <p className="font-semibold text-truffle-text">
-          {selected.size} transaction{selected.size !== 1 ? 's' : ''} imported
-        </p>
+        <p className="font-semibold text-truffle-text">{t.csvImport.imported(selected.size)}</p>
         <button onClick={onClose} className="btn-primary w-full">
-          Done
+          {t.csvImport.done}
         </button>
       </div>
     )
@@ -213,8 +213,8 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
   return (
     <div className="card space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-truffle-text">Import CSV</h3>
-        <span className="text-xs text-truffle-muted">date, description, amount</span>
+        <h3 className="font-semibold text-truffle-text">{t.csvImport.title}</h3>
+        <span className="text-xs text-truffle-muted">{t.csvImport.hint}</span>
       </div>
 
       {!preview ? (
@@ -223,7 +223,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
           className="border-2 border-dashed border-truffle-border rounded-xl py-8 flex flex-col items-center gap-2 cursor-pointer hover:border-truffle-amber transition-colors"
         >
           <span className="text-2xl">📄</span>
-          <p className="text-sm text-truffle-muted">Tap to select a CSV file</p>
+          <p className="text-sm text-truffle-muted">{t.csvImport.tapToSelect}</p>
           <input
             ref={fileRef}
             type="file"
@@ -235,12 +235,10 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-truffle-muted">
-            {preview.length} transaction{preview.length !== 1 ? 's' : ''} found — select which to
-            import
+            {t.csvImport.transactionsFound(preview.length)}
           </p>
 
           <div className="space-y-1">
-            {/* Select all header */}
             <div className="flex items-center gap-2 py-1.5 px-1 border-b border-truffle-border">
               <input
                 type="checkbox"
@@ -253,11 +251,10 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
                 className="accent-truffle-amber cursor-pointer"
               />
               <span className="text-xs font-medium text-truffle-text-secondary">
-                {selected.size} of {preview.length} selected
+                {t.csvImport.selectedOf(selected.size, preview.length)}
               </span>
             </div>
 
-            {/* Rows */}
             <div className="max-h-48 overflow-y-auto space-y-0">
               {visibleRows.map((row, i) => (
                 <label
@@ -288,13 +285,12 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
               ))}
             </div>
 
-            {/* Show more / show less */}
             {hiddenCount > 0 && (
               <button
                 onClick={() => setShowAll((v) => !v)}
                 className="w-full text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors py-1.5 text-center"
               >
-                {showAll ? 'Show less' : `+${hiddenCount} more`}
+                {showAll ? t.csvImport.showLess : t.csvImport.showMore(hiddenCount)}
               </button>
             )}
           </div>
@@ -305,14 +301,14 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
               disabled={isLoading}
               className="btn-ghost flex-1 text-sm disabled:opacity-50"
             >
-              Cancel
+              {t.csvImport.cancel}
             </button>
             <button
               onClick={handleImport}
               disabled={isLoading || selected.size === 0}
               className="btn-primary flex-1 text-sm disabled:opacity-50"
             >
-              {isLoading ? 'Importing…' : `Import ${selected.size}`}
+              {isLoading ? t.csvImport.importing : t.csvImport.import(selected.size)}
             </button>
           </div>
         </div>

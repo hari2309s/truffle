@@ -17,6 +17,7 @@ import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
 import { PageEnter, TypingDots } from './PageMotion'
 import { ErrorBoundary } from './ErrorBoundary'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ChatPageProps {
   userId: string
@@ -25,6 +26,7 @@ interface ChatPageProps {
 }
 
 export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
+  const { t } = useLanguage()
   const chat = useFinancialChat(userId, initialMessages)
   const voice = useVoiceRecorder(userId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -64,7 +66,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
             onClick={chat.cancelSpeech}
             className="ml-auto text-xs text-truffle-amber hover:text-truffle-amber-light"
           >
-            Stop
+            {t.chat.stop}
           </button>
         )}
       </TopBar>
@@ -80,7 +82,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.36, ease: truffleEase }}
               >
-                Hold the button and ask anything.
+                {t.chat.holdButton}
               </motion.p>
               <motion.div
                 className="flex flex-wrap gap-2 justify-center mt-6"
@@ -88,11 +90,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                 animate="show"
                 variants={staggerListVariants}
               >
-                {[
-                  'How am I doing this month?',
-                  'What did I spend on food?',
-                  'Can I afford a weekend trip?',
-                ].map((suggestion) => (
+                {t.chat.suggestions.map((suggestion) => (
                   <motion.button
                     key={suggestion}
                     type="button"
@@ -149,8 +147,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                         <div key={inv.toolCallId} className="flex justify-start mb-3">
                           <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
                             <p className="text-sm text-truffle-text">
-                              {args.emoji} <span className="font-medium">{args.name}</span> added to
-                              your goals — find it in Insights.
+                              {t.proposals.goal.addedToGoals(args.emoji, args.name)}
                             </p>
                           </div>
                         </div>
@@ -228,15 +225,20 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                       inv.state === 'result' &&
                       (inv.result as { confirmed: boolean })?.confirmed
                     ) {
-                      const periodLabel = args.frequency === 'weekly' ? 'week' : 'month'
+                      const periodLabel =
+                        args.frequency === 'weekly'
+                          ? t.savingsHabits.periodWeek
+                          : t.savingsHabits.periodMonth
                       return (
                         <div key={inv.toolCallId} className="flex justify-start mb-3">
                           <div className="max-w-[85%] bg-truffle-card border border-truffle-green/40 rounded-2xl rounded-bl-sm px-4 py-3">
                             <p className="text-sm text-truffle-text">
                               {args.emoji} <span className="font-medium">{args.name}</span>{' '}
-                              <span className="text-truffle-green">habit started</span> — €
-                              {Number(args.amount).toFixed(0)}/{periodLabel}. Log each {periodLabel}{' '}
-                              in Insights.
+                              <span className="text-truffle-green">
+                                {t.proposals.habit.startSaving.toLowerCase()}
+                              </span>{' '}
+                              — €{Number(args.amount).toFixed(0)}/{periodLabel}.{' '}
+                              {t.proposals.habit.logEachPeriod(periodLabel)}
                             </p>
                           </div>
                         </div>
@@ -275,12 +277,12 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                 {/* Inline error + resend on the last user message */}
                 {showError && (
                   <div className="flex justify-end items-center gap-2 mb-3 pr-1">
-                    <span className="text-xs text-truffle-red">Failed to send</span>
+                    <span className="text-xs text-truffle-red">{t.chat.failedToSend}</span>
                     <button
                       onClick={() => chat.reload()}
                       className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
                     >
-                      Resend
+                      {t.chat.resend}
                     </button>
                   </div>
                 )}
@@ -307,7 +309,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
 
           {chat.error && (
             <div className="text-center text-xs text-truffle-red py-2">
-              {chat.error.message || 'An error occurred.'}
+              {chat.error.message || t.chat.anErrorOccurred}
               {process.env.NODE_ENV === 'development' && (
                 <pre className="text-left text-[10px] mt-1 opacity-70 whitespace-pre-wrap">
                   {String(chat.error.cause ?? chat.error)}
@@ -323,9 +325,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
       {/* Input area */}
       <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-lg bg-truffle-bg/95 backdrop-blur-sm border-t border-truffle-border px-4 py-4">
         {!chat.isOnline && (
-          <p className="text-center text-xs text-truffle-muted mb-3">
-            Offline — messages will be answered when you reconnect
-          </p>
+          <p className="text-center text-xs text-truffle-muted mb-3">{t.chat.offlineMessage}</p>
         )}
         <div className="flex flex-col items-center gap-4">
           <VoiceButton
@@ -340,7 +340,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
             <input
               value={chat.input}
               onChange={chat.handleInputChange}
-              placeholder="Or type your question..."
+              placeholder={t.chat.typePlaceholder}
               className="flex-1 bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
             />
             <button

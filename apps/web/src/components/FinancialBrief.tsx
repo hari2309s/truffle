@@ -6,6 +6,7 @@ import { computeForecast } from '@/lib/forecast'
 import { truffleEase } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface FinancialBriefProps {
   userId: string
@@ -34,6 +35,7 @@ function computeAllTimeSummary(
 }
 
 export function FinancialBrief({ userId }: FinancialBriefProps) {
+  const { t } = useLanguage()
   const { data, isLoading } = useTransactionsQuery(userId)
 
   const forecast = useMemo(
@@ -65,7 +67,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
         transition={{ duration: 0.36, ease: truffleEase }}
       >
         <p className="text-sm text-truffle-muted text-center py-2">
-          Add some transactions to see your financial brief
+          {t.financialBrief.addTransactions}
         </p>
       </motion.div>
     )
@@ -84,7 +86,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
       >
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide">
-            End of Month
+            {t.financialBrief.endOfMonth}
           </h2>
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
@@ -95,18 +97,18 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
                   : 'bg-truffle-muted/20 text-truffle-muted'
             }`}
           >
-            {forecast.confidence} confidence
+            {t.financialBrief.confidence[forecast.confidence]}
           </span>
         </div>
 
         <p className={`text-3xl font-bold mb-1 ${balanceColor}`}>
           €{forecast.projectedEndOfMonth.toFixed(0)}
         </p>
-        <p className="text-sm text-truffle-text-secondary">projected balance</p>
+        <p className="text-sm text-truffle-text-secondary">{t.financialBrief.projectedBalance}</p>
 
         <div className="mt-4 pt-4 border-t border-truffle-border">
           <div className="flex justify-between text-sm">
-            <span className="text-truffle-text-secondary">Current</span>
+            <span className="text-truffle-text-secondary">{t.financialBrief.current}</span>
             <span className="text-truffle-text">€{forecast.currentBalance.toFixed(0)}</span>
           </div>
         </div>
@@ -135,29 +137,27 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
           {allTime?.label ?? 'Overview'}
         </h2>
         <span className="text-xs px-2 py-0.5 rounded-full bg-truffle-muted/20 text-truffle-muted">
-          no data this month
+          {t.financialBrief.noDataThisMonth}
         </span>
       </div>
 
       <p className={`text-3xl font-bold mb-1 ${balanceColor}`}>
         €{(allTime?.balance ?? 0).toFixed(0)}
       </p>
-      <p className="text-sm text-truffle-text-secondary">net balance</p>
+      <p className="text-sm text-truffle-text-secondary">{t.financialBrief.netBalance}</p>
 
       <div className="mt-4 pt-4 border-t border-truffle-border space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-truffle-text-secondary">Income</span>
+          <span className="text-truffle-text-secondary">{t.financialBrief.income}</span>
           <span className="text-truffle-green">+€{(allTime?.income ?? 0).toFixed(0)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-truffle-text-secondary">Expenses</span>
+          <span className="text-truffle-text-secondary">{t.financialBrief.expenses}</span>
           <span className="text-truffle-red">-€{(allTime?.expenses ?? 0).toFixed(0)}</span>
         </div>
       </div>
 
-      <p className="text-xs text-truffle-muted mt-3">
-        Add a transaction for this month to see your forecast
-      </p>
+      <p className="text-xs text-truffle-muted mt-3">{t.financialBrief.addForForecast}</p>
     </motion.div>
   )
 }

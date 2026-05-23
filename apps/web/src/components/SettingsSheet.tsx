@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { signOut } from '@/lib/auth'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { LanguagePicker } from './LanguagePicker'
+import { supabase } from '@/lib/supabase'
 
 interface SettingsSheetProps {
   userId: string
@@ -10,6 +13,7 @@ interface SettingsSheetProps {
 }
 
 export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
+  const { t, setLocale } = useLanguage()
   const [isExporting, setIsExporting] = useState(false)
   const [deleteInput, setDeleteInput] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
@@ -52,7 +56,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   }
 
   const handleDelete = async () => {
-    if (deleteInput !== 'DELETE') return
+    if (deleteInput !== t.settings.deleteConfirmWord) return
     setIsDeleting(true)
     setDeleteError(null)
     try {
@@ -64,9 +68,14 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
       if (!res.ok) throw new Error('server error')
       await signOut()
     } catch {
-      setDeleteError('Failed to delete account. Please try again.')
+      setDeleteError(t.settings.deleteError)
       setIsDeleting(false)
     }
+  }
+
+  const handleLocaleChange = async (next: Locale) => {
+    setLocale(next)
+    await supabase.auth.updateUser({ data: { language: next } })
   }
 
   return (
@@ -89,7 +98,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-truffle-text">Settings</h2>
+          <h2 className="font-semibold text-truffle-text">{t.settings.title}</h2>
           <button
             onClick={onClose}
             className="p-2 text-truffle-muted hover:text-truffle-text transition-colors"
@@ -98,48 +107,58 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
           </button>
         </div>
 
+        {/* Language */}
         <div className="space-y-2">
-          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">Your data</h3>
+          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">
+            {t.settings.language}
+          </h3>
+          <LanguagePicker onChange={handleLocaleChange} />
+        </div>
+
+        {/* Your data */}
+        <div className="space-y-2">
+          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">
+            {t.settings.yourData}
+          </h3>
           <div className="card space-y-3">
             <div>
-              <p className="text-sm font-medium text-truffle-text">Download all my data</p>
-              <p className="text-xs text-truffle-muted mt-0.5">
-                Transactions, goals, budgets, and habits exported as JSON
-              </p>
+              <p className="text-sm font-medium text-truffle-text">{t.settings.downloadData}</p>
+              <p className="text-xs text-truffle-muted mt-0.5">{t.settings.downloadDataDesc}</p>
             </div>
             <button
               onClick={handleExport}
               disabled={isExporting}
               className="btn-primary text-sm w-full disabled:opacity-50"
             >
-              {isExporting ? 'Preparing…' : 'Export data'}
+              {isExporting ? t.settings.preparing : t.settings.exportData}
             </button>
           </div>
         </div>
 
+        {/* Danger zone */}
         <div className="space-y-2">
-          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">Danger zone</h3>
+          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">
+            {t.settings.dangerZone}
+          </h3>
           <div className="card border-truffle-red/30 space-y-3">
             <div>
-              <p className="text-sm font-medium text-truffle-text">Delete account</p>
-              <p className="text-xs text-truffle-muted mt-0.5">
-                Permanently deletes all your data. This cannot be undone.
-              </p>
+              <p className="text-sm font-medium text-truffle-text">{t.settings.deleteAccount}</p>
+              <p className="text-xs text-truffle-muted mt-0.5">{t.settings.deleteAccountDesc}</p>
             </div>
             <input
               type="text"
               value={deleteInput}
               onChange={(e) => setDeleteInput(e.target.value)}
-              placeholder='Type "DELETE" to confirm'
+              placeholder={t.settings.deletePlaceholder}
               className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-3 py-2 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-red"
             />
             {deleteError && <p className="text-xs text-truffle-red">{deleteError}</p>}
             <button
               onClick={handleDelete}
-              disabled={deleteInput !== 'DELETE' || isDeleting}
+              disabled={deleteInput !== t.settings.deleteConfirmWord || isDeleting}
               className="w-full py-2 rounded-xl text-sm font-medium bg-truffle-red/10 text-truffle-red border border-truffle-red/30 hover:bg-truffle-red/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {isDeleting ? 'Deleting…' : 'Delete my account'}
+              {isDeleting ? t.settings.deleting : t.settings.deleteMyAccount}
             </button>
           </div>
         </div>

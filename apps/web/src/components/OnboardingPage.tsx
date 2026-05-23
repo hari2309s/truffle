@@ -5,35 +5,22 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PageEnter } from './PageMotion'
 import { supabase } from '@/lib/supabase'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { LanguagePicker } from './LanguagePicker'
 
 interface OnboardingPageProps {
   onComplete: () => void
 }
 
-const TOUR_STEPS = [
-  {
-    emoji: '💬',
-    title: 'Chat naturally',
-    body: "Just talk to Truffle like you'd text a friend. Ask how you're doing, log an expense, or get advice — voice or text.",
-  },
-  {
-    emoji: '💶',
-    title: 'Track every euro',
-    body: 'Every transaction is automatically categorised. Add by chat, CSV import, or snap a receipt.',
-  },
-  {
-    emoji: '🔔',
-    title: 'Get smart nudges',
-    body: 'Truffle watches for budget overruns, unusual spends, and saving streaks — and tells you before things go sideways.',
-  },
-]
-
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
+  const { t, locale, setLocale } = useLanguage()
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState<'EUR' | 'GBP' | 'USD'>('EUR')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tourStep, setTourStep] = useState<number | null>(null)
+
+  const tourSteps = t.tour.steps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,20 +30,20 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     setError(null)
     try {
       const { error } = await supabase.auth.updateUser({
-        data: { name: name.trim(), currency },
+        data: { name: name.trim(), currency, language: locale },
       })
       if (error) throw error
       setTourStep(0)
     } catch {
-      setError('Failed to save your details — please try again.')
+      setError(t.onboarding.errorSave)
     } finally {
       setIsLoading(false)
     }
   }
 
   if (tourStep !== null) {
-    const step = TOUR_STEPS[tourStep]!
-    const isLast = tourStep === TOUR_STEPS.length - 1
+    const step = tourSteps[tourStep]!
+    const isLast = tourStep === tourSteps.length - 1
 
     return (
       <div className="min-h-screen bg-truffle-bg flex flex-col items-center justify-center px-6">
@@ -78,7 +65,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
           {/* Step dots */}
           <div className="flex justify-center gap-2">
-            {TOUR_STEPS.map((_, i) => (
+            {tourSteps.map((_, i) => (
               <span
                 key={i}
                 className={`w-2 h-2 rounded-full transition-all duration-300 ${
@@ -92,14 +79,14 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             onClick={() => (isLast ? onComplete() : setTourStep((s) => (s ?? 0) + 1))}
             className="btn-primary w-full"
           >
-            {isLast ? "Let's go →" : 'Next'}
+            {isLast ? t.tour.letsGo : t.tour.next}
           </button>
 
           <button
             onClick={onComplete}
             className="block w-full text-center text-xs text-truffle-muted hover:text-truffle-text transition-colors"
           >
-            Skip tour
+            {t.tour.skip}
           </button>
         </div>
       </div>
@@ -118,18 +105,25 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             priority
             className="mx-auto"
           />
-          <h1 className="text-2xl font-bold text-truffle-text">Welcome to Truffle</h1>
-          <p className="text-truffle-muted text-sm">Let&apos;s get you set up in 30 seconds.</p>
+          <h1 className="text-2xl font-bold text-truffle-text">{t.onboarding.heading}</h1>
+          <p className="text-truffle-muted text-sm">{t.onboarding.subtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <label className="text-xs text-truffle-muted uppercase tracking-wide">
-              What should we call you?
+              {t.onboarding.languageLabel}
+            </label>
+            <LanguagePicker onChange={setLocale} />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs text-truffle-muted uppercase tracking-wide">
+              {t.onboarding.nameLabel}
             </label>
             <input
               type="text"
-              placeholder="Your first name"
+              placeholder={t.onboarding.namePlaceholder}
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
@@ -140,7 +134,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
           <div className="space-y-1">
             <label className="text-xs text-truffle-muted uppercase tracking-wide">
-              Your currency
+              {t.onboarding.currencyLabel}
             </label>
             <div className="flex gap-2">
               {(['EUR', 'GBP', 'USD'] as const).map((c) => (
@@ -167,7 +161,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             disabled={isLoading || !name.trim()}
             className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
-            {isLoading ? 'Saving...' : 'Continue →'}
+            {isLoading ? t.onboarding.saving : t.onboarding.continue}
           </button>
         </form>
       </PageEnter>

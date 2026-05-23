@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { CategoryBudget, Transaction, TransactionCategory } from '@truffle/types'
 import { TRANSACTION_CATEGORIES } from '@truffle/types'
-import { CATEGORY_EMOJI, formatCategory } from '@/lib/categories'
+import { CATEGORY_EMOJI } from '@/lib/categories'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 import { SkeletonPulse } from './PageMotion'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface MonthlyBudgetsProps {
   userId: string
@@ -29,7 +30,6 @@ function currentYearMonth() {
   return new Date().toISOString().slice(0, 7)
 }
 
-/** Compute how much was spent in a given category this calendar month. */
 function spentThisMonth(transactions: Transaction[], category: TransactionCategory): number {
   const prefix = currentYearMonth()
   return transactions
@@ -43,6 +43,7 @@ export function MonthlyBudgets({
   addBudgetOpen,
   onAddBudgetOpenChange,
 }: MonthlyBudgetsProps) {
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -107,7 +108,7 @@ export function MonthlyBudgets({
         </div>
       ) : budgets.length === 0 && !showAdd ? (
         <div className="card border-dashed text-center text-truffle-muted text-sm py-6">
-          No budgets yet — set one to track category spending
+          {t.monthlyBudgets.noBudgets}
         </div>
       ) : (
         <div className="space-y-2">
@@ -140,12 +141,12 @@ function BudgetCard({
   onDelete: () => void
   isDeleting: boolean
 }) {
+  const { t } = useLanguage()
   const pct = Math.min(100, budget.amount > 0 ? (spent / budget.amount) * 100 : 0)
   const remaining = Math.max(0, budget.amount - spent)
   const isOver = spent > budget.amount
 
   const barColor = isOver ? 'bg-truffle-red' : pct >= 80 ? 'bg-truffle-amber' : 'bg-truffle-green'
-
   const amountColor = isOver
     ? 'text-red-400'
     : pct >= 80
@@ -161,13 +162,13 @@ function BudgetCard({
           <span className="text-base leading-none">{CATEGORY_EMOJI[budget.category]}</span>
           <div>
             <p className="text-sm font-medium text-truffle-text">
-              {formatCategory(budget.category)}
+              {t.categories[budget.category] ?? budget.category}
             </p>
             <p className="text-xs text-truffle-muted">
               {isOver
-                ? `€${(spent - budget.amount).toFixed(0)} over`
-                : `€${remaining.toFixed(0)} left`}{' '}
-              · budget €{budget.amount.toFixed(0)}/mo
+                ? t.monthlyBudgets.over((spent - budget.amount).toFixed(0))
+                : t.monthlyBudgets.left(remaining.toFixed(0))}{' '}
+              · {t.monthlyBudgets.budgetLabel(budget.amount.toFixed(0))}
             </p>
           </div>
         </div>
@@ -178,7 +179,7 @@ function BudgetCard({
           <button
             onClick={onDelete}
             className="text-truffle-muted hover:text-truffle-red transition-colors text-xs"
-            aria-label="Remove budget"
+            aria-label={t.monthlyBudgets.removeBudget}
           >
             ✕
           </button>
@@ -195,7 +196,6 @@ function BudgetCard({
   )
 }
 
-// Spendable categories (exclude income / savings which aren't expenses)
 const BUDGET_CATEGORIES = TRANSACTION_CATEGORIES.filter((c) => c !== 'income' && c !== 'savings')
 
 function AddBudgetForm({
@@ -207,6 +207,7 @@ function AddBudgetForm({
   existingCategories: TransactionCategory[]
   onDone: () => void
 }) {
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
   const available = BUDGET_CATEGORIES.filter((c) => !existingCategories.includes(c))
   const [category, setCategory] = useState<TransactionCategory>(available[0] ?? 'other')
@@ -216,7 +217,7 @@ function AddBudgetForm({
   if (available.length === 0) {
     return (
       <div className="card border-dashed text-center text-truffle-muted text-sm py-4 mb-2">
-        All spendable categories already have a budget.
+        {t.monthlyBudgets.allCategoriesHaveBudget}
       </div>
     )
   }
@@ -269,7 +270,7 @@ function AddBudgetForm({
       >
         {available.map((c) => (
           <option key={c} value={c}>
-            {CATEGORY_EMOJI[c]} {formatCategory(c)}
+            {CATEGORY_EMOJI[c]} {t.categories[c] ?? c}
           </option>
         ))}
       </select>
@@ -280,7 +281,7 @@ function AddBudgetForm({
         </span>
         <input
           type="number"
-          placeholder="Monthly limit"
+          placeholder={t.monthlyBudgets.monthlyLimit}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           min="1"
@@ -291,7 +292,7 @@ function AddBudgetForm({
       </div>
 
       <button type="submit" disabled={isLoading} className="btn-primary w-full disabled:opacity-50">
-        {isLoading ? 'Saving…' : 'Set budget'}
+        {isLoading ? t.monthlyBudgets.saving : t.monthlyBudgets.setBudget}
       </button>
     </form>
   )

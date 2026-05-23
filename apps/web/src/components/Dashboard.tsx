@@ -15,23 +15,28 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { SettingsSheet } from './SettingsSheet'
 import { signOut } from '@/lib/auth'
 import { PageEnter } from './PageMotion'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface DashboardProps {
   userId: string
   name: string
 }
 
-function greeting(name: string) {
-  const hour = new Date().getHours()
-  const time = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  return `${time}, ${name}`
-}
-
 export function Dashboard({ userId, name }: DashboardProps) {
+  const { t } = useLanguage()
   const [showAddForm, setShowAddForm] = useState(false)
   const [showCSVImport, setShowCSVImport] = useState(false)
   const [showReceiptUpload, setShowReceiptUpload] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+
+  const hour = new Date().getHours()
+  const timeGreeting =
+    hour < 12
+      ? t.dashboard.goodMorning
+      : hour < 17
+        ? t.dashboard.goodAfternoon
+        : t.dashboard.goodEvening
+  const greeting = name ? `${timeGreeting}, ${name}` : timeGreeting
 
   return (
     <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
@@ -41,22 +46,20 @@ export function Dashboard({ userId, name }: DashboardProps) {
           <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
           <div>
             <span className="font-semibold text-truffle-text">Truffle</span>
-            {name && (
-              <p className="text-xs text-truffle-muted leading-none mt-0.5">{greeting(name)}</p>
-            )}
+            {name && <p className="text-xs text-truffle-muted leading-none mt-0.5">{greeting}</p>}
           </div>
         </div>
         <div className="flex items-center gap-1">
           <ThemeToggle />
           <button
             onClick={() => setShowSettings(true)}
-            aria-label="Settings"
+            aria-label={t.dashboard.settingsLabel}
             className="p-2 text-truffle-muted hover:text-truffle-text transition-colors rounded-lg hover:bg-truffle-surface"
           >
             <GearIcon />
           </button>
           <button onClick={signOut} className="btn-ghost text-xs">
-            Sign out
+            {t.dashboard.signOut}
           </button>
         </div>
       </header>
@@ -88,7 +91,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
           <ErrorBoundary>
             <div className="px-4 pb-24">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold text-truffle-text">Recent</h2>
+                <h2 className="font-semibold text-truffle-text">{t.dashboard.recent}</h2>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => {
@@ -98,7 +101,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
                     }}
                     className="text-sm text-truffle-muted hover:text-truffle-text transition-colors"
                   >
-                    {showReceiptUpload ? 'Cancel' : 'Scan'}
+                    {showReceiptUpload ? t.dashboard.cancel : t.dashboard.scan}
                   </button>
                   <button
                     onClick={() => {
@@ -108,7 +111,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
                     }}
                     className="text-sm text-truffle-muted hover:text-truffle-text transition-colors"
                   >
-                    {showCSVImport ? 'Cancel' : 'CSV'}
+                    {showCSVImport ? t.dashboard.cancel : t.dashboard.csv}
                   </button>
                   <button
                     onClick={() => {
@@ -118,7 +121,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
                     }}
                     className="text-sm text-truffle-amber hover:text-truffle-amber-light transition-colors"
                   >
-                    {showAddForm ? 'Cancel' : '+ Add'}
+                    {showAddForm ? t.dashboard.cancel : t.dashboard.add}
                   </button>
                 </div>
               </div>

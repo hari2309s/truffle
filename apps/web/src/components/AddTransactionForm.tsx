@@ -6,21 +6,37 @@ import { usePostHog } from 'posthog-js/react'
 import type { Transaction, TransactionCategory } from '@truffle/types'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { useLanguage } from '@/contexts/LanguageContext'
 
-const CATEGORIES: { value: TransactionCategory; label: string }[] = [
-  { value: 'food_groceries', label: '🛒 Groceries' },
-  { value: 'food_delivery', label: '🍕 Food Delivery' },
-  { value: 'transport', label: '🚇 Transport' },
-  { value: 'housing', label: '🏠 Housing' },
-  { value: 'utilities', label: '💡 Utilities' },
-  { value: 'subscriptions', label: '📱 Subscriptions' },
-  { value: 'health', label: '💊 Health' },
-  { value: 'entertainment', label: '🎬 Entertainment' },
-  { value: 'shopping', label: '🛍️ Shopping' },
-  { value: 'income', label: '💰 Income' },
-  { value: 'savings', label: '🏦 Savings' },
-  { value: 'other', label: '📦 Other' },
+const CATEGORY_KEYS: TransactionCategory[] = [
+  'food_groceries',
+  'food_delivery',
+  'transport',
+  'housing',
+  'utilities',
+  'subscriptions',
+  'health',
+  'entertainment',
+  'shopping',
+  'income',
+  'savings',
+  'other',
 ]
+
+const CATEGORY_EMOJI: Record<TransactionCategory, string> = {
+  food_groceries: '🛒',
+  food_delivery: '🍕',
+  transport: '🚇',
+  housing: '🏠',
+  utilities: '💡',
+  subscriptions: '📱',
+  health: '💊',
+  entertainment: '🎬',
+  shopping: '🛍️',
+  income: '💰',
+  savings: '🏦',
+  other: '📦',
+}
 
 interface AddTransactionFormProps {
   userId: string
@@ -28,6 +44,7 @@ interface AddTransactionFormProps {
 }
 
 export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps) {
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
   const [isLoading, setIsLoading] = useState(false)
@@ -61,7 +78,6 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
       }
 
       if (!isOnline) {
-        // Optimistically save to IndexedDB and queue the POST
         const localId = crypto.randomUUID()
         await offlineDb.transactions.add({
           id: localId,
@@ -123,15 +139,15 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
   if (queued) {
     return (
       <div className="card text-center py-6 space-y-2">
-        <p className="text-truffle-text font-medium">Saved offline</p>
-        <p className="text-xs text-truffle-muted">Will sync when you&apos;re back online.</p>
+        <p className="text-truffle-text font-medium">{t.addTransaction.savedOffline}</p>
+        <p className="text-xs text-truffle-muted">{t.addTransaction.savedOfflineDesc}</p>
       </div>
     )
   }
 
   return (
     <form onSubmit={handleSubmit} className="card space-y-4">
-      <h3 className="font-semibold text-truffle-text">Add Transaction</h3>
+      <h3 className="font-semibold text-truffle-text">{t.addTransaction.title}</h3>
 
       <div className="flex gap-2">
         <button
@@ -143,7 +159,7 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
               : 'bg-truffle-surface text-truffle-muted'
           }`}
         >
-          Expense
+          {t.addTransaction.expense}
         </button>
         <button
           type="button"
@@ -154,13 +170,13 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
               : 'bg-truffle-surface text-truffle-muted'
           }`}
         >
-          Income
+          {t.addTransaction.income}
         </button>
       </div>
 
       <input
         type="text"
-        placeholder="Description (e.g. Coffee at Rewe)"
+        placeholder={t.addTransaction.descriptionPlaceholder}
         value={form.description}
         onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
         className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
@@ -200,9 +216,9 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
         }}
         className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-sm text-truffle-text focus:outline-none focus:border-truffle-amber"
       >
-        {CATEGORIES.map((cat) => (
-          <option key={cat.value} value={cat.value}>
-            {cat.label}
+        {CATEGORY_KEYS.map((key) => (
+          <option key={key} value={key}>
+            {CATEGORY_EMOJI[key]} {t.categories[key] ?? key}
           </option>
         ))}
       </select>
@@ -212,7 +228,11 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
         disabled={isLoading}
         className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isLoading ? 'Saving...' : isOnline ? 'Add Transaction' : 'Save Offline'}
+        {isLoading
+          ? t.addTransaction.saving
+          : isOnline
+            ? t.addTransaction.add
+            : t.addTransaction.saveOffline}
       </button>
     </form>
   )

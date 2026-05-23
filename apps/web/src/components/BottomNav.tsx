@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 type Tab = 'home' | 'chat' | 'insights'
 
@@ -11,6 +12,7 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ active }: BottomNavProps) {
+  const { t } = useLanguage()
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function BottomNav({ active }: BottomNavProps) {
       <div className="flex">
         <Link href="/" className={`${base} ${active === 'home' ? activeClass : inactiveClass}`}>
           <HomeIcon />
-          <span className="text-[10px]">Home</span>
+          <span className="text-[10px]">{t.nav.home}</span>
         </Link>
         <Link href="/chat" className={`${base} ${active === 'chat' ? activeClass : inactiveClass}`}>
           <div className="relative">
@@ -46,14 +48,14 @@ export function BottomNav({ active }: BottomNavProps) {
               </span>
             )}
           </div>
-          <span className="text-[10px]">Chat</span>
+          <span className="text-[10px]">{t.nav.chat}</span>
         </Link>
         <Link
           href="/insights"
           className={`${base} ${active === 'insights' ? activeClass : inactiveClass}`}
         >
           <InsightsIcon />
-          <span className="text-[10px]">Insights</span>
+          <span className="text-[10px]">{t.nav.insights}</span>
         </Link>
       </div>
     </nav>

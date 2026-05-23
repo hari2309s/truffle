@@ -6,6 +6,7 @@ import { AnimatePresence } from 'framer-motion'
 import { ThemeToggle } from './ThemeToggle'
 import { SettingsSheet } from './SettingsSheet'
 import { signOut } from '@/lib/auth'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface TopBarProps {
   subtitle?: string
@@ -16,13 +17,15 @@ interface TopBarProps {
 }
 
 export function TopBar({
-  subtitle = 'Ask me anything',
+  subtitle,
   title = 'Truffle',
   showControls = false,
   userId,
   children,
 }: TopBarProps) {
+  const { t } = useLanguage()
   const [showSettings, setShowSettings] = useState(false)
+  const resolvedSubtitle = subtitle !== undefined ? subtitle : t.topBar.subtitle
 
   return (
     <>
@@ -31,7 +34,7 @@ export function TopBar({
           <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
           <div>
             <p className="font-semibold text-truffle-text text-sm">{title}</p>
-            {subtitle && <p className="text-xs text-truffle-muted">{subtitle}</p>}
+            {resolvedSubtitle && <p className="text-xs text-truffle-muted">{resolvedSubtitle}</p>}
           </div>
         </div>
         <div className="flex flex-1 items-center min-w-0">{children}</div>
@@ -41,14 +44,14 @@ export function TopBar({
             {userId && (
               <button
                 onClick={() => setShowSettings(true)}
-                aria-label="Settings"
+                aria-label={t.topBar.settingsLabel}
                 className="p-2 text-truffle-muted hover:text-truffle-text transition-colors rounded-lg hover:bg-truffle-surface"
               >
                 <GearIcon />
               </button>
             )}
             <button onClick={signOut} className="btn-ghost text-xs">
-              Sign out
+              {t.topBar.signOut}
             </button>
           </div>
         )}

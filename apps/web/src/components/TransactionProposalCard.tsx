@@ -8,6 +8,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { TransactionCategory } from '@truffle/types'
 import { CATEGORY_EMOJI } from '@/lib/categories'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { toDateLocale } from '@/lib/date'
 
 export interface TransactionProposal {
   description: string
@@ -28,6 +30,7 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
   userId,
   onResult,
 }: TransactionProposalCardProps) {
+  const { t, locale } = useLanguage()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
@@ -37,8 +40,8 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
   const formattedAmount = `${isExpense ? '-' : '+'}€${Math.abs(proposal.amount).toFixed(2)}`
   const amountColor = isExpense ? 'text-red-400' : 'text-green-400'
   const emoji = CATEGORY_EMOJI[proposal.category] ?? '📝'
-  const categoryLabel = proposal.category.replace(/_/g, ' ')
-  const formattedDate = new Date(proposal.date).toLocaleDateString('en-GB', {
+  const categoryLabel = t.categories[proposal.category] ?? proposal.category.replace(/_/g, ' ')
+  const formattedDate = new Date(proposal.date).toLocaleDateString(toDateLocale(locale), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -84,7 +87,7 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
       setStatus('done')
       onResult(true)
     } catch {
-      setError('Something went wrong — please try again.')
+      setError(t.proposals.transaction.error)
       setStatus('pending')
     }
   }
@@ -118,7 +121,7 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
           <span className={`ml-auto font-semibold text-sm ${amountColor}`}>{formattedAmount}</span>
         </div>
 
-        <p className="text-sm font-medium text-truffle-text">Log this transaction?</p>
+        <p className="text-sm font-medium text-truffle-text">{t.proposals.transaction.logThis}</p>
 
         {error && <p className="text-xs text-truffle-red">{error}</p>}
 
@@ -128,14 +131,14 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
             disabled={status === 'saving'}
             className="flex-1 btn-ghost text-sm py-2"
           >
-            No thanks
+            {t.proposals.transaction.noThanks}
           </button>
           <button
             onClick={handleYes}
             disabled={status === 'saving'}
             className="flex-1 btn-primary text-sm py-2 disabled:opacity-50"
           >
-            {status === 'saving' ? 'Saving…' : 'Add'}
+            {status === 'saving' ? t.proposals.transaction.saving : t.proposals.transaction.add}
           </button>
         </div>
       </div>

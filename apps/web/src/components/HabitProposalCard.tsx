@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { memo, useState } from 'react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export interface HabitProposal {
   name: string
@@ -24,12 +25,15 @@ export const HabitProposalCard = memo(function HabitProposalCard({
   userId,
   onResult,
 }: HabitProposalCardProps) {
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
   const [error, setError] = useState<string | null>(null)
 
-  const periodLabel = proposal.frequency === 'weekly' ? 'week' : 'month'
-  const frequencyLabel = proposal.frequency === 'weekly' ? 'Weekly' : 'Monthly'
+  const periodLabel =
+    proposal.frequency === 'weekly' ? t.savingsHabits.periodWeek : t.savingsHabits.periodMonth
+  const frequencyLabel =
+    proposal.frequency === 'weekly' ? t.proposals.habit.weeklyLabel : t.proposals.habit.monthlyLabel
 
   const handleYes = async () => {
     setStatus('saving')
@@ -51,7 +55,7 @@ export const HabitProposalCard = memo(function HabitProposalCard({
       setStatus('done')
       onResult(true)
     } catch {
-      setError('Something went wrong — please try again.')
+      setError(t.proposals.habit.error)
       setStatus('pending')
     }
   }
@@ -75,7 +79,7 @@ export const HabitProposalCard = memo(function HabitProposalCard({
         <div className="bg-truffle-green/10 px-4 py-3 flex items-center gap-2">
           <span className="text-base">🔁</span>
           <span className="text-xs font-semibold text-truffle-green uppercase tracking-wide">
-            {frequencyLabel} saving habit
+            {frequencyLabel}
           </span>
         </div>
 
@@ -86,7 +90,7 @@ export const HabitProposalCard = memo(function HabitProposalCard({
             <div>
               <p className="font-semibold text-truffle-text text-sm">{proposal.name}</p>
               <p className="text-xs text-truffle-muted">
-                You log each {periodLabel} yourself in Insights
+                {t.proposals.habit.logEachPeriod(periodLabel)}
               </p>
             </div>
           </div>
@@ -111,14 +115,14 @@ export const HabitProposalCard = memo(function HabitProposalCard({
               disabled={status === 'saving'}
               className="flex-1 btn-ghost text-sm py-2"
             >
-              Not now
+              {t.proposals.habit.notNow}
             </button>
             <button
               onClick={handleYes}
               disabled={status === 'saving'}
               className="flex-1 text-sm py-2 rounded-xl font-semibold bg-truffle-green text-truffle-bg disabled:opacity-50 transition-opacity"
             >
-              {status === 'saving' ? 'Setting up…' : 'Start saving'}
+              {status === 'saving' ? t.proposals.habit.settingUp : t.proposals.habit.startSaving}
             </button>
           </div>
         </div>

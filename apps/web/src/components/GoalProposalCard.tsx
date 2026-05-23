@@ -6,6 +6,8 @@ import { usePostHog } from 'posthog-js/react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { toDateLocale } from '@/lib/date'
 
 interface GoalProposal {
   name: string
@@ -26,6 +28,7 @@ export const GoalProposalCard = memo(function GoalProposalCard({
   userId,
   onResult,
 }: GoalProposalCardProps) {
+  const { t, locale } = useLanguage()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
@@ -64,7 +67,7 @@ export const GoalProposalCard = memo(function GoalProposalCard({
       setStatus('done')
       onResult(true)
     } catch {
-      setError('Something went wrong — please try again.')
+      setError(t.proposals.goal.error)
       setStatus('pending')
     }
   }
@@ -84,8 +87,7 @@ export const GoalProposalCard = memo(function GoalProposalCard({
       >
         <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
           <p className="text-sm text-truffle-text">
-            {proposal.emoji} <span className="font-medium">{proposal.name}</span> added to your
-            goals — find it in Insights.
+            {t.proposals.goal.addedToGoals(proposal.emoji, proposal.name)}
           </p>
         </div>
       </motion.div>
@@ -110,7 +112,7 @@ export const GoalProposalCard = memo(function GoalProposalCard({
             <p className="text-xs text-truffle-muted">
               €{proposal.targetAmount.toLocaleString()}
               {proposal.deadline
-                ? ` · by ${new Date(proposal.deadline).toLocaleDateString('en-GB', {
+                ? ` · by ${new Date(proposal.deadline).toLocaleDateString(toDateLocale(locale), {
                     month: 'short',
                     year: 'numeric',
                   })}`
@@ -121,7 +123,7 @@ export const GoalProposalCard = memo(function GoalProposalCard({
 
         <p className="text-xs text-truffle-text-secondary leading-relaxed">{proposal.pitch}</p>
 
-        <p className="text-sm font-medium text-truffle-text">Add this to your goals?</p>
+        <p className="text-sm font-medium text-truffle-text">{t.proposals.goal.addToGoals}</p>
 
         {error && <p className="text-xs text-truffle-red">{error}</p>}
 
@@ -131,14 +133,14 @@ export const GoalProposalCard = memo(function GoalProposalCard({
             disabled={status === 'saving'}
             className="flex-1 btn-ghost text-sm py-2"
           >
-            No thanks
+            {t.proposals.goal.noThanks}
           </button>
           <button
             onClick={handleYes}
             disabled={status === 'saving'}
             className="flex-1 btn-primary text-sm py-2 disabled:opacity-50"
           >
-            {status === 'saving' ? 'Saving…' : 'Yes, add it'}
+            {status === 'saving' ? t.proposals.goal.saving : t.proposals.goal.yesAddIt}
           </button>
         </div>
       </div>

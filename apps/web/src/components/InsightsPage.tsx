@@ -19,12 +19,15 @@ import { MonthlyBudgets } from './MonthlyBudgets'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
 import { ErrorBoundary } from './ErrorBoundary'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { toDateLocale } from '@/lib/date'
 
 interface InsightsPageProps {
   userId: string
 }
 
 export function InsightsPage({ userId }: InsightsPageProps) {
+  const { t, locale } = useLanguage()
   const mainRef = useRef<HTMLElement>(null)
   const [addGoalOpen, setAddGoalOpen] = useState(false)
   const [addBudgetOpen, setAddBudgetOpen] = useState(false)
@@ -35,7 +38,6 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
   const { data: txData, isLoading: txLoading } = useTransactionsQuery(userId)
 
-  // Anomalies are server-computed — cache in IndexedDB for offline reads
   const { data: anomalyData, isLoading: anomalyLoading } = useQuery({
     queryKey: ['anomalies', userId],
     queryFn: async () => {
@@ -61,13 +63,12 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
   return (
     <div className="h-dvh bg-truffle-bg flex flex-col max-w-lg mx-auto">
-      <TopBar title="Insights" subtitle="" showControls userId={userId} />
+      <TopBar title={t.insights.title} subtitle="" showControls userId={userId} />
 
       <PageEnter className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        {/* Forecast stays above the scroll region so it never scrolls away */}
         <div className="flex-shrink-0 px-4 pt-4 pb-2 bg-truffle-bg">
           <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide mb-3">
-            Month Forecast
+            {t.insights.monthForecast}
           </h2>
           {isLoading ? (
             <SkeletonPulse className="card h-24" />
@@ -80,14 +81,14 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.36, ease: truffleEase }}
             >
-              Add transactions to see your forecast
+              {t.insights.addTransactionsForForecast}
             </motion.div>
           )}
         </div>
 
         <main ref={mainRef} className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6 min-h-0">
           <ErrorBoundary>
-            <InsightsAccordionSection title="Spending Calendar" scrollRootRef={mainRef}>
+            <InsightsAccordionSection title={t.insights.spendingCalendar} scrollRootRef={mainRef}>
               {isLoading ? (
                 <SkeletonPulse className="card h-64" />
               ) : (
@@ -96,7 +97,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
             </InsightsAccordionSection>
 
             <InsightsAccordionSection
-              title="Monthly Budgets"
+              title={t.insights.monthlyBudgets}
               scrollRootRef={mainRef}
               headerRight={
                 <button
@@ -104,7 +105,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   onClick={() => setAddBudgetOpen((v) => !v)}
                   className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
                 >
-                  {addBudgetOpen ? 'Cancel' : '+ New budget'}
+                  {addBudgetOpen ? t.savingsGoals.cancel : t.insights.newBudget}
                 </button>
               }
             >
@@ -121,7 +122,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
             </InsightsAccordionSection>
 
             <InsightsAccordionSection
-              title="Savings Goals"
+              title={t.insights.savingsGoals}
               scrollRootRef={mainRef}
               onLeaveViewport={handleSavingsGoalsLeaveViewport}
               headerRight={
@@ -130,7 +131,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   onClick={() => setAddGoalOpen((v) => !v)}
                   className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
                 >
-                  {addGoalOpen ? 'Cancel' : '+ New goal'}
+                  {addGoalOpen ? t.savingsGoals.cancel : t.insights.newGoal}
                 </button>
               }
             >
@@ -142,30 +143,33 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               />
             </InsightsAccordionSection>
 
-            <InsightsAccordionSection title="Saving Habits" scrollRootRef={mainRef}>
+            <InsightsAccordionSection title={t.insights.savingHabits} scrollRootRef={mainRef}>
               <SavingsHabits userId={userId} />
             </InsightsAccordionSection>
 
-            {/* Subscriptions */}
             {subscriptions.length > 0 && (
-              <InsightsAccordionSection title="Recurring Subscriptions" scrollRootRef={mainRef}>
+              <InsightsAccordionSection
+                title={t.insights.recurringSubscriptions}
+                scrollRootRef={mainRef}
+              >
                 <div className="space-y-2">
                   {subscriptions.map((sub) => (
                     <div key={sub.key} className="card flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-truffle-text">{sub.displayName}</p>
                         <p className="text-xs text-truffle-muted">
-                          Last charged{' '}
-                          {new Date(sub.lastCharged).toLocaleDateString('en-GB', {
+                          {t.insights.lastCharged}{' '}
+                          {new Date(sub.lastCharged).toLocaleDateString(toDateLocale(locale), {
                             day: 'numeric',
                             month: 'short',
                           })}
-                          {' · '}detected {sub.monthsDetected} month
-                          {sub.monthsDetected !== 1 ? 's' : ''}
+                          {' · '}
+                          {t.insights.detected(sub.monthsDetected)}
                         </p>
                       </div>
                       <span className="text-sm font-semibold text-truffle-red">
-                        -€{sub.monthlyAmount.toFixed(2)}/mo
+                        -€{sub.monthlyAmount.toFixed(2)}
+                        {t.insights.perMonth}
                       </span>
                     </div>
                   ))}
@@ -173,7 +177,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               </InsightsAccordionSection>
             )}
 
-            <InsightsAccordionSection title="Things to Review" scrollRootRef={mainRef}>
+            <InsightsAccordionSection title={t.insights.thingsToReview} scrollRootRef={mainRef}>
               {anomalyLoading ? (
                 <div className="space-y-2">
                   {[1, 2].map((i) => (
@@ -200,7 +204,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.34, ease: truffleEase }}
                 >
-                  No unusual activity detected
+                  {t.insights.noUnusualActivity}
                 </motion.div>
               )}
             </InsightsAccordionSection>
@@ -214,6 +218,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 }
 
 function ForecastCard({ forecast }: { forecast: Forecast }) {
+  const { t } = useLanguage()
   const isPositive = forecast.projectedEndOfMonth >= 0
   const progress = Math.min(
     100,
@@ -234,7 +239,7 @@ function ForecastCard({ forecast }: { forecast: Forecast }) {
     >
       <div className="flex justify-between items-end">
         <div>
-          <p className="text-xs text-truffle-muted mb-1">Projected end of month</p>
+          <p className="text-xs text-truffle-muted mb-1">{t.insights.projectedEndOfMonth}</p>
           <p
             className={`text-2xl font-bold ${isPositive ? 'text-truffle-green' : 'text-truffle-red'}`}
           >
@@ -250,7 +255,7 @@ function ForecastCard({ forecast }: { forecast: Forecast }) {
                 : 'bg-truffle-muted/20 text-truffle-muted'
           }`}
         >
-          {forecast.confidence} confidence
+          {t.financialBrief.confidence[forecast.confidence]}
         </span>
       </div>
 

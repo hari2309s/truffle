@@ -7,6 +7,8 @@ import { LoadingDots } from './PageMotion'
 import { Dashboard } from './Dashboard'
 import { AuthPage } from './AuthPage'
 import { OnboardingPage } from './OnboardingPage'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { type Locale, translations } from '@/lib/i18n'
 
 type AppState = 'loading' | 'unauthenticated' | 'onboarding' | 'dashboard'
 
@@ -14,6 +16,7 @@ export function HomeClient() {
   const [state, setState] = useState<AppState>('loading')
   const [userId, setUserId] = useState<string | null>(null)
   const [name, setName] = useState<string>('')
+  const { t, setLocale } = useLanguage()
   const searchParams = useSearchParams()
   const authError = searchParams.get('error')
 
@@ -29,6 +32,15 @@ export function HomeClient() {
     setUserId(session.user.id)
     const userName = (session.user.user_metadata?.name as string) ?? ''
     setName(userName)
+
+    const savedLocale = session.user.user_metadata?.language as string | undefined
+    if (savedLocale && savedLocale in translations) {
+      setLocale(savedLocale as Locale)
+    } else {
+      // Existing user with no saved language preference — default to English
+      setLocale('en')
+    }
+
     setState(userName ? 'dashboard' : 'onboarding')
   }
 
@@ -53,15 +65,7 @@ export function HomeClient() {
       </div>
     )
   if (state === 'unauthenticated')
-    return (
-      <AuthPage
-        error={
-          authError === 'auth_failed'
-            ? 'Sign-in link expired or already used. Please request a new one.'
-            : null
-        }
-      />
-    )
+    return <AuthPage error={authError === 'auth_failed' ? t.home.authExpiredError : null} />
   if (state === 'onboarding' && userId) {
     return (
       <OnboardingPage

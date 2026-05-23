@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react'
 import { truffleEase } from '@/lib/motion'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { useTextToSpeech } from '@/hooks/useTextToSpeech'
+import { useLanguage } from '@/contexts/LanguageContext'
+import type { Translations } from '@/lib/i18n'
 
 interface WeeklySummaryProps {
   userId: string
@@ -20,7 +22,8 @@ function getISOWeek(date: Date): string {
 }
 
 function buildSummary(
-  transactions: { amount: number | string; category: string; date: string }[]
+  transactions: { amount: number | string; category: string; date: string }[],
+  ws: Translations['weeklySummary']
 ): string | null {
   const today = new Date()
   const weekAgo = new Date(today)
@@ -45,14 +48,15 @@ function buildSummary(
   const topCategory = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
   const topLabel = topCategory.replace(/_/g, ' ')
 
-  let text = `This week you spent €${expenses.toFixed(0)}`
-  if (income > 0) text += ` and earned €${income.toFixed(0)}`
-  if (topLabel) text += `. Most went on ${topLabel}.`
+  let text = ws.spent(`€${expenses.toFixed(0)}`)
+  if (income > 0) text += ws.earned(`€${income.toFixed(0)}`)
+  if (topLabel) text += ws.topCategory(topLabel)
 
   return text
 }
 
 export function WeeklySummary({ userId }: WeeklySummaryProps) {
+  const { t } = useLanguage()
   const [visible, setVisible] = useState(false)
   const [summaryText, setSummaryText] = useState<string | null>(null)
   const { speak, isSpeaking } = useTextToSpeech()
@@ -65,13 +69,13 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
     const lastSeen = localStorage.getItem('truffle_weekly_summary')
     if (lastSeen === currentWeek) return
 
-    const text = buildSummary(data.transactions)
+    const text = buildSummary(data.transactions, t.weeklySummary)
     if (!text) return
 
     setSummaryText(text)
     setVisible(true)
     localStorage.setItem('truffle_weekly_summary', currentWeek)
-  }, [data])
+  }, [data, t.weeklySummary])
 
   const handleSpeak = () => {
     if (!summaryText || isSpeaking) return
@@ -90,7 +94,7 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium text-truffle-amber uppercase tracking-wide mb-1">
-            Weekly summary
+            {t.weeklySummary.title}
           </p>
           <p className="text-sm text-truffle-text">{summaryText}</p>
         </div>
@@ -107,7 +111,7 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
         className={`text-xs flex items-center gap-1.5 transition-colors ${isSpeaking ? 'text-truffle-muted cursor-default' : 'text-truffle-amber hover:text-truffle-amber-light'}`}
       >
         <span>{isSpeaking ? '🔊' : '▶'}</span>
-        {isSpeaking ? 'Playing…' : 'Read aloud'}
+        {isSpeaking ? t.weeklySummary.playing : t.weeklySummary.readAloud}
       </button>
     </motion.div>
   )
