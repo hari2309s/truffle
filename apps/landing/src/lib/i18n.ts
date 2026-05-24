@@ -78,6 +78,12 @@ export interface LandingTranslations {
     }
     bottomTagline: string
   }
+  cookieBanner: {
+    message: string
+    accept: string
+    reject: string
+    privacyLabel: string
+  }
   legal: {
     back: string
     lastUpdatedPrefix: string
@@ -294,6 +300,13 @@ export const translations: Record<Locale, LandingTranslations> = {
         },
       },
       bottomTagline: 'No bank linking. No spreadsheets. Just talk.',
+    },
+    cookieBanner: {
+      message:
+        'We use analytics cookies to understand how Truffle is used and improve the experience.',
+      accept: 'Accept',
+      reject: 'Reject',
+      privacyLabel: 'Privacy Policy',
     },
     legal: {
       back: '← Back',
@@ -631,6 +644,13 @@ export const translations: Record<Locale, LandingTranslations> = {
         },
       },
       bottomTagline: 'Kein Bank-Linking. Keine Tabellen. Einfach sprechen.',
+    },
+    cookieBanner: {
+      message:
+        'Wir verwenden Analyse-Cookies, um zu verstehen, wie Truffle genutzt wird, und die Erfahrung zu verbessern.',
+      accept: 'Akzeptieren',
+      reject: 'Ablehnen',
+      privacyLabel: 'Datenschutzerklärung',
     },
     legal: {
       back: '← Zurück',
