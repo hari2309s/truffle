@@ -218,6 +218,12 @@ export interface Translations {
     syncing: string
     pendingChanges: (n: number) => string
   }
+  cookieBanner: {
+    message: string
+    accept: string
+    reject: string
+    privacyLabel: string
+  }
   topBar: {
     subtitle: string
     signOut: string
@@ -523,6 +529,13 @@ export const translations: Record<Locale, Translations> = {
       offline: 'Offline — changes will sync when reconnected',
       syncing: 'Syncing…',
       pendingChanges: (n) => `${n} pending change${n > 1 ? 's' : ''} — tap to sync`,
+    },
+    cookieBanner: {
+      message:
+        'We use analytics cookies to understand how Truffle is used and improve the experience.',
+      accept: 'Accept',
+      reject: 'Reject',
+      privacyLabel: 'Privacy Policy',
     },
     topBar: {
       subtitle: 'Ask me anything',
@@ -840,6 +853,13 @@ export const translations: Record<Locale, Translations> = {
       syncing: 'Wird synchronisiert…',
       pendingChanges: (n) =>
         `${n} ausstehende Änderung${n > 1 ? 'en' : ''} — tippe zum Synchronisieren`,
+    },
+    cookieBanner: {
+      message:
+        'Wir verwenden Analyse-Cookies, um zu verstehen, wie Truffle genutzt wird, und die Erfahrung zu verbessern.',
+      accept: 'Akzeptieren',
+      reject: 'Ablehnen',
+      privacyLabel: 'Datenschutzerklärung',
     },
     topBar: {
       subtitle: 'Frag mich alles',

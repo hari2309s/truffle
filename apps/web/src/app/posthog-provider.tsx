@@ -10,6 +10,11 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
       person_profiles: 'identified_only',
       capture_pageview: false,
+      loaded: (ph) => {
+        if (localStorage.getItem('truffle-cookie-consent') !== 'accepted') {
+          ph.opt_out_capturing()
+        }
+      },
     })
   }, [])
 

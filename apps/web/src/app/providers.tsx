@@ -6,6 +6,7 @@ import { PostHogProvider } from './posthog-provider'
 import { PostHogPageView } from './posthog-pageview'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { OfflineBanner } from '@/components/OfflineBanner'
+import { CookieBanner } from '@/components/CookieBanner'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -44,6 +45,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <OfflineBanner />
             {children}
           </div>
+          <CookieBanner />
         </QueryClientProvider>
       </LanguageProvider>
     </PostHogProvider>
