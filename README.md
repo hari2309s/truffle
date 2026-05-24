@@ -270,3 +270,5 @@ pnpm test:e2e:ui       # interactive Playwright UI
 MIT
 
 ---
+
+Made with ♥ in Berlin
