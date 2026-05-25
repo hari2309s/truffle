@@ -3,14 +3,21 @@ import { createServerClient } from '@truffle/db'
 import type { Forecast } from '@truffle/types'
 import { currentYearMonth } from '@/lib/date'
 import { sendMonthlyReportNudge } from '@/lib/proactive-nudge'
+import { requireAuth } from '@/lib/require-auth'
+import { assertFeature } from '@/lib/entitlements'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 })
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
+    const entitlement = await assertFeature(userId, 'insights')
+    if (!entitlement.allowed) {
+      // Return empty data + flag so the UI can render an upgrade prompt rather than an error state
+      return NextResponse.json({ anomalies: [], forecast: null, upgradeRequired: true })
     }
 
     // Fire-and-forget: send monthly report nudge for the previous month if not yet sent
@@ -20,6 +27,7 @@ export async function GET(request: NextRequest) {
 
     const db = createServerClient()
     const currentMonth = currentYearMonth()
+    // Note: userId is now from the verified session (requireAuth), not a query param
 
     // Anomalies — isolated so a missing table never breaks the forecast
     let anomalies: unknown[] = []

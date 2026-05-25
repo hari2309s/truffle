@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { streamText, tool, convertToCoreMessages, StreamData } from 'ai'
 import { z } from 'zod'
 import {
@@ -15,6 +15,8 @@ import type { MonthlySnapshot, TransactionCategory, QueryIntent } from '@truffle
 import { INTENT, TRANSACTION_CATEGORIES } from '@truffle/types'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
 import { currentYearMonth, parseDateRange } from '@/lib/date'
+import { requireAuth } from '@/lib/require-auth'
+import { assertFeature } from '@/lib/entitlements'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -69,13 +71,25 @@ function detectFollowUpIntent(prevText: string, hasToolInvocations: boolean): Qu
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages: clientMessages, userId } = await request.json()
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
+    const entitlement = await assertFeature(userId, 'chat')
+    if (!entitlement.allowed) {
+      return new Response(JSON.stringify({ error: entitlement.reason, upgradeRequired: true }), {
+        status: 402,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { messages: clientMessages } = await request.json()
     const message = Array.isArray(clientMessages)
       ? [...clientMessages].reverse().find((m: { role: string }) => m.role === 'user')?.content
       : undefined
 
-    if (!message || !userId) {
-      return new Response(JSON.stringify({ error: 'message and userId required' }), {
+    if (!message) {
+      return new Response(JSON.stringify({ error: 'message required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })

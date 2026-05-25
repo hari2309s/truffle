@@ -3,13 +3,18 @@ import { createServerClient } from '@truffle/db'
 import type { SavingsGoal } from '@truffle/types'
 import { recomputeSnapshot } from '@/lib/server-db'
 import { sendGoalMilestoneNudge, sendGoalAtRiskNudge } from '@/lib/proactive-nudge'
+import { requireAuth } from '@/lib/require-auth'
+import { getUserPlan } from '@/lib/entitlements'
 
 export const runtime = 'nodejs'
 
+const FREE_GOAL_LIMIT = 3
+
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
-    if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
 
     const db = createServerClient()
     const { data, error } = await db
@@ -59,12 +64,35 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, name, targetAmount, deadline, emoji } = await request.json()
-    if (!userId || !name || !targetAmount) {
-      return NextResponse.json({ error: 'userId, name, targetAmount required' }, { status: 400 })
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
+    const { name, targetAmount, deadline, emoji } = await request.json()
+    if (!name || !targetAmount) {
+      return NextResponse.json({ error: 'name and targetAmount required' }, { status: 400 })
     }
 
     const db = createServerClient()
+
+    // Enforce Free plan goal limit
+    const plan = await getUserPlan(userId)
+    if (plan === 'free') {
+      const { count } = await db
+        .from('savings_goals')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+      if ((count ?? 0) >= FREE_GOAL_LIMIT) {
+        return NextResponse.json(
+          {
+            error: `Free plan allows ${FREE_GOAL_LIMIT} savings goals. Upgrade to Pro for unlimited goals.`,
+            upgradeRequired: true,
+          },
+          { status: 402 }
+        )
+      }
+    }
+
     const { data, error } = await db
       .from('savings_goals')
       .insert({
@@ -88,9 +116,13 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId, goalId, savedAmount } = await request.json()
-    if (!userId || !goalId || savedAmount === undefined) {
-      return NextResponse.json({ error: 'userId, goalId, savedAmount required' }, { status: 400 })
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
+    const { goalId, savedAmount } = await request.json()
+    if (!goalId || savedAmount === undefined) {
+      return NextResponse.json({ error: 'goalId and savedAmount required' }, { status: 400 })
     }
 
     const db = createServerClient()
@@ -185,10 +217,13 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
     const goalId = request.nextUrl.searchParams.get('goalId')
-    if (!userId || !goalId) {
-      return NextResponse.json({ error: 'userId and goalId required' }, { status: 400 })
+    if (!goalId) {
+      return NextResponse.json({ error: 'goalId required' }, { status: 400 })
     }
 
     const db = createServerClient()

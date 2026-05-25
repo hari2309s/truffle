@@ -18,6 +18,8 @@ import { BottomNav } from './BottomNav'
 import { PageEnter, TypingDots } from './PageMotion'
 import { ErrorBoundary } from './ErrorBoundary'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { UpgradeGate } from './UpgradeGate'
+import { useSubscription } from '@/hooks/useSubscription'
 
 interface ChatPageProps {
   userId: string
@@ -27,8 +29,15 @@ interface ChatPageProps {
 
 export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
   const { t } = useLanguage()
-  const chat = useFinancialChat(userId, initialMessages)
-  const voice = useVoiceRecorder(userId)
+  const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null)
+  const { data: subscription, refetch: refetchSubscription } = useSubscription(userId)
+
+  const chat = useFinancialChat(userId, initialMessages, {
+    onUpgradeRequired: () => setUpgradeFeature('Unlimited AI chat'),
+  })
+  const voice = useVoiceRecorder(userId, {
+    onUpgradeRequired: () => setUpgradeFeature('Voice transcription'),
+  })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const processedTranscriptRef = useRef<string | null>(null)
   const reactedRef = useRef<Set<string>>(new Set())
@@ -60,6 +69,16 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
 
   return (
     <PageEnter className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden min-h-0">
+      {upgradeFeature && (
+        <UpgradeGate
+          feature={upgradeFeature}
+          onClose={() => {
+            setUpgradeFeature(null)
+            refetchSubscription()
+          }}
+        />
+      )}
+
       <TopBar showControls userId={userId}>
         {chat.isSpeaking && (
           <button

@@ -5,6 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import type { LandingTranslations } from '@/lib/i18n'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
+const PRO_UPGRADE_URL = `${APP_URL}/upgrade`
 
 export default function Pricing() {
   const { t } = useLanguage()
@@ -53,7 +54,7 @@ export default function Pricing() {
           >
             <div className="absolute inset-0 rounded-2xl bg-truffle-amber/[0.04]" />
             <div className="relative">
-              <PricingCardContent tier={t.pricing.pro} isPro href="#" />
+              <PricingCardContent tier={t.pricing.pro} isPro href={PRO_UPGRADE_URL} />
             </div>
           </motion.div>
         </div>

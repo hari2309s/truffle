@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Groq from 'groq-sdk'
 import { langfuse } from '@truffle/ai'
+import { requireAuth } from '@/lib/require-auth'
+import { assertFeature } from '@/lib/entitlements'
 
 function getGroq() {
   return new Groq({ apiKey: process.env.GROQ_API_KEY })
@@ -8,6 +10,18 @@ function getGroq() {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
+    const entitlement = await assertFeature(userId, 'voice')
+    if (!entitlement.allowed) {
+      return NextResponse.json(
+        { error: entitlement.reason, upgradeRequired: true },
+        { status: 402 }
+      )
+    }
+
     const formData = await request.formData()
     const audio = formData.get('audio') as File | null
 

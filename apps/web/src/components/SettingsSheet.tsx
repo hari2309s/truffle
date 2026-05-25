@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { type Locale } from '@/lib/i18n'
 import { LanguagePicker } from './LanguagePicker'
 import { supabase } from '@/lib/supabase'
+import { useSubscription } from '@/hooks/useSubscription'
 
 interface SettingsSheetProps {
   userId: string
@@ -19,6 +20,8 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   const [deleteInput, setDeleteInput] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isBillingLoading, setIsBillingLoading] = useState(false)
+  const { data: subscription } = useSubscription(userId)
 
   const handleExport = async () => {
     setIsExporting(true)
@@ -79,6 +82,18 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
     await supabase.auth.updateUser({ data: { language: next } })
   }
 
+  const handleBilling = async () => {
+    setIsBillingLoading(true)
+    try {
+      const endpoint = subscription?.plan === 'pro' ? '/api/stripe/portal' : '/api/stripe/checkout'
+      const res = await fetch(endpoint, { method: 'POST' })
+      const json = await res.json()
+      if (json.url) window.location.href = json.url
+    } finally {
+      setIsBillingLoading(false)
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col justify-end max-w-lg mx-auto"
@@ -114,6 +129,47 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
             {t.settings.language}
           </h3>
           <LanguagePicker onChange={handleLocaleChange} />
+        </div>
+
+        {/* Subscription */}
+        <div className="space-y-2">
+          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">Subscription</h3>
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-truffle-text">
+                  {subscription?.plan === 'pro' ? 'Pro plan' : 'Free plan'}
+                </p>
+                {subscription?.plan === 'free' && subscription.receiptScanLimit !== null && (
+                  <p className="text-xs text-truffle-muted mt-0.5">
+                    {subscription.receiptScansUsed} / {subscription.receiptScanLimit} receipt scans
+                    used this month
+                  </p>
+                )}
+                {subscription?.plan === 'pro' && (
+                  <p className="text-xs text-truffle-muted mt-0.5">
+                    Unlimited — all features unlocked
+                  </p>
+                )}
+              </div>
+              {subscription?.plan === 'pro' && (
+                <span className="text-[11px] font-bold uppercase tracking-wider text-truffle-bg bg-truffle-amber px-2 py-0.5 rounded-full">
+                  Pro
+                </span>
+              )}
+            </div>
+            <button
+              onClick={handleBilling}
+              disabled={isBillingLoading}
+              className="btn-primary text-sm w-full disabled:opacity-50"
+            >
+              {isBillingLoading
+                ? 'Loading…'
+                : subscription?.plan === 'pro'
+                  ? 'Manage billing →'
+                  : 'Upgrade to Pro — €9/month'}
+            </button>
+          </div>
         </div>
 
         {/* Your data */}

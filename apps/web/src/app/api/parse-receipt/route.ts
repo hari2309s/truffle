@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
 import { visionModel, langfuse } from '@truffle/ai'
 import type { TransactionCategory } from '@truffle/types'
+import { requireAuth } from '@/lib/require-auth'
+import { assertFeature } from '@/lib/entitlements'
+import { createServerClient } from '@truffle/db'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -52,6 +55,18 @@ Rules:
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
+    const entitlement = await assertFeature(userId, 'receipt')
+    if (!entitlement.allowed) {
+      return NextResponse.json(
+        { error: entitlement.reason, upgradeRequired: true },
+        { status: 402 }
+      )
+    }
+
     const formData = await req.formData()
     const file = formData.get('file') as File | null
     if (!file) {
@@ -143,6 +158,10 @@ export async function POST(req: NextRequest) {
         category: sanitiseCategory(String(item.category ?? 'other')),
       }))
       .filter((t) => !isNaN(t.amount) && t.amount !== 0)
+
+    // Log the scan for monthly quota tracking
+    const db = createServerClient()
+    await db.from('receipt_scans').insert({ user_id: userId })
 
     return NextResponse.json({ transactions })
   } catch (err) {

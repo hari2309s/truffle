@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import type { CategoryBudget } from '@truffle/types'
+import { requireAuth } from '@/lib/require-auth'
 
 export const runtime = 'nodejs'
 
@@ -16,8 +17,9 @@ function mapBudget(row: Record<string, unknown>): CategoryBudget {
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
-    if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
 
     const db = createServerClient()
     const { data, error } = await db
@@ -36,18 +38,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { userId, category, amount } = body as {
-      userId: string
-      category: string
-      amount: number
-    }
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
 
-    if (!userId || !category || !amount || amount <= 0) {
-      return NextResponse.json(
-        { error: 'userId, category, and amount (>0) required' },
-        { status: 400 }
-      )
+    const body = await request.json()
+    const { category, amount } = body as { category: string; amount: number }
+
+    if (!category || !amount || amount <= 0) {
+      return NextResponse.json({ error: 'category and amount (>0) required' }, { status: 400 })
     }
 
     const db = createServerClient()
@@ -67,11 +66,14 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
     const budgetId = request.nextUrl.searchParams.get('budgetId')
 
-    if (!userId || !budgetId) {
-      return NextResponse.json({ error: 'userId and budgetId required' }, { status: 400 })
+    if (!budgetId) {
+      return NextResponse.json({ error: 'budgetId required' }, { status: 400 })
     }
 
     const db = createServerClient()

@@ -183,6 +183,31 @@ export interface Database {
           amount?: number
         }
       }
+      user_profiles: {
+        Row: {
+          id: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          plan: 'free' | 'pro'
+          plan_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          plan?: 'free' | 'pro'
+          plan_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          plan?: 'free' | 'pro'
+          plan_expires_at?: string | null
+          updated_at?: string
+        }
+      }
     }
   }
 }

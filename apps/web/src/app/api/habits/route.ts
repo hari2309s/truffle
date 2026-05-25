@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
 import { sendHabitStreakNudge, sendHabitCheckInNudge } from '@/lib/proactive-nudge'
+import { requireAuth } from '@/lib/require-auth'
+import { getUserPlan } from '@/lib/entitlements'
 
 export const runtime = 'nodejs'
 
+const FREE_HABIT_LIMIT = 2
+
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
-    if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
 
     const db = createServerClient()
 
@@ -95,15 +100,36 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, name, amount, frequency, emoji } = await request.json()
-    if (!userId || !name || !amount || !frequency) {
-      return NextResponse.json(
-        { error: 'userId, name, amount, frequency required' },
-        { status: 400 }
-      )
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
+    const { name, amount, frequency, emoji } = await request.json()
+    if (!name || !amount || !frequency) {
+      return NextResponse.json({ error: 'name, amount, frequency required' }, { status: 400 })
     }
 
     const db = createServerClient()
+
+    // Enforce Free plan habit limit
+    const plan = await getUserPlan(userId)
+    if (plan === 'free') {
+      const { count } = await db
+        .from('savings_habits')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_active', true)
+      if ((count ?? 0) >= FREE_HABIT_LIMIT) {
+        return NextResponse.json(
+          {
+            error: `Free plan allows ${FREE_HABIT_LIMIT} active savings habits. Upgrade to Pro for unlimited habits.`,
+            upgradeRequired: true,
+          },
+          { status: 402 }
+        )
+      }
+    }
+
     const { data, error } = await db
       .from('savings_habits')
       .insert({
@@ -127,12 +153,13 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId, habitId, period, amount } = await request.json()
-    if (!userId || !habitId || !period || amount === undefined) {
-      return NextResponse.json(
-        { error: 'userId, habitId, period, amount required' },
-        { status: 400 }
-      )
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
+    const { habitId, period, amount } = await request.json()
+    if (!habitId || !period || amount === undefined) {
+      return NextResponse.json({ error: 'habitId, period, amount required' }, { status: 400 })
     }
 
     const db = createServerClient()

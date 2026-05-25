@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { langfuse } from '@truffle/ai'
+import { requireAuth } from '@/lib/require-auth'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+
     const { traceId, score } = await request.json()
     if (!traceId || (score !== 1 && score !== -1)) {
       return NextResponse.json({ error: 'traceId and score (1 or -1) required' }, { status: 400 })

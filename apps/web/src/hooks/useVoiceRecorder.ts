@@ -3,6 +3,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import posthog from 'posthog-js'
 
+interface UseVoiceRecorderOptions {
+  onUpgradeRequired?: () => void
+}
+
 interface UseVoiceRecorderReturn {
   isRecording: boolean
   startRecording: () => Promise<void>
@@ -13,7 +17,10 @@ interface UseVoiceRecorderReturn {
   error: string | null
 }
 
-export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
+export function useVoiceRecorder(
+  userId: string,
+  { onUpgradeRequired }: UseVoiceRecorderOptions = {}
+): UseVoiceRecorderReturn {
   const [isRecording, setIsRecording] = useState(false)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [transcript, setTranscript] = useState<string | null>(null)
@@ -91,6 +98,10 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
       })
 
       const json = await response.json()
+      if (response.status === 402 && json.upgradeRequired) {
+        onUpgradeRequired?.()
+        return
+      }
       if (!response.ok) throw new Error(json.error ?? 'Transcription failed')
 
       posthog.capture('voice_input_used', { mime_type: mime })

@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { usePostHog } from 'posthog-js/react'
 import type { TransactionCategory } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { UpgradeGate } from './UpgradeGate'
 
 interface ParsedTransaction {
   date: string
@@ -33,6 +34,7 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
   const [isImporting, setIsImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [imported, setImported] = useState(false)
+  const [showUpgradeGate, setShowUpgradeGate] = useState(false)
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -69,6 +71,11 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
 
       const res = await fetch('/api/parse-receipt', { method: 'POST', body: fd })
       const json = await res.json()
+
+      if (res.status === 402 && json.upgradeRequired) {
+        setShowUpgradeGate(true)
+        return
+      }
 
       if (!res.ok) {
         setError(json.error ?? t.receiptUpload.parseError)
@@ -131,6 +138,12 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
     setError(null)
     setImported(false)
     if (fileRef.current) fileRef.current.value = ''
+  }
+
+  if (showUpgradeGate) {
+    return (
+      <UpgradeGate feature="Receipt & PDF scanning" onClose={() => setShowUpgradeGate(false)} />
+    )
   }
 
   if (imported) {

@@ -21,6 +21,7 @@ import { BottomNav } from './BottomNav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toDateLocale } from '@/lib/date'
+import { UpgradeGate } from './UpgradeGate'
 
 interface InsightsPageProps {
   userId: string
@@ -31,6 +32,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   const mainRef = useRef<HTMLElement>(null)
   const [addGoalOpen, setAddGoalOpen] = useState(false)
   const [addBudgetOpen, setAddBudgetOpen] = useState(false)
+  const [showUpgradeGate, setShowUpgradeGate] = useState(false)
 
   const handleSavingsGoalsLeaveViewport = useCallback(() => {
     setAddGoalOpen(false)
@@ -42,9 +44,13 @@ export function InsightsPage({ userId }: InsightsPageProps) {
     queryKey: ['anomalies', userId],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/insights?userId=${userId}`)
+        const res = await fetch(`/api/insights`)
         if (!res.ok) throw new Error('Failed to fetch anomalies')
         const json = await res.json()
+        if (json.upgradeRequired) {
+          setShowUpgradeGate(true)
+          return [] as Anomaly[]
+        }
         const anomalies = (json.anomalies ?? []) as Anomaly[]
         await offlineDb.anomalies.bulkPut(anomalies.map((a) => ({ ...a, userId })))
         return anomalies
@@ -63,6 +69,10 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
   return (
     <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
+      {showUpgradeGate && (
+        <UpgradeGate feature="AI spending insights" onClose={() => setShowUpgradeGate(false)} />
+      )}
+
       <TopBar title={t.insights.title} subtitle="" showControls userId={userId} />
 
       <PageEnter className="flex flex-col flex-1 min-h-0 overflow-hidden">

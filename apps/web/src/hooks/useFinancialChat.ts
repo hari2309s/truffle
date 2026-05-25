@@ -11,7 +11,15 @@ import { useNetworkStatus } from './useNetworkStatus'
 
 type StreamAnnotation = { type: string; tone?: SpeechTone }
 
-export function useFinancialChat(userId: string, initialMessages: Message[]) {
+interface UseFinancialChatOptions {
+  onUpgradeRequired?: () => void
+}
+
+export function useFinancialChat(
+  userId: string,
+  initialMessages: Message[],
+  { onUpgradeRequired }: UseFinancialChatOptions = {}
+) {
   const { speak, isSpeaking, cancel } = useTextToSpeech()
   const lastAssistantMessageRef = useRef<string>('')
   const latestDataRef = useRef<StreamAnnotation[]>([])
@@ -25,6 +33,16 @@ export function useFinancialChat(userId: string, initialMessages: Message[]) {
       latestDataRef.current = []
     },
     onError: (error) => {
+      // Detect 402 plan gate — the AI SDK serialises the response body as error.message
+      try {
+        const parsed = JSON.parse(error.message)
+        if (parsed.upgradeRequired) {
+          onUpgradeRequired?.()
+          return
+        }
+      } catch {
+        // not JSON — fall through to generic log
+      }
       console.error('[useFinancialChat] stream error:', error, error?.message, error?.cause)
     },
     onFinish: async (message, { finishReason }) => {

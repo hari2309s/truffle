@@ -5,15 +5,15 @@ import type { Transaction, Anomaly } from '@truffle/types'
 import { recomputeSnapshot } from '@/lib/server-db'
 import { sendAnomalyNudge, sendBudgetNudge } from '@/lib/proactive-nudge'
 import { CATEGORY_EMOJI } from '@/lib/categories'
+import { requireAuth } from '@/lib/require-auth'
 
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 })
-    }
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
 
     const db = createServerClient()
     const { data, error } = await db
@@ -40,14 +40,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const {
-      transactions,
-      userId,
-    }: { transactions: Omit<Transaction, 'id' | 'embedding'>[]; userId: string } = body
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
 
-    if (!transactions?.length || !userId) {
-      return NextResponse.json({ error: 'transactions and userId required' }, { status: 400 })
+    const body = await request.json()
+    const { transactions }: { transactions: Omit<Transaction, 'id' | 'embedding'>[] } = body
+
+    if (!transactions?.length) {
+      return NextResponse.json({ error: 'transactions required' }, { status: 400 })
     }
 
     const db = createServerClient()
@@ -176,9 +177,12 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
     const body = await request.json()
-    const { userId, transactionId, description, amount, category, merchant, date } = body as {
-      userId: string
+    const { transactionId, description, amount, category, merchant, date } = body as {
       transactionId: string
       description: string
       amount: number
@@ -187,8 +191,8 @@ export async function PATCH(request: NextRequest) {
       date: string
     }
 
-    if (!userId || !transactionId) {
-      return NextResponse.json({ error: 'userId and transactionId required' }, { status: 400 })
+    if (!transactionId) {
+      return NextResponse.json({ error: 'transactionId required' }, { status: 400 })
     }
 
     const db = createServerClient()
@@ -218,11 +222,14 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
     const transactionId = request.nextUrl.searchParams.get('transactionId')
 
-    if (!userId || !transactionId) {
-      return NextResponse.json({ error: 'userId and transactionId required' }, { status: 400 })
+    if (!transactionId) {
+      return NextResponse.json({ error: 'transactionId required' }, { status: 400 })
     }
 
     const db = createServerClient()
