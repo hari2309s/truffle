@@ -153,8 +153,9 @@ function buildToolRules(intent: QueryIntent): string {
   }
   if (intent === 'habit_setting') {
     return `Habit tool rules:
-- You MUST call proposeHabit for this recurring saving habit. Do NOT describe it in plain text.
-- The amount and frequency are provided — call proposeHabit now with the details the user stated.
+- ALWAYS respond in plain text first: explain your reasoning, show the calculation (e.g. €30,000 ÷ 9 months = €3,333/month), and confirm the amount with the user.
+- Only call proposeHabit AFTER you have given a text explanation. Never call it as your first and only response.
+- If the user asks you to calculate a saving amount, compute it from the goal and deadline they provided — do not guess or invent a number.
 - After a confirmed habit, respond with one warm encouraging sentence.
 - If the user declined, respond warmly and do not re-propose.`
   }

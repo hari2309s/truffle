@@ -373,7 +373,7 @@ export async function POST(request: NextRequest) {
     const proposeHabitTool = {
       proposeHabit: tool({
         description:
-          'Show a recurring savings habit confirmation card. Call when the user wants to save a fixed amount weekly or monthly. Only call when you have a name/purpose, a specific amount, AND a frequency (weekly or monthly) from the user. Never guess the amount.',
+          'Show a recurring savings habit confirmation card. STRICT RULES: (1) ALWAYS explain the calculation or give a text response first before calling this tool. (2) Only call after you have already told the user the suggested amount in plain text. (3) Only call when you have a name/purpose, a specific amount, AND a frequency (weekly or monthly). Never guess the amount.',
         parameters: z.object({
           name: z.string().describe('Short habit name, e.g. "Emergency fund"'),
           amount: z
@@ -444,13 +444,13 @@ export async function POST(request: NextRequest) {
       return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
     })()
 
-    // 'required' forces a tool call without naming it — safe because the tools
-    // list is already scoped to the one correct tool for this intent.
-    // goal_setting uses 'auto' so the model can ask for the amount first.
+    // 'required' forces a tool call without a text response first.
+    // ADD_TRANSACTION uses 'required' because the user is stating a known transaction.
+    // HABIT_SETTING and GOAL_SETTING use 'auto' so the model can explain or calculate
+    // first in plain text, then optionally surface the confirmation card.
     const toolChoice = (() => {
       if (!activeTools) return undefined
-      if (intent === INTENT.ADD_TRANSACTION || intent === INTENT.HABIT_SETTING)
-        return 'required' as const
+      if (intent === INTENT.ADD_TRANSACTION) return 'required' as const
       return 'auto' as const
     })()
 
