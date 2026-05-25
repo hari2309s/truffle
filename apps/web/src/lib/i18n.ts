@@ -234,6 +234,8 @@ export interface Translations {
     suggestions: string[]
     typePlaceholder: string
     stop: string
+    mute: string
+    unmute: string
     failedToSend: string
     resend: string
     offlineMessage: string
@@ -551,6 +553,8 @@ export const translations: Record<Locale, Translations> = {
       ],
       typePlaceholder: 'Or type your question...',
       stop: 'Stop',
+      mute: 'Mute voice',
+      unmute: 'Unmute voice',
       failedToSend: 'Failed to send',
       resend: 'Resend',
       offlineMessage: 'Offline — messages will be answered when you reconnect',
@@ -875,6 +879,8 @@ export const translations: Record<Locale, Translations> = {
       ],
       typePlaceholder: 'Oder tippe deine Frage...',
       stop: 'Stopp',
+      mute: 'Ton aus',
+      unmute: 'Ton an',
       failedToSend: 'Senden fehlgeschlagen',
       resend: 'Erneut senden',
       offlineMessage: 'Offline — Nachrichten werden beantwortet, wenn du wieder verbunden bist',

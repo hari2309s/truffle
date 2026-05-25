@@ -1,7 +1,7 @@
 'use client'
 
 import { useChat } from 'ai/react'
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import type { Message } from 'ai/react'
 import { useTextToSpeech, type SpeechTone } from './useTextToSpeech'
 import { supabase } from '@/lib/supabase'
@@ -17,6 +17,23 @@ export function useFinancialChat(userId: string, initialMessages: Message[]) {
   const latestDataRef = useRef<StreamAnnotation[]>([])
   const isFlushingRef = useRef(false)
 
+  const isMutedRef = useRef(false)
+  const [isMuted, setIsMuted] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('truffle_voice_muted') === 'true'
+    isMutedRef.current = stored
+    setIsMuted(stored)
+  }, [])
+
+  const toggleMute = useCallback(() => {
+    const next = !isMutedRef.current
+    isMutedRef.current = next
+    setIsMuted(next)
+    if (next) cancel()
+    localStorage.setItem('truffle_voice_muted', String(next))
+  }, [cancel])
+
   const chat = useChat({
     api: '/api/chat',
     body: { userId },
@@ -31,7 +48,7 @@ export function useFinancialChat(userId: string, initialMessages: Message[]) {
       if (message.role === 'assistant' && message.content !== lastAssistantMessageRef.current) {
         lastAssistantMessageRef.current = message.content
         const toneAnnotation = latestDataRef.current.find((d) => d.type === 'speech_tone')
-        speak(message.content, { tone: toneAnnotation?.tone })
+        if (!isMutedRef.current) speak(message.content, { tone: toneAnnotation?.tone })
       }
 
       if (finishReason === 'stop' || finishReason === 'length') {
@@ -110,7 +127,7 @@ export function useFinancialChat(userId: string, initialMessages: Message[]) {
       await offlineDb.pendingChatMessages.add({ userId, content, createdAt: Date.now() })
 
       // Speak the fallback using the existing TTS
-      speak(fallbackContent)
+      if (!isMutedRef.current) speak(fallbackContent)
     },
     [userId, chat, speak]
   )
@@ -153,5 +170,7 @@ export function useFinancialChat(userId: string, initialMessages: Message[]) {
     cancelSpeech: cancel,
     startVoice,
     isOnline,
+    isMuted,
+    toggleMute,
   }
 }
