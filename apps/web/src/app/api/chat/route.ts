@@ -2,13 +2,15 @@ import { NextRequest } from 'next/server'
 import { streamText, tool, convertToCoreMessages, StreamData } from 'ai'
 import { z } from 'zod'
 import {
-  chatModel,
   queryTransactions,
   routeIntent,
   langfuse,
   getSpeechTone,
   getToneGuidance,
   buildSystemPrompt,
+  selectModel,
+  incrementUsage,
+  logEval,
 } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory, QueryIntent } from '@truffle/types'
@@ -391,9 +393,11 @@ export async function POST(request: NextRequest) {
       }),
     }
 
+    const { model: chatModel, provider: chatProvider } = await selectModel('tool-calling')
+
     const generation = trace.generation({
       name: 'streamText',
-      model: 'llama-3.3-70b-versatile',
+      model: chatProvider,
       input: [{ role: 'system', content: systemPrompt }],
     })
 
@@ -473,6 +477,19 @@ export async function POST(request: NextRequest) {
         } finally {
           streamData.close()
         }
+        // Fire-and-forget usage tracking and eval logging
+        Promise.all([
+          incrementUsage(chatProvider),
+          logEval({
+            provider: chatProvider,
+            task: 'tool-calling',
+            input: message,
+            output: text,
+            latencyMs: 0, // streamText doesn't expose total latency in onFinish
+            tokensUsed: (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0),
+            traceId: trace.id,
+          }),
+        ]).catch((e) => console.error('[chat/eval log error]', e))
       },
     })
 
