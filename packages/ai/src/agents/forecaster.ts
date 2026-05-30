@@ -1,5 +1,4 @@
-import { generateText } from 'ai'
-import { chatModel } from '../llm'
+import { routedGenerateText } from '../router'
 import { langfuse } from '../langfuse'
 import { FORECASTER_PROMPT } from '../prompts/forecaster.prompt'
 import type { Transaction, MonthlySnapshot } from '@truffle/types'
@@ -38,19 +37,14 @@ export async function forecastSpending(
     .replace('{context}', context)
 
   const gen = traceId
-    ? langfuse.generation({
-        traceId,
-        name: 'forecastSpending',
-        model: 'llama-3.3-70b-versatile',
-        input: prompt,
-      })
+    ? langfuse.generation({ traceId, name: 'forecastSpending', model: 'routed', input: prompt })
     : null
 
-  const { text, usage } = await generateText({
-    model: chatModel,
-    prompt,
-    maxTokens: 300,
-  })
+  const { text, usage } = await routedGenerateText(
+    'reasoning',
+    { prompt, maxTokens: 300 },
+    { traceId }
+  )
 
   gen?.end({
     output: text,

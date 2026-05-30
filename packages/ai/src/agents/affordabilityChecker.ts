@@ -1,5 +1,4 @@
-import { generateText } from 'ai'
-import { chatModel } from '../llm'
+import { routedGenerateText } from '../router'
 import { langfuse } from '../langfuse'
 import { AFFORDABILITY_CHECKER_PROMPT } from '../prompts/affordabilityChecker.prompt'
 import type { Transaction, MonthlySnapshot } from '@truffle/types'
@@ -39,19 +38,14 @@ export async function checkAffordability(
     .replace('{question}', query)
 
   const gen = traceId
-    ? langfuse.generation({
-        traceId,
-        name: 'checkAffordability',
-        model: 'llama-3.3-70b-versatile',
-        input: prompt,
-      })
+    ? langfuse.generation({ traceId, name: 'checkAffordability', model: 'routed', input: prompt })
     : null
 
-  const { text, usage } = await generateText({
-    model: chatModel,
-    prompt,
-    maxTokens: 300,
-  })
+  const { text, usage } = await routedGenerateText(
+    'reasoning',
+    { prompt, maxTokens: 300 },
+    { traceId }
+  )
 
   gen?.end({
     output: text,

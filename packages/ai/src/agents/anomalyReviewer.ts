@@ -1,5 +1,4 @@
-import { generateText } from 'ai'
-import { chatModel } from '../llm'
+import { routedGenerateText } from '../router'
 import { langfuse } from '../langfuse'
 import { ANOMALY_REVIEWER_PROMPT } from '../prompts/anomalyReviewer.prompt'
 import type { Transaction, Anomaly } from '@truffle/types'
@@ -25,19 +24,14 @@ export async function reviewAnomalies(
     .replace('{question}', query)
 
   const gen = traceId
-    ? langfuse.generation({
-        traceId,
-        name: 'reviewAnomalies',
-        model: 'llama-3.3-70b-versatile',
-        input: prompt,
-      })
+    ? langfuse.generation({ traceId, name: 'reviewAnomalies', model: 'routed', input: prompt })
     : null
 
-  const { text, usage } = await generateText({
-    model: chatModel,
-    prompt,
-    maxTokens: 300,
-  })
+  const { text, usage } = await routedGenerateText(
+    'reasoning',
+    { prompt, maxTokens: 300 },
+    { traceId }
+  )
 
   gen?.end({
     output: text,

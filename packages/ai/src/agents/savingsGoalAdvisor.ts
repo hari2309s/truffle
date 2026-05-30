@@ -1,5 +1,4 @@
-import { generateText } from 'ai'
-import { chatModel } from '../llm'
+import { routedGenerateText } from '../router'
 import { langfuse } from '../langfuse'
 import { SAVINGS_GOAL_ADVISOR_PROMPT } from '../prompts/savingsGoalAdvisor.prompt'
 import type { SavingsGoal, MonthlySnapshot } from '@truffle/types'
@@ -29,19 +28,14 @@ export async function adviseSavingsGoals(
     .replace('{question}', query)
 
   const gen = traceId
-    ? langfuse.generation({
-        traceId,
-        name: 'adviseSavingsGoals',
-        model: 'llama-3.3-70b-versatile',
-        input: prompt,
-      })
+    ? langfuse.generation({ traceId, name: 'adviseSavingsGoals', model: 'routed', input: prompt })
     : null
 
-  const { text, usage } = await generateText({
-    model: chatModel,
-    prompt,
-    maxTokens: 300,
-  })
+  const { text, usage } = await routedGenerateText(
+    'reasoning',
+    { prompt, maxTokens: 300 },
+    { traceId }
+  )
 
   gen?.end({
     output: text,

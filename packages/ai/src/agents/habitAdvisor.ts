@@ -1,22 +1,16 @@
-import { generateText } from 'ai'
-import { chatModel } from '../llm'
+import { routedGenerateText } from '../router'
 import { langfuse } from '../langfuse'
 
 export async function adviseHabit(query: string, traceId?: string): Promise<string> {
   const gen = traceId
-    ? langfuse.generation({
-        traceId,
-        name: 'adviseHabit',
-        model: 'llama-3.3-70b-versatile',
-        input: query,
-      })
+    ? langfuse.generation({ traceId, name: 'adviseHabit', model: 'routed', input: query })
     : null
 
-  const { text, usage } = await generateText({
-    model: chatModel,
-    prompt: query,
-    maxTokens: 150,
-  })
+  const { text, usage } = await routedGenerateText(
+    'fast-chat',
+    { prompt: query, maxTokens: 150 },
+    { traceId }
+  )
 
   gen?.end({
     output: text,

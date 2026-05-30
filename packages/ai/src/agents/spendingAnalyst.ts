@@ -1,5 +1,4 @@
-import { generateText } from 'ai'
-import { chatModel } from '../llm'
+import { routedGenerateText } from '../router'
 import { langfuse } from '../langfuse'
 import { SPENDING_ANALYST_PROMPT } from '../prompts/spendingAnalyst.prompt'
 import type { Transaction, MonthlySnapshot } from '@truffle/types'
@@ -22,19 +21,14 @@ export async function analyseSpending(
     .replace('{totalIncome}', snapshot.totalIncome.toFixed(2))
 
   const gen = traceId
-    ? langfuse.generation({
-        traceId,
-        name: 'analyseSpending',
-        model: 'llama-3.3-70b-versatile',
-        input: prompt,
-      })
+    ? langfuse.generation({ traceId, name: 'analyseSpending', model: 'routed', input: prompt })
     : null
 
-  const { text, usage } = await generateText({
-    model: chatModel,
-    prompt,
-    maxTokens: 300,
-  })
+  const { text, usage } = await routedGenerateText(
+    'fast-chat',
+    { prompt, maxTokens: 300 },
+    { traceId }
+  )
 
   gen?.end({
     output: text,
