@@ -100,7 +100,7 @@ Your recent transactions are passed directly as context to the model on every qu
 | LLM router | Custom multi-provider router (`packages/ai/src/router.ts`) |
 | LLM — fast chat | Groq `llama-3.3-70b-versatile` → Cerebras → OpenRouter → Mistral (in priority order) |
 | LLM — reasoning | Gemini `gemini-2.5-flash` → Groq → Cerebras → OpenRouter (in priority order) |
-| LLM — tool calling | Gemini `gemini-2.5-flash` → Groq → Cerebras (in priority order) |
+| LLM — tool calling | Groq `llama-3.3-70b-versatile` → Gemini → Cerebras (in priority order) |
 | LLM — vision | Gemini `gemini-2.5-flash` → OpenRouter (in priority order) |
 | Embeddings | Gemini `text-embedding-004` (Google AI Studio) |
 | Eval layer | Supabase `eval_logs` table + nightly LLM-as-judge cron |
@@ -257,7 +257,7 @@ Each agent node calls `routedGenerateText(taskType, options)` which transparentl
 |---|---|
 | `fast-chat` | Groq → Cerebras → OpenRouter → Mistral |
 | `reasoning` | Gemini → Groq → Cerebras → OpenRouter |
-| `tool-calling` | Gemini → Groq → Cerebras |
+| `tool-calling` | Groq → Gemini → Cerebras |
 | `vision` | Gemini → OpenRouter |
 
 Daily limits (conservative — ~10% below actual free tier caps):
