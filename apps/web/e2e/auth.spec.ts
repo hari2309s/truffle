@@ -49,4 +49,15 @@ test.describe('Auth page', () => {
     await page.goto('/')
     await expect(page.getByText('Sign in with a magic link · No password needed')).toBeVisible()
   })
+
+  test('submit button is disabled when email field is empty', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: 'Continue with email' })).toBeDisabled()
+  })
+
+  test('submit button is disabled with an invalid email format', async ({ page }) => {
+    await page.goto('/')
+    await page.getByPlaceholder('your@email.com').fill('notanemail')
+    await expect(page.getByRole('button', { name: 'Continue with email' })).toBeDisabled()
+  })
 })

@@ -33,4 +33,10 @@ test.describe('Navigation guards (unauthenticated)', () => {
     await page.goto('/')
     await expect(page.getByPlaceholder('your@email.com')).toBeVisible({ timeout: 10_000 })
   })
+
+  test('/offline is publicly accessible without redirect', async ({ page }) => {
+    await page.goto('/offline')
+    await expect(page).toHaveURL('/offline')
+    await expect(page.getByRole('heading', { name: "You're offline" })).toBeVisible()
+  })
 })
