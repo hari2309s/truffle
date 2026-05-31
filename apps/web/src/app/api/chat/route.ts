@@ -350,7 +350,7 @@ export async function POST(request: NextRequest) {
     const proposeTransactionTool = {
       proposeTransaction: tool({
         description:
-          'Show a ONE-TIME transaction confirmation card. Use for expenses, purchases, or income the user just made or received. DO NOT use this for recurring saving habits — use proposeHabit for those. NEVER skip this and respond in plain text instead — the transaction is only logged after the user confirms the card. Use negative amounts for expenses, positive for income.',
+          'Show a ONE-TIME transaction confirmation card. ONLY call this when the user explicitly states they have already made a real, past purchase or received real income — e.g. "I just bought", "I paid", "I received". DO NOT call this for hypothetical questions, jokes, future plans, impossible scenarios, or anything the user has not actually done. DO NOT use this for recurring saving habits — use proposeHabit for those. NEVER skip this and respond in plain text instead — the transaction is only logged after the user confirms the card. Use negative amounts for expenses, positive for income.',
         parameters: z.object({
           description: z.string().describe('Short description, e.g. "Coffee at Costa"'),
           amount: z
