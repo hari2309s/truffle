@@ -90,7 +90,7 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !/\S+@\S+\.\S+/.test(email)}
               className="btn-primary w-full py-4 disabled:opacity-50"
             >
               {isLoading ? t.auth.sending : t.auth.continueWithEmail}
