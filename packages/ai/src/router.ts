@@ -9,7 +9,7 @@ import { getModel as getOpenRouterModel } from './providers/openrouter'
 import { getModel as getMistralModel } from './providers/mistral'
 
 // Conservative buffers — stay ~10% under actual free tier limits
-const DAILY_LIMITS: Record<Provider, number> = {
+export const DAILY_LIMITS: Record<Provider, number> = {
   groq: 900,
   gemini: 1300,
   cerebras: 1500,
@@ -18,7 +18,7 @@ const DAILY_LIMITS: Record<Provider, number> = {
 }
 
 // Priority order per task type. First available provider wins.
-const PRIORITY_ORDER: Record<TaskType, Provider[]> = {
+export const PRIORITY_ORDER: Record<TaskType, Provider[]> = {
   'fast-chat': ['groq', 'cerebras', 'openrouter', 'mistral'],
   vision: ['gemini', 'openrouter'],
   reasoning: ['gemini', 'groq', 'cerebras', 'openrouter'],
