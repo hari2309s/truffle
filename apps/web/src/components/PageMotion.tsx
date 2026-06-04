@@ -2,7 +2,7 @@
 
 import type { HTMLMotionProps } from 'framer-motion'
 import { motion } from 'framer-motion'
-import { pageEnterVariants, truffleEase } from '@/lib/motion'
+import { pageEnterVariants } from '@/lib/motion'
 
 type PageEnterProps = {
   children: React.ReactNode
@@ -40,17 +40,21 @@ export function SkeletonPulse({ className, ...props }: SkeletonPulseProps) {
 /** App shell loading (Home auth check, chat history load, etc.) */
 export function LoadingDots({ className }: { className?: string }) {
   return (
-    <div className={className ?? 'flex gap-1.5'}>
+    <div className={className ?? 'flex items-center gap-[3px]'} style={{ height: 20 }}>
       {[0, 1, 2].map((i) => (
         <motion.span
           key={i}
-          className="w-2 h-2 rounded-full bg-truffle-amber"
-          animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }}
+          className="rounded-full bg-truffle-amber"
+          style={{ width: 4, height: 18, transformOrigin: 'center' }}
+          animate={{
+            scaleY: [0.25, 1, 0.25],
+            opacity: [0.4, 1, 0.4],
+          }}
           transition={{
-            duration: 0.55,
+            duration: 0.8,
             repeat: Infinity,
-            delay: i * 0.12,
-            ease: truffleEase,
+            delay: i * 0.15,
+            ease: [0.45, 0, 0.55, 1],
           }}
         />
       ))}
@@ -61,15 +65,28 @@ export function LoadingDots({ className }: { className?: string }) {
 /** Centered route loading (chat/insights while auth resolves). */
 export function LoadingSpinner({ className }: { className?: string }) {
   return (
-    <motion.div
-      role="status"
-      aria-label="Loading"
-      className={
-        className ?? 'w-8 h-8 rounded-full border-2 border-truffle-amber border-t-transparent'
-      }
-      animate={{ rotate: 360 }}
-      transition={{ duration: 0.85, repeat: Infinity, ease: 'linear' }}
-    />
+    <div className="relative flex items-center justify-center w-8 h-8">
+      <motion.div
+        role="status"
+        aria-label="Loading"
+        className={
+          className ?? 'w-8 h-8 rounded-full border-2 border-truffle-amber border-t-transparent'
+        }
+        animate={{ rotate: 360 }}
+        transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+      />
+      <motion.div
+        className="absolute inset-0 rounded-full pointer-events-none"
+        animate={{
+          boxShadow: [
+            '0 0 0 0 rgba(232,168,78,0)',
+            '0 0 10px 3px rgba(232,168,78,0.28)',
+            '0 0 0 0 rgba(232,168,78,0)',
+          ],
+        }}
+        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+      />
+    </div>
   )
 }
 
