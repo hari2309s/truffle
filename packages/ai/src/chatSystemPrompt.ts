@@ -57,6 +57,7 @@ const NEEDS_TRANSACTIONS: QueryIntent[] = [
   'category_breakdown',
   'goal_setting',
   'add_transaction',
+  'general_advice', // follow-up clarifications must retain transaction grounding
 ]
 
 // Intents that need anomaly context
@@ -262,6 +263,7 @@ Response guidelines:
 - No bullet points or lists — use natural spoken language
 - Never lecture or shame. Celebrate wins. Reassure when things are tight.
 - Do not give unsolicited tips, suggestions, or advice. Only advise if the user explicitly asks for it.
+- If you cited specific amounts in a previous message this conversation, those are accurate — do not retract them. The monthly summary reflects only the current period; historical data lives in the transaction list above.
 
 ${toolRules}`
 }
