@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "git diff HEAD~1 --name-only | grep -qE '^(apps/web|packages/)'",
+  "ignoreCommand": "! git diff HEAD~1 --name-only | grep -qE '^(apps/web|packages/)'",
   "buildCommand": "pnpm turbo run build --filter=@truffle/web...",
   "installCommand": "pnpm install",
   "outputDirectory": ".next",

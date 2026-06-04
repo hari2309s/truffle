@@ -37,23 +37,23 @@ export function SkeletonPulse({ className, ...props }: SkeletonPulseProps) {
   )
 }
 
-/** App shell loading (Home auth check, chat history load, etc.) */
+/** App shell loading (Home auth check, chat history load, etc.) — 5-bar waveform. */
 export function LoadingDots({ className }: { className?: string }) {
   return (
-    <div className={className ?? 'flex items-center gap-[3px]'} style={{ height: 20 }}>
-      {[0, 1, 2].map((i) => (
+    <div className={className ?? 'flex items-center gap-1'} style={{ height: 24 }}>
+      {[0, 1, 2, 3, 4].map((i) => (
         <motion.span
           key={i}
           className="rounded-full bg-truffle-amber"
-          style={{ width: 4, height: 18, transformOrigin: 'center' }}
+          style={{ width: 4, height: 20, transformOrigin: 'center' }}
           animate={{
-            scaleY: [0.25, 1, 0.25],
-            opacity: [0.4, 1, 0.4],
+            scaleY: [0.2, 1, 0.5, 0.85, 0.2],
+            opacity: [0.4, 1, 0.65, 1, 0.4],
           }}
           transition={{
-            duration: 0.8,
+            duration: 1.1,
             repeat: Infinity,
-            delay: i * 0.15,
+            delay: i * 0.1,
             ease: [0.45, 0, 0.55, 1],
           }}
         />
@@ -62,25 +62,18 @@ export function LoadingDots({ className }: { className?: string }) {
   )
 }
 
-/** Centered route loading (chat/insights while auth resolves). */
-export function LoadingSpinner({ className }: { className?: string }) {
+/** Centered route loading (chat/insights while auth resolves) — pulsing orb, not a spinner. */
+export function LoadingSpinner({ className: _className }: { className?: string }) {
   return (
-    <div className="relative flex items-center justify-center w-8 h-8">
+    <div role="status" aria-label="Loading" className="flex items-center justify-center w-16 h-16">
       <motion.div
-        role="status"
-        aria-label="Loading"
-        className={
-          className ?? 'w-8 h-8 rounded-full border-2 border-truffle-amber border-t-transparent'
-        }
-        animate={{ rotate: 360 }}
-        transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
-      />
-      <motion.div
-        className="absolute inset-0 rounded-full pointer-events-none"
+        className="w-4 h-4 rounded-full bg-truffle-amber"
         animate={{
+          scale: [1, 2, 1],
+          opacity: [0.7, 1, 0.7],
           boxShadow: [
             '0 0 0 0 rgba(232,168,78,0)',
-            '0 0 10px 3px rgba(232,168,78,0.28)',
+            '0 0 24px 8px rgba(232,168,78,0.35)',
             '0 0 0 0 rgba(232,168,78,0)',
           ],
         }}
