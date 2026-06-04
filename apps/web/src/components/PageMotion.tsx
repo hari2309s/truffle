@@ -73,20 +73,24 @@ export function LoadingSpinner({ className }: { className?: string }) {
   )
 }
 
-/** Inline typing indicator (chat). */
+/** Inline typing indicator (chat) — audio waveform bars. */
 export function TypingDots({ className }: { className?: string }) {
   return (
-    <div className={className ?? 'flex gap-1'}>
-      {[0, 1, 2].map((i) => (
+    <div className={className ?? 'flex items-center gap-[3px]'} style={{ height: 18 }}>
+      {[0, 1, 2, 3, 4].map((i) => (
         <motion.span
           key={i}
-          className="w-2 h-2 rounded-full bg-truffle-amber"
-          animate={{ y: [0, -4, 0] }}
+          className="rounded-full bg-truffle-amber"
+          style={{ width: 3, height: 16, transformOrigin: 'center' }}
+          animate={{
+            scaleY: [0.25, 1, 0.55, 0.9, 0.25],
+            opacity: [0.45, 1, 0.7, 1, 0.45],
+          }}
           transition={{
-            duration: 0.45,
+            duration: 1.0,
             repeat: Infinity,
-            delay: i * 0.14,
-            ease: truffleEase,
+            delay: i * 0.1,
+            ease: [0.45, 0, 0.55, 1],
           }}
         />
       ))}

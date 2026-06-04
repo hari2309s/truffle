@@ -1,6 +1,7 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
+import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
 import type { Message } from 'ai/react'
@@ -299,18 +300,39 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
             )
           })}
 
-          {chat.isLoading && (
-            <motion.div
-              className="flex justify-start mb-3"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.28, ease: truffleEase }}
-            >
-              <div className="bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
-                <TypingDots />
-              </div>
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {chat.isLoading && (
+              <motion.div
+                key="ai-thinking"
+                className="flex justify-start mb-3 items-end gap-2"
+                initial={{ opacity: 0, y: 10, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.94, transition: { duration: 0.18 } }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              >
+                <motion.div
+                  className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0"
+                  animate={{ opacity: [0.55, 1, 0.55] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <Image src="/icons/truffle.png" alt="Truffle" width={24} height={24} />
+                </motion.div>
+                <motion.div
+                  className="bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3"
+                  animate={{
+                    boxShadow: [
+                      '0 0 0 0 rgba(232,168,78,0)',
+                      '0 0 14px 3px rgba(232,168,78,0.18)',
+                      '0 0 0 0 rgba(232,168,78,0)',
+                    ],
+                  }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <TypingDots />
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {voice.error && (
             <div className="text-center text-xs text-truffle-red py-2">{voice.error}</div>

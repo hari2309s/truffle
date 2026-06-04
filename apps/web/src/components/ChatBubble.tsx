@@ -32,9 +32,9 @@ export function ChatBubble({
   return (
     <motion.div
       className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}
-      initial={{ opacity: 0, y: 8, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.32, ease: truffleEase }}
+      initial={{ opacity: 0, y: 10, scale: 0.93, x: isUser ? 12 : -12 }}
+      animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.8 }}
     >
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-3 ${
