@@ -38,6 +38,8 @@ Condition met?
 | 3 | Goal at risk | `GET /api/goals` | `sendGoalAtRiskNudge` | `goal-at-risk:{goalId}:{YYYY-MM}` | Once per goal per month |
 | 4 | Habit streak milestone | `PATCH /api/habits` | `sendHabitStreakNudge` | `habit-streak:{habitId}:{streak}` | Once per streak number |
 | 5 | Habit check-in reminder | `GET /api/habits` | `sendHabitCheckInNudge` | `habit-checkin:{habitId}:{period}` | Once per habit per period |
+| 6 | Budget warning (80% / over) | `POST /api/transactions` | `sendBudgetNudge` | `budget-warning:{category}:{YYYY-MM}:{80\|100}` | Once per category per threshold per month |
+| 7 | Monthly spending report | `GET /api/insights` | `sendMonthlyReportNudge` | `monthly-report:{YYYY-MM}` | Once per month, ever |
 
 ### 1. Anomaly detected on a new transaction
 

@@ -75,28 +75,28 @@ function buildProactiveGraph(traceId: string) {
     .compile()
 }
 
-export interface AnomalyTrigger {
+interface AnomalyTrigger {
   type: 'anomaly'
   anomaly: Anomaly
   transactions: Transaction[]
   snapshot: MonthlySnapshot | null
 }
 
-export interface GoalMilestoneTrigger {
+interface GoalMilestoneTrigger {
   type: 'goal_milestone'
   goal: SavingsGoal
   milestone: 25 | 50 | 75 | 100
   snapshot: MonthlySnapshot | null
 }
 
-export interface GoalAtRiskTrigger {
+interface GoalAtRiskTrigger {
   type: 'goal_at_risk'
   goal: SavingsGoal
   daysRemaining: number
   projectedShortfall: number
 }
 
-export interface HabitStreakTrigger {
+interface HabitStreakTrigger {
   type: 'habit_streak'
   habitId: string
   habitName: string
@@ -104,7 +104,7 @@ export interface HabitStreakTrigger {
   streak: number
 }
 
-export interface HabitCheckInTrigger {
+interface HabitCheckInTrigger {
   type: 'habit_check_in'
   habitId: string
   habitName: string
@@ -115,7 +115,7 @@ export interface HabitCheckInTrigger {
   lastStreak: number
 }
 
-export interface BudgetWarningTrigger {
+interface BudgetWarningTrigger {
   type: 'budget_warning'
   category: string
   categoryEmoji: string
@@ -125,7 +125,7 @@ export interface BudgetWarningTrigger {
   month: string // YYYY-MM
 }
 
-export interface MonthlyReportTrigger {
+interface MonthlyReportTrigger {
   type: 'monthly_report'
   month: string // YYYY-MM (the reported month)
   monthName: string // e.g. "May 2026"

@@ -63,7 +63,7 @@ export function LoadingDots({ className }: { className?: string }) {
 }
 
 /** Centered route loading (chat/insights while auth resolves) — pulsing orb, not a spinner. */
-export function LoadingSpinner({ className: _className }: { className?: string }) {
+export function LoadingSpinner() {
   return (
     <div role="status" aria-label="Loading" className="flex items-center justify-center w-16 h-16">
       <motion.div
