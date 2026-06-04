@@ -81,7 +81,7 @@ You speak → Groq Whisper transcribes → LangGraph routes your intent
 → Every call is logged to eval_logs; nightly judge scores response quality
 ```
 
-Your recent transactions are passed directly as context to the model on every query — grounding every answer in your real data, not generic advice.
+Your recent transactions are passed directly as context to the model on every query — including follow-up clarifications — grounding every answer in your real data, not generic advice.
 
 ---
 
@@ -91,6 +91,7 @@ Your recent transactions are passed directly as context to the model on every qu
 |---|---|
 | Framework | Next.js 14 (App Router) + TypeScript |
 | Styling | Tailwind CSS |
+| Animations | Framer Motion (spring physics, waveform indicators, pulsing orb loader) |
 | PWA / Service Worker | `next-pwa` v5 + Workbox (asset caching, runtime caching, offline fallback) |
 | Offline storage | Dexie.js v3 (typed IndexedDB wrapper) |
 | Offline sync | Background Sync API + client-side online-event fallback |
