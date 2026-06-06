@@ -1,8 +1,13 @@
 import { offlineDb } from './offline-db'
 import { formatCategory } from './categories'
+import { CURRENCY_SYMBOLS, CURRENCY_DECIMALS } from './currency'
 
 function formatAmount(n: number): string {
-  return `€${Math.abs(n).toFixed(0)}`
+  const currency =
+    (typeof window !== 'undefined' && localStorage.getItem('truffle-currency')) || 'EUR'
+  const symbol = CURRENCY_SYMBOLS[currency] ?? '€'
+  const decimals = CURRENCY_DECIMALS[currency] ?? 2
+  return `${symbol}${Math.abs(n).toFixed(decimals)}`
 }
 
 /**

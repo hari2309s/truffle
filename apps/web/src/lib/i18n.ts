@@ -43,6 +43,7 @@ export interface Translations {
     deleteMyAccount: string
     deleteError: string
     language: string
+    currency: string
   }
   dashboard: {
     goodMorning: string
@@ -335,6 +336,7 @@ export const translations: Record<Locale, Translations> = {
       deleteMyAccount: 'Delete my account',
       deleteError: 'Failed to delete account. Please try again.',
       language: 'Language',
+      currency: 'Currency',
     },
     dashboard: {
       goodMorning: 'Good morning',
@@ -510,7 +512,7 @@ export const translations: Record<Locale, Translations> = {
       noHabits: 'No saving habits yet — ask Truffle to set one up',
       periodWeek: 'week',
       periodMonth: 'month',
-      totalSaved: (amount) => `€${amount} total saved`,
+      totalSaved: (amount) => `${amount} total saved`,
       done: '✓ done',
       log: '+ Log',
       frequencyWeekly: 'Weekly',
@@ -519,9 +521,9 @@ export const translations: Record<Locale, Translations> = {
     monthlyBudgets: {
       noBudgets: 'No budgets yet — set one to track category spending',
       allCategoriesHaveBudget: 'All spendable categories already have a budget.',
-      over: (amount) => `€${amount} over`,
-      left: (amount) => `€${amount} left`,
-      budgetLabel: (amount) => `budget €${amount}/mo`,
+      over: (amount) => `${amount} over`,
+      left: (amount) => `${amount} left`,
+      budgetLabel: (amount) => `budget ${amount}/mo`,
       monthlyLimit: 'Monthly limit',
       saving: 'Saving…',
       setBudget: 'Set budget',
@@ -655,6 +657,7 @@ export const translations: Record<Locale, Translations> = {
       deleteMyAccount: 'Mein Konto löschen',
       deleteError: 'Konto konnte nicht gelöscht werden. Bitte erneut versuchen.',
       language: 'Sprache',
+      currency: 'Währung',
     },
     dashboard: {
       goodMorning: 'Guten Morgen',
@@ -835,7 +838,7 @@ export const translations: Record<Locale, Translations> = {
       noHabits: 'Noch keine Spargewohnheiten — bitte Truffle, eine einzurichten',
       periodWeek: 'Woche',
       periodMonth: 'Monat',
-      totalSaved: (amount) => `€${amount} insgesamt gespart`,
+      totalSaved: (amount) => `${amount} insgesamt gespart`,
       done: '✓ erledigt',
       log: '+ Buchen',
       frequencyWeekly: 'Wöchentlich',
@@ -844,9 +847,9 @@ export const translations: Record<Locale, Translations> = {
     monthlyBudgets: {
       noBudgets: 'Noch keine Budgets — lege eines fest, um Ausgaben zu verfolgen',
       allCategoriesHaveBudget: 'Alle Ausgabenkategorien haben bereits ein Budget.',
-      over: (amount) => `€${amount} überschritten`,
-      left: (amount) => `€${amount} übrig`,
-      budgetLabel: (amount) => `Budget €${amount}/Monat`,
+      over: (amount) => `${amount} überschritten`,
+      left: (amount) => `${amount} übrig`,
+      budgetLabel: (amount) => `Budget ${amount}/Monat`,
       monthlyLimit: 'Monatslimit',
       saving: 'Wird gespeichert…',
       setBudget: 'Budget festlegen',

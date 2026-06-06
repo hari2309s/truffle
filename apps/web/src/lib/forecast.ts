@@ -1,4 +1,3 @@
-import { toEur } from './currency'
 import { currentYearMonth } from './date'
 
 export interface Forecast {
@@ -9,18 +8,17 @@ export interface Forecast {
 }
 
 export function computeForecast(
-  transactions: { amount: number | string; currency?: string; date: string }[]
+  transactions: { amount: number | string; currency?: string; date: string }[],
+  formatAmount: (n: number) => string = (n) => `€${Math.abs(n).toFixed(2)}`
 ): Forecast | null {
   const currentMonth = currentYearMonth()
   const txs = transactions.filter((t) => String(t.date).startsWith(currentMonth))
   if (txs.length === 0) return null
 
-  // Convert all amounts to EUR for consistent totals
-  const eurAmounts = txs.map((t) => toEur(Number(t.amount), t.currency ?? 'EUR'))
-
-  const totalIncome = eurAmounts.filter((a) => a > 0).reduce((s, a) => s + a, 0)
-  const totalExpenses = eurAmounts.filter((a) => a < 0).reduce((s, a) => s + a, 0)
-  const balance = eurAmounts.reduce((s, a) => s + a, 0)
+  const amounts = txs.map((t) => Number(t.amount))
+  const totalIncome = amounts.filter((a) => a > 0).reduce((s, a) => s + a, 0)
+  const totalExpenses = amounts.filter((a) => a < 0).reduce((s, a) => s + a, 0)
+  const balance = amounts.reduce((s, a) => s + a, 0)
 
   const today = new Date()
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
@@ -38,9 +36,9 @@ export function computeForecast(
     confidence: count >= 10 ? 'high' : count >= 3 ? 'medium' : 'low',
     assumptions: [
       `Based on ${count} transaction${count !== 1 ? 's' : ''} in ${monthName}`,
-      `Daily spend rate: €${Math.abs(dailySpendRate).toFixed(2)}`,
+      `Daily spend rate: ${formatAmount(Math.abs(dailySpendRate))}`,
       `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`,
-      `Income this month: €${totalIncome.toFixed(2)}`,
+      `Income this month: ${formatAmount(totalIncome)}`,
     ],
   }
 }
