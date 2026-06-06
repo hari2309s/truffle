@@ -37,17 +37,17 @@ describe('computeForecast', () => {
     expect(result!.assumptions[0]).toContain('2 transactions')
   })
 
-  it('computes currentBalance as sum of EUR amounts', () => {
+  it('computes currentBalance as sum of raw amounts', () => {
     const txs = [makeTx(1000, '2026-05-01'), makeTx(-300, '2026-05-10')]
     const result = computeForecast(txs)!
     expect(result.currentBalance).toBeCloseTo(700)
   })
 
-  it('converts non-EUR currencies', () => {
-    // 100 GBP = 117 EUR
+  it('uses raw amounts regardless of currency', () => {
+    // No conversion — each user has one currency, amounts are used as-is
     const txs = [makeTx(100, '2026-05-01', 'GBP')]
     const result = computeForecast(txs)!
-    expect(result.currentBalance).toBeCloseTo(117)
+    expect(result.currentBalance).toBeCloseTo(100)
   })
 
   it('confidence is low for <3 transactions', () => {
