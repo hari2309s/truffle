@@ -2,7 +2,7 @@ export interface Transaction {
   id: string
   userId: string
   amount: number // negative = expense, positive = income
-  currency: 'EUR' | 'GBP' | 'USD'
+  currency: 'EUR' | 'GBP' | 'USD' | 'JPY'
   description: string
   category: TransactionCategory
   merchant?: string
@@ -83,7 +83,7 @@ export interface DetectedSubscription {
   key: string // normalised merchant/description
   displayName: string
   monthlyAmount: number
-  currency: 'EUR' | 'GBP' | 'USD'
+  currency: 'EUR' | 'GBP' | 'USD' | 'JPY'
   lastCharged: string // ISO date
   monthsDetected: number
 }
