@@ -30,7 +30,7 @@ type BudgetRow = {
   spentAmount: unknown // computed by caller — current month spend in that category
 }
 
-function buildBudgetContext(budgetRows: BudgetRow[] | null): string {
+function buildBudgetContext(budgetRows: BudgetRow[] | null, fmt: (n: number) => string): string {
   const budgets = (budgetRows ?? []).slice(0, 12)
   if (!budgets.length) return ''
   return (
@@ -43,7 +43,7 @@ function buildBudgetContext(budgetRows: BudgetRow[] | null): string {
         const cat = sanitize(String(b.category).replace(/_/g, ' '))
         const status =
           spent > limit ? ' ⚠️ over budget' : spent / limit >= 0.8 ? ' (near limit)' : ''
-        return `- ${cat}: €${spent.toFixed(0)} / €${limit.toFixed(0)} (${pct}% used${status})`
+        return `- ${cat}: ${fmt(spent)} / ${fmt(limit)} (${pct}% used${status})`
       })
       .join('\n')
   )
@@ -76,12 +76,16 @@ function sanitize(text: unknown, maxLen = 120): string {
     .slice(0, maxLen)
 }
 
-function buildTransactionContext(intent: QueryIntent, transactions: Transaction[]): string {
+function buildTransactionContext(
+  intent: QueryIntent,
+  transactions: Transaction[],
+  fmt: (n: number) => string
+): string {
   if (!NEEDS_TRANSACTIONS.includes(intent)) return ''
   return (
     "\nThe user's recent transactions:\n" +
     transactions
-      .map((t) => `${t.date}: ${sanitize(t.description)} (${t.category}) €${t.amount.toFixed(2)}`)
+      .map((t) => `${t.date}: ${sanitize(t.description)} (${t.category}) ${fmt(t.amount)}`)
       .join('\n')
   )
 }
@@ -94,7 +98,7 @@ function buildAnomalyContext(intent: QueryIntent, anomalyRows: AnomalyRow[] | nu
   )
 }
 
-function buildGoalsContext(goalRows: GoalRow[] | null): string {
+function buildGoalsContext(goalRows: GoalRow[] | null, fmt: (n: number) => string): string {
   const goals = (goalRows ?? []).slice(0, 10)
   if (!goals.length) return ''
   return (
@@ -102,8 +106,9 @@ function buildGoalsContext(goalRows: GoalRow[] | null): string {
     goals
       .map((g) => {
         const target = g.target_amount as number
-        const pct = target > 0 ? (((g.saved_amount as number) / target) * 100).toFixed(0) : '0'
-        return `- ${g.emoji} ${sanitize(g.name)}: €${g.saved_amount} / €${target} (${pct}%)${g.deadline ? ` by ${g.deadline}` : ''}`
+        const saved = g.saved_amount as number
+        const pct = target > 0 ? ((saved / target) * 100).toFixed(0) : '0'
+        return `- ${g.emoji} ${sanitize(g.name)}: ${fmt(saved)} / ${fmt(target)} (${pct}%)${g.deadline ? ` by ${g.deadline}` : ''}`
       })
       .join('\n')
   )
@@ -111,7 +116,10 @@ function buildGoalsContext(goalRows: GoalRow[] | null): string {
 
 type HabitsContextResult = { context: string; pendingHabits: HabitRow[] }
 
-function buildHabitsContext(habitRows: HabitRow[] | null): HabitsContextResult {
+function buildHabitsContext(
+  habitRows: HabitRow[] | null,
+  fmt: (n: number) => string
+): HabitsContextResult {
   const habits = (habitRows ?? []).slice(0, 10)
   if (!habits.length) return { context: '', pendingHabits: [] }
   const pendingHabits = habits.filter((h) => !h.currentPeriodLogged)
@@ -121,7 +129,7 @@ function buildHabitsContext(habitRows: HabitRow[] | null): HabitsContextResult {
       .map((h) => {
         const streakStr = (h.streak as number) > 0 ? ` 🔥 ${h.streak}-period streak` : ''
         const status = h.currentPeriodLogged ? '✓ logged this period' : '⏳ not yet logged'
-        return `- ${h.emoji} ${sanitize(h.name)}: €${h.amount}/${h.frequency} (${status}${streakStr})`
+        return `- ${h.emoji} ${sanitize(h.name)}: ${fmt(h.amount as number)}/${h.frequency} (${status}${streakStr})`
       })
       .join('\n')
   return { context, pendingHabits }
@@ -168,18 +176,19 @@ function buildSnapshotContext(
   projectedBalance: number,
   daysRemaining: number,
   dailySpend: number,
-  currentMonth: string
+  currentMonth: string,
+  fmt: (n: number) => string
 ): string {
   if (snapshots.length === 1) {
     const s = snapshots[0]!
     const isCurrentMonth = s.month === currentMonth
     const projectionLine = isCurrentMonth
-      ? `\n- Projected end of month: €${projectedBalance.toFixed(2)} (${daysRemaining} days remaining, spending ~€${dailySpend.toFixed(2)}/day)`
+      ? `\n- Projected end of month: ${fmt(projectedBalance)} (${daysRemaining} days remaining, spending ~${fmt(dailySpend)}/day)`
       : ''
     return `Monthly summary (${s.month}):
-- Income: €${s.totalIncome.toFixed(2)}
-- Expenses: €${Math.abs(s.totalExpenses).toFixed(2)}
-- Balance: €${s.balance.toFixed(2)}${projectionLine}`
+- Income: ${fmt(s.totalIncome)}
+- Expenses: ${fmt(Math.abs(s.totalExpenses))}
+- Balance: ${fmt(s.balance)}${projectionLine}`
   }
 
   const totalIncome = snapshots.reduce((sum, s) => sum + s.totalIncome, 0)
@@ -189,14 +198,14 @@ function buildSnapshotContext(
   const lines = snapshots.map((s) => {
     const projectionNote =
       s.month === currentMonth
-        ? ` (projected end: €${projectedBalance.toFixed(2)}, ${daysRemaining}d remaining)`
+        ? ` (projected end: ${fmt(projectedBalance)}, ${daysRemaining}d remaining)`
         : ''
-    return `- ${s.month}: income €${s.totalIncome.toFixed(2)}, expenses €${Math.abs(s.totalExpenses).toFixed(2)}, balance €${s.balance.toFixed(2)}${projectionNote}`
+    return `- ${s.month}: income ${fmt(s.totalIncome)}, expenses ${fmt(Math.abs(s.totalExpenses))}, balance ${fmt(s.balance)}${projectionNote}`
   })
 
   return `Monthly summary (${snapshots[0]!.month} – ${snapshots[snapshots.length - 1]!.month}):
 ${lines.join('\n')}
-- Totals: income €${totalIncome.toFixed(2)}, expenses €${totalExpenses.toFixed(2)}, net balance €${totalBalance.toFixed(2)}`
+- Totals: income ${fmt(totalIncome)}, expenses ${fmt(totalExpenses)}, net balance ${fmt(totalBalance)}`
 }
 
 export function buildSystemPrompt(params: {
@@ -212,6 +221,7 @@ export function buildSystemPrompt(params: {
   projectedBalance: number
   daysRemaining: number
   dailySpend: number
+  currencyCode?: string
 }): string {
   const {
     intent,
@@ -226,26 +236,33 @@ export function buildSystemPrompt(params: {
     projectedBalance,
     daysRemaining,
     dailySpend,
+    currencyCode = 'EUR',
   } = params
+
+  const decimals = currencyCode === 'JPY' ? 0 : 2
+  const symbol =
+    currencyCode === 'JPY' ? '¥' : currencyCode === 'GBP' ? '£' : currencyCode === 'USD' ? '$' : '€'
+  const fmt = (n: number) => `${symbol}${Math.abs(n).toFixed(decimals)}`
 
   if (intent === 'greeting') {
     return `You are Truffle — a warm, calm personal finance companion. The user is just saying hello.
 Respond with a single warm, brief greeting. Do not mention their finances, balance, goals, or any financial data unprompted. Just say hi back.`
   }
 
-  const transactionContext = buildTransactionContext(intent, transactions)
+  const transactionContext = buildTransactionContext(intent, transactions, fmt)
   const anomalyContext = buildAnomalyContext(intent, anomalyRows)
-  const goalsContext = buildGoalsContext(goalRows)
-  const { context: habitsContext, pendingHabits } = buildHabitsContext(habitRows)
+  const goalsContext = buildGoalsContext(goalRows, fmt)
+  const { context: habitsContext, pendingHabits } = buildHabitsContext(habitRows, fmt)
   const habitReminderContext = buildHabitReminderContext(intent, pendingHabits)
-  const budgetContext = buildBudgetContext(budgetRows)
+  const budgetContext = buildBudgetContext(budgetRows, fmt)
   const toolRules = buildToolRules(intent)
   const snapshotContext = buildSnapshotContext(
     snapshots,
     projectedBalance,
     daysRemaining,
     dailySpend,
-    currentMonth
+    currentMonth,
+    fmt
   )
 
   return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.
