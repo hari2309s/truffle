@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { PostHogProvider } from './posthog-provider'
 import { PostHogPageView } from './posthog-pageview'
 import { LanguageProvider } from '@/contexts/LanguageContext'
+import { CurrencyProvider } from '@/contexts/CurrencyContext'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { CookieBanner } from '@/components/CookieBanner'
 
@@ -40,13 +41,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <PostHogPageView />
       </Suspense>
       <LanguageProvider>
-        <QueryClientProvider client={queryClient}>
-          <div className="flex flex-col h-dvh overflow-hidden">
-            <OfflineBanner />
-            {children}
-          </div>
-          <CookieBanner />
-        </QueryClientProvider>
+        <CurrencyProvider>
+          <QueryClientProvider client={queryClient}>
+            <div className="flex flex-col h-dvh overflow-hidden">
+              <OfflineBanner />
+              {children}
+            </div>
+            <CookieBanner />
+          </QueryClientProvider>
+        </CurrencyProvider>
       </LanguageProvider>
     </PostHogProvider>
   )
