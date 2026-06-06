@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { TransactionCategory } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 interface ParsedRow {
   date: string
@@ -101,6 +102,7 @@ const PREVIEW_LIMIT = 5
 
 export function CSVImport({ userId, onClose }: CSVImportProps) {
   const { t } = useLanguage()
+  const { currency, formatAmount } = useCurrency()
   const queryClient = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<ParsedRow[] | null>(null)
@@ -172,7 +174,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
           transactions: rows.map((row) => ({
             description: row.description,
             amount: row.amount,
-            currency: 'EUR',
+            currency,
             category: row.category,
             date: row.date,
             merchant: row.merchant,
@@ -279,7 +281,8 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
                   <span
                     className={`ml-2 text-xs font-medium tabular-nums flex-shrink-0 ${row.amount >= 0 ? 'text-truffle-green' : 'text-truffle-red'}`}
                   >
-                    {row.amount >= 0 ? '+' : ''}€{row.amount.toFixed(2)}
+                    {row.amount >= 0 ? '+' : ''}
+                    {formatAmount(row.amount)}
                   </span>
                 </label>
               ))}

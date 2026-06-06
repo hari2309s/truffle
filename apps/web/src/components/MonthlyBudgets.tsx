@@ -8,6 +8,7 @@ import { CATEGORY_EMOJI } from '@/lib/categories'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 import { SkeletonPulse } from './PageMotion'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 interface MonthlyBudgetsProps {
   userId: string
@@ -142,6 +143,7 @@ function BudgetCard({
   isDeleting: boolean
 }) {
   const { t } = useLanguage()
+  const { formatAmount } = useCurrency()
   const pct = Math.min(100, budget.amount > 0 ? (spent / budget.amount) * 100 : 0)
   const remaining = Math.max(0, budget.amount - spent)
   const isOver = spent > budget.amount
@@ -166,15 +168,15 @@ function BudgetCard({
             </p>
             <p className="text-xs text-truffle-muted">
               {isOver
-                ? t.monthlyBudgets.over((spent - budget.amount).toFixed(0))
-                : t.monthlyBudgets.left(remaining.toFixed(0))}{' '}
-              · {t.monthlyBudgets.budgetLabel(budget.amount.toFixed(0))}
+                ? t.monthlyBudgets.over(formatAmount(spent - budget.amount))
+                : t.monthlyBudgets.left(formatAmount(remaining))}{' '}
+              · {t.monthlyBudgets.budgetLabel(formatAmount(budget.amount))}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs font-semibold tabular-nums ${amountColor}`}>
-            €{spent.toFixed(0)}
+            {formatAmount(spent)}
           </span>
           <button
             onClick={onDelete}
@@ -208,6 +210,7 @@ function AddBudgetForm({
   onDone: () => void
 }) {
   const { t } = useLanguage()
+  const { symbol } = useCurrency()
   const queryClient = useQueryClient()
   const available = BUDGET_CATEGORIES.filter((c) => !existingCategories.includes(c))
   const [category, setCategory] = useState<TransactionCategory>(available[0] ?? 'other')
@@ -277,7 +280,7 @@ function AddBudgetForm({
 
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-muted text-sm">
-          €
+          {symbol}
         </span>
         <input
           type="number"

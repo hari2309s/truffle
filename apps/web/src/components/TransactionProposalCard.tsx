@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import type { TransactionCategory } from '@truffle/types'
 import { CATEGORY_EMOJI } from '@/lib/categories'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
 
 export interface TransactionProposal {
@@ -31,13 +32,14 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
   onResult,
 }: TransactionProposalCardProps) {
   const { t, locale } = useLanguage()
+  const { formatAmount, currency } = useCurrency()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
   const [error, setError] = useState<string | null>(null)
 
   const isExpense = proposal.amount < 0
-  const formattedAmount = `${isExpense ? '-' : '+'}€${Math.abs(proposal.amount).toFixed(2)}`
+  const formattedAmount = `${isExpense ? '-' : '+'}${formatAmount(proposal.amount)}`
   const amountColor = isExpense ? 'text-red-400' : 'text-green-400'
   const emoji = CATEGORY_EMOJI[proposal.category] ?? '📝'
   const categoryLabel = t.categories[proposal.category] ?? proposal.category.replace(/_/g, ' ')
@@ -60,7 +62,7 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
             {
               userId,
               amount: proposal.amount,
-              currency: 'EUR',
+              currency,
               description: proposal.description,
               category: proposal.category,
               merchant: proposal.merchant ?? null,

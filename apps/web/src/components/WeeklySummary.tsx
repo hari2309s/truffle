@@ -6,6 +6,7 @@ import { truffleEase } from '@/lib/motion'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { useTextToSpeech } from '@/hooks/useTextToSpeech'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import type { Translations } from '@/lib/i18n'
 
 interface WeeklySummaryProps {
@@ -23,7 +24,8 @@ function getISOWeek(date: Date): string {
 
 function buildSummary(
   transactions: { amount: number | string; category: string; date: string }[],
-  ws: Translations['weeklySummary']
+  ws: Translations['weeklySummary'],
+  formatAmount: (n: number) => string = (n) => `€${Math.abs(n).toFixed(0)}`
 ): string | null {
   const today = new Date()
   const weekAgo = new Date(today)
@@ -48,8 +50,8 @@ function buildSummary(
   const topCategory = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
   const topLabel = topCategory.replace(/_/g, ' ')
 
-  let text = ws.spent(`€${expenses.toFixed(0)}`)
-  if (income > 0) text += ws.earned(`€${income.toFixed(0)}`)
+  let text = ws.spent(formatAmount(expenses))
+  if (income > 0) text += ws.earned(formatAmount(income))
   if (topLabel) text += ws.topCategory(topLabel)
 
   return text
@@ -57,6 +59,7 @@ function buildSummary(
 
 export function WeeklySummary({ userId }: WeeklySummaryProps) {
   const { t } = useLanguage()
+  const { formatAmount } = useCurrency()
   const [visible, setVisible] = useState(false)
   const [summaryText, setSummaryText] = useState<string | null>(null)
   const { speak, isSpeaking } = useTextToSpeech()
@@ -69,7 +72,7 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
     const lastSeen = localStorage.getItem('truffle_weekly_summary')
     if (lastSeen === currentWeek) return
 
-    const text = buildSummary(data.transactions, t.weeklySummary)
+    const text = buildSummary(data.transactions, t.weeklySummary, formatAmount)
     if (!text) return
 
     setSummaryText(text)

@@ -7,6 +7,7 @@ import type { Transaction, TransactionCategory } from '@truffle/types'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 const CATEGORY_KEYS: TransactionCategory[] = [
   'food_groceries',
@@ -45,6 +46,7 @@ interface AddTransactionFormProps {
 
 export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps) {
   const { t } = useLanguage()
+  const { symbol, currency } = useCurrency()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
   const [isLoading, setIsLoading] = useState(false)
@@ -69,7 +71,7 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
       const transaction = {
         description: form.description,
         amount,
-        currency: 'EUR',
+        currency,
         category: form.category,
         date: form.date,
         merchant: form.merchant || undefined,
@@ -186,7 +188,7 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
       <div className="flex gap-2">
         <div className="relative flex-1">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-muted text-sm">
-            €
+            {symbol}
           </span>
           <input
             type="number"

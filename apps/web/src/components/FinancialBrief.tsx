@@ -7,6 +7,7 @@ import { truffleEase } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 interface FinancialBriefProps {
   userId: string
@@ -36,11 +37,12 @@ function computeAllTimeSummary(
 
 export function FinancialBrief({ userId }: FinancialBriefProps) {
   const { t } = useLanguage()
+  const { formatAmount } = useCurrency()
   const { data, isLoading } = useTransactionsQuery(userId)
 
   const forecast = useMemo(
-    () => (data?.transactions ? computeForecast(data.transactions) : null),
-    [data?.transactions]
+    () => (data?.transactions ? computeForecast(data.transactions, formatAmount) : null),
+    [data?.transactions, formatAmount]
   )
   const allTime = useMemo(
     () =>
@@ -102,14 +104,14 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
         </div>
 
         <p className={`text-3xl font-bold mb-1 ${balanceColor}`}>
-          €{forecast.projectedEndOfMonth.toFixed(0)}
+          {formatAmount(forecast.projectedEndOfMonth)}
         </p>
         <p className="text-sm text-truffle-text-secondary">{t.financialBrief.projectedBalance}</p>
 
         <div className="mt-4 pt-4 border-t border-truffle-border">
           <div className="flex justify-between text-sm">
             <span className="text-truffle-text-secondary">{t.financialBrief.current}</span>
-            <span className="text-truffle-text">€{forecast.currentBalance.toFixed(0)}</span>
+            <span className="text-truffle-text">{formatAmount(forecast.currentBalance)}</span>
           </div>
         </div>
 
@@ -142,18 +144,18 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
       </div>
 
       <p className={`text-3xl font-bold mb-1 ${balanceColor}`}>
-        €{(allTime?.balance ?? 0).toFixed(0)}
+        {formatAmount(allTime?.balance ?? 0)}
       </p>
       <p className="text-sm text-truffle-text-secondary">{t.financialBrief.netBalance}</p>
 
       <div className="mt-4 pt-4 border-t border-truffle-border space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-truffle-text-secondary">{t.financialBrief.income}</span>
-          <span className="text-truffle-green">+€{(allTime?.income ?? 0).toFixed(0)}</span>
+          <span className="text-truffle-green">+{formatAmount(allTime?.income ?? 0)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-truffle-text-secondary">{t.financialBrief.expenses}</span>
-          <span className="text-truffle-red">-€{(allTime?.expenses ?? 0).toFixed(0)}</span>
+          <span className="text-truffle-red">-{formatAmount(allTime?.expenses ?? 0)}</span>
         </div>
       </div>
 

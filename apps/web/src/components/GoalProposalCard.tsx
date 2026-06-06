@@ -7,6 +7,7 @@ import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
 
 interface GoalProposal {
@@ -29,6 +30,7 @@ export const GoalProposalCard = memo(function GoalProposalCard({
   onResult,
 }: GoalProposalCardProps) {
   const { t, locale } = useLanguage()
+  const { formatAmount } = useCurrency()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
@@ -110,7 +112,7 @@ export const GoalProposalCard = memo(function GoalProposalCard({
           <div>
             <p className="font-semibold text-truffle-text text-sm">{proposal.name}</p>
             <p className="text-xs text-truffle-muted">
-              €{proposal.targetAmount.toLocaleString()}
+              {formatAmount(proposal.targetAmount)}
               {proposal.deadline
                 ? ` · by ${new Date(proposal.deadline).toLocaleDateString(toDateLocale(locale), {
                     month: 'short',

@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Transaction } from '@truffle/types'
-import { toEur } from '@/lib/currency'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { CATEGORY_EMOJI } from '@/lib/categories'
 
 interface Props {
@@ -32,6 +32,7 @@ const HEAT_CLASS: Record<0 | 1 | 2 | 3 | 4, string> = {
 }
 
 export function SpendingHeatmap({ transactions }: Props) {
+  const { formatAmount } = useCurrency()
   const today = new Date()
   const todayStr = today.toISOString().slice(0, 10)
 
@@ -52,7 +53,7 @@ export function SpendingHeatmap({ transactions }: Props) {
 
     for (const tx of transactions) {
       if (!tx.date.startsWith(prefix) || tx.amount >= 0) continue
-      const eur = Math.abs(toEur(tx.amount, tx.currency ?? 'EUR'))
+      const eur = Math.abs(tx.amount)
       const entry = map.get(tx.date)
       if (entry) {
         entry.spend += eur
@@ -113,7 +114,7 @@ export function SpendingHeatmap({ transactions }: Props) {
           <p className="text-sm font-medium text-truffle-text">{monthLabel}</p>
           {monthTotal > 0 && (
             <p className="text-[10px] text-truffle-muted mt-0.5">
-              €{monthTotal.toFixed(0)} spent · max €{maxSpend.toFixed(0)}/day
+              {formatAmount(monthTotal)} spent · max {formatAmount(maxSpend)}/day
             </p>
           )}
         </div>
@@ -226,7 +227,7 @@ export function SpendingHeatmap({ transactions }: Props) {
                   </p>
                   {selectedData ? (
                     <p className="text-xs font-semibold text-truffle-text-secondary">
-                      €{selectedData.spend.toFixed(2)} spent
+                      {formatAmount(selectedData.spend)} spent
                     </p>
                   ) : (
                     <p className="text-xs text-truffle-muted">No spending</p>
@@ -246,7 +247,7 @@ export function SpendingHeatmap({ transactions }: Props) {
                             {tx.description}
                           </span>
                           <span className="text-xs text-red-400 flex-shrink-0 font-medium tabular-nums">
-                            -€{Math.abs(tx.amount).toFixed(2)}
+                            -{formatAmount(tx.amount)}
                           </span>
                         </div>
                       ))}

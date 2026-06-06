@@ -7,6 +7,7 @@ import { usePostHog } from 'posthog-js/react'
 import type { SavingsGoal } from '@truffle/types'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 const GOAL_EMOJIS = ['🎯', '✈️', '🏠', '🚗', '💻', '🎓', '💍', '🏖️', '🎸', '📱', '🏋️', '🌍']
 
@@ -178,6 +179,7 @@ function GoalCard({
   isDeleting: boolean
 }) {
   const { t } = useLanguage()
+  const { formatAmount, symbol } = useCurrency()
   const [showDeposit, setShowDeposit] = useState(false)
   const [depositAmount, setDepositAmount] = useState('')
 
@@ -199,7 +201,7 @@ function GoalCard({
           <div>
             <p className="font-medium text-truffle-text text-sm">{goal.name}</p>
             <p className="text-xs text-truffle-muted">
-              €{goal.savedAmount.toFixed(0)} / €{goal.targetAmount.toFixed(0)}
+              {formatAmount(goal.savedAmount)} / {formatAmount(goal.targetAmount)}
               {daysLeft !== null && daysLeft > 0 && ` · ${t.savingsGoals.daysLeft(daysLeft)}`}
               {daysLeft !== null && daysLeft <= 0 && ` · ${t.savingsGoals.deadlinePassed}`}
             </p>
@@ -230,7 +232,7 @@ function GoalCard({
             <div className="flex gap-2">
               <input
                 type="number"
-                placeholder={`€0 — €${remaining.toFixed(0)} ${t.savingsGoals.deadlinePassed}`}
+                placeholder={`${symbol}0 — ${formatAmount(remaining)} ${t.savingsGoals.deadlinePassed}`}
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 min="0"
@@ -267,6 +269,7 @@ function GoalCard({
 
 function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void }) {
   const { t } = useLanguage()
+  const { symbol } = useCurrency()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
   const [form, setForm] = useState({ name: '', targetAmount: '', deadline: '', emoji: '🎯' })
@@ -354,7 +357,7 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
       <div className="flex gap-2">
         <div className="relative flex-1">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-muted text-sm">
-            €
+            {symbol}
           </span>
           <input
             type="number"

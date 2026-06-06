@@ -10,7 +10,7 @@ interface ParsedTransaction {
   date: string
   description: string
   amount: number
-  currency: 'EUR' | 'GBP' | 'USD'
+  currency: 'EUR' | 'GBP' | 'USD' | 'JPY'
   category: TransactionCategory
 }
 
@@ -19,7 +19,7 @@ interface ReceiptUploadProps {
   onClose?: () => void
 }
 
-const CURRENCY_SYMBOL: Record<string, string> = { EUR: '€', GBP: '£', USD: '$' }
+import { CURRENCY_SYMBOLS } from '@/lib/currency'
 const MAX_SIZE_MB = 10
 
 export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
@@ -210,7 +210,7 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
           </p>
           <div className="max-h-48 overflow-y-auto space-y-1">
             {parsed.map((tx, i) => {
-              const sym = CURRENCY_SYMBOL[tx.currency] ?? tx.currency
+              const sym = CURRENCY_SYMBOLS[tx.currency] ?? tx.currency
               return (
                 <div
                   key={i}

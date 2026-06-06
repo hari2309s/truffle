@@ -5,6 +5,7 @@ import { memo, useState } from 'react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 export interface HabitProposal {
   name: string
@@ -26,6 +27,7 @@ export const HabitProposalCard = memo(function HabitProposalCard({
   onResult,
 }: HabitProposalCardProps) {
   const { t } = useLanguage()
+  const { formatAmount } = useCurrency()
   const queryClient = useQueryClient()
   const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
   const [error, setError] = useState<string | null>(null)
@@ -98,7 +100,7 @@ export const HabitProposalCard = memo(function HabitProposalCard({
           {/* Amount callout */}
           <div className="bg-truffle-surface rounded-xl px-4 py-3 flex items-baseline gap-1">
             <span className="text-2xl font-bold text-truffle-green">
-              €{proposal.amount.toFixed(0)}
+              {formatAmount(proposal.amount)}
             </span>
             <span className="text-sm text-truffle-muted">/ {periodLabel}</span>
           </div>

@@ -9,6 +9,7 @@ import { SkeletonPulse } from './PageMotion'
 import type { HabitWithStats } from '@truffle/types'
 import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 interface SavingsHabitsProps {
   userId: string
@@ -123,6 +124,7 @@ function HabitCard({
   onLog: () => void
 }) {
   const { t } = useLanguage()
+  const { formatAmount } = useCurrency()
   const periodLabel =
     habit.frequency === 'weekly' ? t.savingsHabits.periodWeek : t.savingsHabits.periodMonth
   const streakLabel = habit.streak > 0 ? `🔥 ${habit.streak} in a row` : null
@@ -139,8 +141,8 @@ function HabitCard({
           )}
         </div>
         <p className="text-xs text-truffle-muted">
-          €{habit.amount.toFixed(2)}/{periodLabel} ·{' '}
-          {t.savingsHabits.totalSaved(habit.totalSaved.toFixed(2))}
+          {formatAmount(habit.amount)}/{periodLabel} ·{' '}
+          {t.savingsHabits.totalSaved(formatAmount(habit.totalSaved))}
         </p>
       </div>
 

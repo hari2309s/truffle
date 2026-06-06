@@ -12,6 +12,7 @@ import { TransactionFilterPanel } from './TransactionFilterPanel'
 import { TRANSACTION_CATEGORIES } from '@truffle/types'
 import type { Transaction, TransactionCategory } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
 
 function exportToCSV(transactions: Transaction[]) {
@@ -62,6 +63,7 @@ function EditForm({
   onCancel: () => void
 }) {
   const { t } = useLanguage()
+  const { symbol } = useCurrency()
   const [form, setForm] = useState<EditFormState>({
     description: tx.description,
     amount: tx.amount.toString(),
@@ -112,7 +114,7 @@ function EditForm({
         />
         <div className="relative w-28">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-muted text-sm">
-            €
+            {symbol}
           </span>
           <input
             type="number"
@@ -175,6 +177,7 @@ function EditForm({
 
 export function TransactionList({ userId }: TransactionListProps) {
   const { t, locale } = useLanguage()
+  const { formatAmount } = useCurrency()
   const queryClient = useQueryClient()
   const { data, isLoading } = useTransactionsQuery(userId)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -360,7 +363,8 @@ export function TransactionList({ userId }: TransactionListProps) {
                     <span
                       className={`text-sm font-semibold flex-shrink-0 ${tx.amount > 0 ? 'text-truffle-green' : 'text-red-400'}`}
                     >
-                      {tx.amount > 0 ? '+' : '-'}€{Math.abs(tx.amount).toFixed(2)}
+                      {tx.amount > 0 ? '+' : '-'}
+                      {formatAmount(tx.amount)}
                     </span>
                     <div className="flex items-center gap-1 flex-shrink-0 ml-1">
                       <button

@@ -19,6 +19,7 @@ import { BottomNav } from './BottomNav'
 import { PageEnter, TypingDots } from './PageMotion'
 import { ErrorBoundary } from './ErrorBoundary'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 interface ChatPageProps {
   userId: string
@@ -28,7 +29,8 @@ interface ChatPageProps {
 
 export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
   const { t } = useLanguage()
-  const chat = useFinancialChat(userId, initialMessages)
+  const { formatAmount, currency } = useCurrency()
+  const chat = useFinancialChat(userId, initialMessages, currency)
   const voice = useVoiceRecorder(userId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const processedTranscriptRef = useRef<string | null>(null)
@@ -192,7 +194,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                       (inv.result as { confirmed: boolean })?.confirmed
                     ) {
                       const isExpense = args.amount < 0
-                      const formattedAmount = `${isExpense ? '-' : '+'}€${Math.abs(args.amount).toFixed(2)}`
+                      const formattedAmount = `${isExpense ? '-' : '+'}${formatAmount(args.amount)}`
                       return (
                         <div key={inv.toolCallId} className="flex justify-start mb-3">
                           <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
@@ -247,7 +249,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                               <span className="text-truffle-green">
                                 {t.proposals.habit.startSaving.toLowerCase()}
                               </span>{' '}
-                              — €{Number(args.amount).toFixed(0)}/{periodLabel}.{' '}
+                              — {formatAmount(Number(args.amount))}/{periodLabel}.{' '}
                               {t.proposals.habit.logEachPeriod(periodLabel)}
                             </p>
                           </div>

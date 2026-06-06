@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { signOut } from '@/lib/auth'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency, type Currency } from '@/contexts/CurrencyContext'
 import { type Locale } from '@/lib/i18n'
 import { LanguagePicker } from './LanguagePicker'
 import { supabase } from '@/lib/supabase'
@@ -15,6 +16,7 @@ interface SettingsSheetProps {
 
 export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   const { t, setLocale } = useLanguage()
+  const { currency, setCurrency } = useCurrency()
   const [isExporting, setIsExporting] = useState(false)
   const [deleteInput, setDeleteInput] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
@@ -79,6 +81,11 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
     await supabase.auth.updateUser({ data: { language: next } })
   }
 
+  const handleCurrencyChange = async (next: Currency) => {
+    setCurrency(next)
+    await supabase.auth.updateUser({ data: { currency: next } })
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col justify-end max-w-lg mx-auto"
@@ -114,6 +121,28 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
             {t.settings.language}
           </h3>
           <LanguagePicker onChange={handleLocaleChange} />
+        </div>
+
+        {/* Currency */}
+        <div className="space-y-2">
+          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">
+            {t.settings.currency}
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            {(['EUR', 'GBP', 'USD', 'JPY'] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => handleCurrencyChange(c)}
+                className={`py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  currency === c
+                    ? 'bg-truffle-amber text-truffle-bg'
+                    : 'bg-truffle-surface text-truffle-muted border border-truffle-border'
+                }`}
+              >
+                {c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : c === 'USD' ? '$ USD' : '¥ JPY'}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Your data */}

@@ -20,6 +20,7 @@ import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
 
 interface InsightsPageProps {
@@ -56,7 +57,8 @@ export function InsightsPage({ userId }: InsightsPageProps) {
     networkMode: 'always',
   })
 
-  const forecast = txData?.transactions ? computeForecast(txData.transactions) : null
+  const { formatAmount } = useCurrency()
+  const forecast = txData?.transactions ? computeForecast(txData.transactions, formatAmount) : null
   const anomalies = anomalyData ?? []
   const subscriptions = txData?.transactions ? detectSubscriptions(txData.transactions) : []
   const isLoading = txLoading
@@ -168,7 +170,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                         </p>
                       </div>
                       <span className="text-sm font-semibold text-truffle-red">
-                        -€{sub.monthlyAmount.toFixed(2)}
+                        -{formatAmount(sub.monthlyAmount)}
                         {t.insights.perMonth}
                       </span>
                     </div>
@@ -219,6 +221,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
 function ForecastCard({ forecast }: { forecast: Forecast }) {
   const { t } = useLanguage()
+  const { formatAmount } = useCurrency()
   const isPositive = forecast.projectedEndOfMonth >= 0
   const progress = Math.min(
     100,
@@ -243,7 +246,7 @@ function ForecastCard({ forecast }: { forecast: Forecast }) {
           <p
             className={`text-2xl font-bold ${isPositive ? 'text-truffle-green' : 'text-truffle-red'}`}
           >
-            €{forecast.projectedEndOfMonth.toFixed(0)}
+            {formatAmount(forecast.projectedEndOfMonth)}
           </p>
         </div>
         <span

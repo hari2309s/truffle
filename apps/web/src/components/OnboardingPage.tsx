@@ -15,7 +15,7 @@ interface OnboardingPageProps {
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const { t, locale, setLocale } = useLanguage()
   const [name, setName] = useState('')
-  const [currency, setCurrency] = useState<'EUR' | 'GBP' | 'USD'>('EUR')
+  const [currency, setCurrency] = useState<'EUR' | 'GBP' | 'USD' | 'JPY'>('EUR')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tourStep, setTourStep] = useState<number | null>(null)
@@ -136,19 +136,19 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             <label className="text-xs text-truffle-muted uppercase tracking-wide">
               {t.onboarding.currencyLabel}
             </label>
-            <div className="flex gap-2">
-              {(['EUR', 'GBP', 'USD'] as const).map((c) => (
+            <div className="grid grid-cols-2 gap-2">
+              {(['EUR', 'GBP', 'USD', 'JPY'] as const).map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setCurrency(c)}
-                  className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all ${
+                  className={`py-3 rounded-xl text-sm font-medium transition-all ${
                     currency === c
                       ? 'bg-truffle-amber text-truffle-bg'
                       : 'bg-truffle-surface text-truffle-muted border border-truffle-border'
                   }`}
                 >
-                  {c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : '$ USD'}
+                  {c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : c === 'USD' ? '$ USD' : '¥ JPY'}
                 </button>
               ))}
             </div>
