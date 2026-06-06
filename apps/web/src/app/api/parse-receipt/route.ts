@@ -42,7 +42,7 @@ Each item must follow this exact shape:
 Rules:
 - amount: negative for purchases/expenses, positive for income/refunds/credits
 - date: use ISO format YYYY-MM-DD; if only month/day visible assume year from context; if no date at all use today (${today})
-- currency: infer from symbol (€ → EUR, £ → GBP, $ → USD); default EUR
+- currency: infer from symbol (€ → EUR, £ → GBP, $ → USD, ¥ → JPY); default EUR
 - category: pick the single best fit from this list exactly as written:
   food_groceries, food_delivery, transport, housing, utilities, subscriptions,
   health, entertainment, shopping, income, savings, other
@@ -137,8 +137,8 @@ export async function POST(req: NextRequest) {
         date: String(item.date ?? today),
         description: String(item.description ?? 'Unknown'),
         amount: Number(item.amount ?? 0),
-        currency: ['EUR', 'GBP', 'USD'].includes(String(item.currency))
-          ? (String(item.currency) as 'EUR' | 'GBP' | 'USD')
+        currency: ['EUR', 'GBP', 'USD', 'JPY'].includes(String(item.currency))
+          ? (String(item.currency) as 'EUR' | 'GBP' | 'USD' | 'JPY')
           : 'EUR',
         category: sanitiseCategory(String(item.category ?? 'other')),
       }))
