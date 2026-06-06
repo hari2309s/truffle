@@ -11,7 +11,11 @@ import { useNetworkStatus } from './useNetworkStatus'
 
 type StreamAnnotation = { type: string; tone?: SpeechTone }
 
-export function useFinancialChat(userId: string, initialMessages: Message[]) {
+export function useFinancialChat(
+  userId: string,
+  initialMessages: Message[],
+  currency: string = 'EUR'
+) {
   const { speak, isSpeaking, cancel } = useTextToSpeech()
   const lastAssistantMessageRef = useRef<string>('')
   const latestDataRef = useRef<StreamAnnotation[]>([])
@@ -36,7 +40,7 @@ export function useFinancialChat(userId: string, initialMessages: Message[]) {
 
   const chat = useChat({
     api: '/api/chat',
-    body: { userId },
+    body: { userId, currency },
     initialMessages,
     onResponse: () => {
       latestDataRef.current = []
