@@ -1,11 +1,14 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import { PageEnter } from './PageMotion'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LOCALE_LABELS, type Locale } from '@/lib/i18n'
+
+const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''
 
 export function AuthPage({ error: initialError = null }: { error?: string | null }) {
   const { t, locale, setLocale } = useLanguage()
@@ -13,9 +16,12 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
   const [sent, setSent] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(initialError)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileInstance>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!captchaToken) return
     setIsLoading(true)
     setError(null)
 
@@ -23,8 +29,12 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        captchaToken,
       },
     })
+
+    turnstileRef.current?.reset()
+    setCaptchaToken(null)
 
     if (error) {
       setError(error.message)
@@ -86,11 +96,19 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
               />
             </div>
 
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={SITE_KEY}
+              onSuccess={setCaptchaToken}
+              onExpire={() => setCaptchaToken(null)}
+              options={{ theme: 'dark', size: 'invisible' }}
+            />
+
             {error && <p className="text-sm text-truffle-red text-center">{error}</p>}
 
             <button
               type="submit"
-              disabled={isLoading || !/\S+@\S+\.\S+/.test(email)}
+              disabled={isLoading || !captchaToken || !/\S+@\S+\.\S+/.test(email)}
               className="btn-primary w-full py-4 disabled:opacity-50"
             >
               {isLoading ? t.auth.sending : t.auth.continueWithEmail}
