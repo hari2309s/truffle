@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useRef, useState } from 'react'
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
+import { usePostHog } from 'posthog-js/react'
 import { PageEnter } from './PageMotion'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -12,11 +13,13 @@ const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''
 
 export function AuthPage({ error: initialError = null }: { error?: string | null }) {
   const { t, locale, setLocale } = useLanguage()
+  const posthog = usePostHog()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(initialError)
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  // When no site key is configured (CI / local dev), bypass captcha requirement
+  const [captchaToken, setCaptchaToken] = useState<string | null>(SITE_KEY ? null : 'bypass')
   const turnstileRef = useRef<TurnstileInstance>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,6 +27,8 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
     if (!captchaToken) return
     setIsLoading(true)
     setError(null)
+
+    posthog.capture('auth_magic_link_requested')
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -37,8 +42,10 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
     setCaptchaToken(null)
 
     if (error) {
+      posthog.capture('auth_magic_link_failed', { error: error.message })
       setError(error.message)
     } else {
+      posthog.capture('auth_magic_link_sent')
       setSent(true)
     }
     setIsLoading(false)
@@ -96,13 +103,15 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
               />
             </div>
 
-            <Turnstile
-              ref={turnstileRef}
-              siteKey={SITE_KEY}
-              onSuccess={setCaptchaToken}
-              onExpire={() => setCaptchaToken(null)}
-              options={{ theme: 'dark', size: 'invisible' }}
-            />
+            {SITE_KEY && (
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={SITE_KEY}
+                onSuccess={setCaptchaToken}
+                onExpire={() => setCaptchaToken(null)}
+                options={{ theme: 'dark', size: 'invisible' }}
+              />
+            )}
 
             {error && <p className="text-sm text-truffle-red text-center">{error}</p>}
 
