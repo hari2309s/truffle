@@ -1,4 +1,4 @@
-export type Locale = 'en' | 'de'
+export type Locale = 'en' | 'de' | 'ja'
 
 export interface HeadlineWord {
   text: string
@@ -376,6 +376,7 @@ export const translations: Record<Locale, LandingTranslations> = {
               { name: 'Groq / Whisper', desc: 'Voice transcription.' },
               { name: 'PostHog', desc: 'Anonymised product analytics.' },
               { name: 'Vercel', desc: 'Hosting and deployment (EU edge where available).' },
+              { name: 'Cloudflare Turnstile', desc: 'Bot protection on the sign-in form.' },
             ],
           },
           gdprRights: {
@@ -721,6 +722,7 @@ export const translations: Record<Locale, LandingTranslations> = {
               { name: 'Groq / Whisper', desc: 'Sprachtranskription.' },
               { name: 'PostHog', desc: 'Anonymisierte Produktanalysen.' },
               { name: 'Vercel', desc: 'Hosting und Deployment (EU-Edge wo verfügbar).' },
+              { name: 'Cloudflare Turnstile', desc: 'Bot-Schutz im Anmeldeformular.' },
             ],
           },
           gdprRights: {
@@ -831,9 +833,361 @@ export const translations: Record<Locale, LandingTranslations> = {
       },
     },
   },
+
+  ja: {
+    nav: {
+      features: '機能',
+      howItWorks: '使い方',
+      pricing: '料金',
+      signIn: 'ログイン',
+      getStarted: '始める',
+    },
+    hero: {
+      badge: '音声優先 · AI搭載',
+      headlineWords: [
+        { text: 'あなたの', amber: false },
+        { text: '家計を、', amber: false },
+        { text: '明らかに。', amber: true },
+      ],
+      subheadline:
+        'あなたに寄り添うAI家計アシスタント。スプレッドシート不要。銀行連携不要。話しかけるだけ。',
+      getStartedFree: '無料で始める',
+      seeHowItWorks: '使い方を見る',
+      socialProof: '無料で開始 · クレジットカード不要 · 銀行情報不要',
+      mockupQuestion: '今週、食費にいくら使った？',
+      mockupAnswer:
+        '今週の食費は¥38,400でした — 先週より¥6,200多いです。主にUber Eats（5回）とライフ（2回）です。',
+      holdToSpeak: '押して話す',
+      aiAssistant: 'AIアシスタント',
+    },
+    trustStrip: {
+      badges: [
+        '銀行連携不要',
+        '音声入力対応',
+        'データはあなたのもの',
+        'スプレッドシート不要',
+        'AI搭載',
+      ],
+    },
+    features: {
+      sectionLabel: '機能',
+      headlineNormal: '必要なものだけ、',
+      headlineAmber: '余計なものは一切なし',
+      subheadline:
+        'Truffleはお金の管理が苦手な方のために作られました。面倒な作業はすべてAIにお任せください。',
+      items: [
+        {
+          title: '音声チャット',
+          desc: '「今週の食費は？」と声に出すだけ。Truffleは自然な言葉を理解し、あなたの状況を記憶しています。',
+        },
+        {
+          title: 'レシートスキャナー',
+          desc: 'レシートを撮影するかPDFをアップロードするだけ。すべての明細を自動で抽出・分類します。手入力は不要です。',
+        },
+        {
+          title: 'AI支出分析',
+          desc: '異常な支出、トレンド、月末予測を自動で検出。お金がなくなる前に、どこに使っているかを把握できます。',
+        },
+        {
+          title: '貯蓄目標',
+          desc: '期限付きで目標を設定。遅れたらお知らせ。マイルストーン達成時はお祝いメッセージが届きます。',
+        },
+        {
+          title: 'スマートな習慣',
+          desc: '週ごとの貯蓄ストリークを作りましょう。Truffleはすべての積み立てを記録し、継続をサポートします。',
+        },
+        {
+          title: 'プライバシー最優先',
+          desc: '銀行連携は一切なし。あなたがデータを入力し、Truffleが分析します。同意なく販売・共有・同期されることはありません。',
+        },
+      ],
+    },
+    howItWorks: {
+      sectionLabel: '使い方',
+      headline: '3ステップで始められます',
+      subheadline: '説明会なし。何週間もかかる設定なし。登録してすぐ話しかけるだけ。',
+      steps: [
+        {
+          number: '01',
+          title: '数秒で登録',
+          desc: 'メールアドレスだけでOK。クレジットカードも銀行情報も不要。コーヒーが冷める前に始められます。',
+          detail: 'パスワード不要のマジックリンク認証',
+        },
+        {
+          number: '02',
+          title: '自分のやり方で支出を記録',
+          desc: 'テキストでも、声でも、レシートを撮影しても、銀行のCSVを取り込んでも。お好みの方法で — あとはTruffleがやります。',
+          detail: 'テキスト · 音声 · レシート撮影 · CSVインポート',
+        },
+        {
+          number: '03',
+          title: 'なんでも聞いて、リアルな答えを得る',
+          desc: '「先月いくら使った？」「これは買える？」「お金はどこに消えてる？」自然に質問して、明確な答えが返ってきます。',
+          detail: 'あなたの履歴を把握したコンテキスト対応AI',
+        },
+      ],
+    },
+    pricing: {
+      sectionLabel: '料金',
+      headline: 'シンプルで正直な料金',
+      subheadline: '無料で始めて、価値を感じたらアップグレード。',
+      free: {
+        name: '無料',
+        period: 'ずっと無料',
+        description: '始めるために必要なすべてが揃っています。クレジットカード不要。',
+        features: [
+          '手動取引入力',
+          'AIチャット — 月50メッセージ',
+          '支出分析 & ヒートマップ',
+          '貯蓄目標 3件',
+          '貯蓄習慣 2件',
+          'CSVエクスポート — 過去30日分',
+        ],
+        cta: '無料で始める',
+      },
+      pro: {
+        name: 'Pro',
+        badge: '近日公開',
+        period: '/月',
+        description: 'お金を本気でコントロールしたい方へ。',
+        features: [
+          '無料プランのすべて',
+          '無制限AIチャット',
+          'レシート・PDFスキャナー',
+          '音声文字起こし',
+          '無制限の目標 & 習慣',
+          '全履歴CSVエクスポート',
+          '月次AIファイナンスレポート',
+        ],
+        cta: '順番待ちに登録',
+      },
+      finePrint:
+        'Proプランは開発中です。リリース時に通知を受け取り、アーリープライスを確保するには順番待ちリストにご登録ください。',
+    },
+    finalCta: {
+      headline: 'あなたの家計は、',
+      headlineAmber: '明らかにされるのを待っています',
+      subheadline:
+        'お金がどこに消えているか、もう迷わなくていい。Truffleは無料で試せます — カード不要、銀行連携不要、落とし穴なし。',
+      cta: '無料で始める',
+      finePrint: 'ずっと無料 · クレジットカード不要 · 30秒で完了',
+    },
+    footer: {
+      tagline: 'あなたの家計を、明らかに。あなたに寄り添う音声優先のAI家計アシスタント。',
+      getStartedFree: '無料で始める →',
+      groups: {
+        product: {
+          label: 'プロダクト',
+          links: [
+            { label: '機能', href: '#features' },
+            { label: '使い方', href: '#how-it-works' },
+            { label: '料金', href: '#pricing' },
+          ],
+        },
+        legal: {
+          label: '法的情報',
+          links: [
+            { label: 'プライバシーポリシー', href: '/privacy' },
+            { label: '利用規約', href: '/terms' },
+          ],
+        },
+      },
+      bottomTagline: '銀行連携なし。スプレッドシートなし。ただ話すだけ。',
+    },
+    cookieBanner: {
+      message: 'Truffleの利用状況を把握し、サービスを改善するために分析クッキーを使用しています。',
+      accept: '同意する',
+      reject: '拒否する',
+      privacyLabel: 'プライバシーポリシー',
+    },
+    legal: {
+      back: '← 戻る',
+      lastUpdatedPrefix: '最終更新：',
+      footerPrivacy: 'プライバシー',
+      footerTerms: '利用規約',
+      privacy: {
+        pageTitle: 'プライバシーポリシー',
+        sections: {
+          whoWeAre: {
+            heading: '運営者について',
+            body: 'Truffleは、ドイツ・ベルリンを拠点とするHariharan Selvarajが構築・運営する個人向け家計アシスタントです。Truffleをご利用いただく際、Hariharan Selvarajが個人情報保護法（APPI）に基づく個人データの取扱責任者となります。',
+            contactPrefix: 'お問い合わせ：',
+          },
+          whatWeCollect: {
+            heading: '収集するデータ',
+            items: [
+              {
+                title: 'メールアドレス',
+                desc: 'マジックリンクによるアカウント作成・認証に使用します。パスワードは保存しません。',
+              },
+              {
+                title: 'ご入力いただいた取引データ',
+                desc: 'テキスト入力、CSVインポート、レシートから抽出した支出データ。サービスの中核となる情報です。',
+              },
+              {
+                title: '音声録音',
+                desc: '音声入力機能使用時のみ録音し、Groq（Whisper）に文字起こし用として送信します。処理後は保存されません。',
+              },
+              {
+                title: 'レシート画像・PDF',
+                desc: '解析目的のみにアップロードされます。抽出された取引データは保存されますが、元のファイルは保持されません。',
+              },
+              {
+                title: '利用状況の分析データ',
+                desc: 'PostHogを通じた匿名化されたイベントデータで、機能の利用状況把握に使用します。個人を特定できる情報は含まれません。',
+              },
+            ],
+          },
+          whatWeDoNotCollect: {
+            heading: '収集しないデータ',
+            items: [
+              '銀行の認証情報や口座番号 — 銀行連携機能はありません。',
+              'クレジットカード情報 — Proプラン開始時の決済はStripeが完全に処理します。',
+              'サードパーティデータブローカーからのデータ。',
+              '登録していない方のデータ。',
+            ],
+          },
+          howWeUse: {
+            heading: 'データの利用目的',
+            intro: 'お客様のデータは、Truffleサービスの提供にのみ使用されます：',
+            items: [
+              'AIチャットでのご質問への回答（取引履歴をAIモデルのコンテキストとして使用します）。',
+              '支出分析、予測、異常検出の生成。',
+              '貯蓄目標や習慣に関するプッシュ通知の送信。',
+              'ご自身のデータのエクスポート機能の提供。',
+            ],
+            outro:
+              'お客様のデータを販売、広告目的での共有、AIモデルの学習に使用することは一切ありません。',
+          },
+          thirdParty: {
+            heading: 'サードパーティサービス',
+            intro: 'サービス運営のために以下の委託先を利用しています：',
+            items: [
+              { name: 'Supabase', desc: 'データベースおよび認証（EUリージョン）。' },
+              { name: 'Google Gemini', desc: 'チャットと分析を担うAIモデル。' },
+              { name: 'Groq / Whisper', desc: '音声文字起こし。' },
+              { name: 'PostHog', desc: '匿名化プロダクト分析。' },
+              { name: 'Vercel', desc: 'ホスティングおよびデプロイ（利用可能な場合はEUエッジ）。' },
+              { name: 'Cloudflare Turnstile', desc: 'ログインフォームのボット対策。' },
+            ],
+          },
+          gdprRights: {
+            heading: '個人情報保護法（APPI）に基づくお客様の権利',
+            intro: '個人情報保護法に基づき、以下の権利があります：',
+            items: [
+              {
+                right: '開示請求',
+                desc: '当社が保有するご自身の個人データの開示を請求できます。',
+              },
+              {
+                right: '訂正・追加・削除',
+                desc: '不正確なデータの訂正、追加、または削除を請求できます。',
+              },
+              {
+                right: '利用停止・消去',
+                desc: '個人データの利用停止または消去を請求できます。',
+              },
+              {
+                right: '第三者提供停止',
+                desc: '第三者への個人データ提供の停止を請求できます。',
+              },
+              {
+                right: 'データ移行',
+                desc: 'アプリ内でCSVとして取引データをエクスポートできます。',
+              },
+            ],
+            outro:
+              'これらの権利を行使するには、{email} までご連絡ください。30日以内に回答いたします。',
+          },
+          retention: {
+            heading: 'データ保持期間',
+            body: 'お客様のデータは、アカウントが有効な間保持されます。アカウントを削除された場合、関連するすべてのデータは30日以内に完全に削除されます。匿名化された分析データ（個人を特定できないもの）は、サービス改善のために保持される場合があります。',
+          },
+          changes: {
+            heading: 'ポリシーの変更',
+            body: '本ポリシーに重要な変更が生じた場合、変更が発効する前にメールにてお知らせします。その後もTruffleをご利用いただくことで、更新されたポリシーへの同意とみなされます。',
+          },
+          contact: {
+            heading: 'お問い合わせ',
+            body: 'ご質問やご不満は {email} までご連絡ください。また、個人情報保護委員会（PPC）に苦情を申し立てる権利もあります。',
+          },
+        },
+      },
+      terms: {
+        pageTitle: '利用規約',
+        sections: {
+          whoApplies: {
+            heading: '1. 適用対象',
+            body: 'これらの利用規約（「規約」）は、ドイツ・ベルリンのHariharan Selvarajが運営する個人向け家計アシスタントTruffleのご利用に適用されます。アカウントを作成することで、本規約に同意したものとみなします。同意できない場合は、サービスをご利用いただけません。',
+          },
+          whatTruffleIs: {
+            heading: '2. Truffleとは',
+            body: 'Truffleは個人向けの家計管理・AIチャットツールです。支出の記録、貯蓄目標の設定、ご自身の財務データへの質問をサポートします。',
+            notAdvisorLabel: 'Truffleはファイナンシャルアドバイザーではありません。',
+            notAdvisorBody:
+              'Truffleの内容は、財務、投資、税務、または法的アドバイスを構成するものではありません。すべての分析、予測、提案はお客様が入力したデータのみに基づき、情報提供を目的としたものです。財務上の決定はご自身の判断で行い、必要に応じて専門家のアドバイスを取得してください。',
+          },
+          yourAccount: {
+            heading: '3. お客様のアカウント',
+            items: [
+              'Truffleをご利用いただくには18歳以上である必要があります。',
+              'マジックリンクメールを非公開に保ち、アカウントのセキュリティを維持する責任があります。',
+              'お客様のアカウント上で発生するすべての活動についての責任を負います。',
+              '1人につき1アカウントです。他の方の知らないところで代理アカウントを作成しないでください。',
+            ],
+          },
+          plans: {
+            heading: '4. 無料プランとProプラン',
+            body: 'Truffleは一定の制限のもと無料でご利用いただけます（詳細は{pricingLink}をご参照ください）。Proプランは開発中で、リリース時には月額料金が発生します。',
+            pricingLinkLabel: '料金ページ',
+            body2:
+              'プランの制限や料金は変更される場合があります。既存の有料サブスクライバーへの値上げについては、少なくとも30日前にお知らせします。',
+          },
+          yourData: {
+            heading: '5. お客様のデータ',
+            body: 'Truffleに入力したデータはお客様自身のものです。当社はお客様の取引記録、目標、その他の個人データに対する権利を主張しません。いつでもデータをエクスポートまたは削除できます。',
+            privacyLinkLabel: 'プライバシーポリシー',
+            body2: 'データの取り扱いの詳細については{privacyLink}をご確認ください。',
+          },
+          acceptableUse: {
+            heading: '6. 禁止事項',
+            intro: '以下の行為を禁止します：',
+            items: [
+              '違法な目的でTruffleを使用すること。',
+              '他のユーザーのデータへのアクセスを試みること。',
+              'APIのリバースエンジニアリング、スクレイピング、または不正利用。',
+              '他者の同意なく、その代わりにデータを処理するためにサービスを使用すること。',
+              '身元を偽り、または他人になりすますこと。',
+            ],
+          },
+          availability: {
+            heading: '7. サービスの可用性',
+            body: 'Truffleの継続的な提供に努めますが、稼働時間を保証するものではありません。サービスは「現状のまま」提供されます。重要な変更については合理的な通知を行うよう努めますが、機能の変更、停止、廃止を行う場合があります。',
+          },
+          liability: {
+            heading: '8. 責任の制限',
+            body: '法律で許可される最大限の範囲において、Truffleはサービスのご利用に起因する間接的、偶発的、または結果的損害（Truffleの出力に基づく判断から生じた財務上の損失を含む）について責任を負いません。',
+          },
+          termination: {
+            heading: '9. 解約',
+            body: '設定からいつでもアカウントを削除できます。本規約に違反したアカウントは停止または解約される場合があります。解約時には、プライバシーポリシーに従ってデータが削除されます。',
+          },
+          governingLaw: {
+            heading: '10. 準拠法',
+            body: '本規約はドイツ連邦共和国の法律に準拠します。紛争はベルリン（ドイツ）の裁判所の専属管轄に服しますが、お客様の居住国の強行的な消費者保護法が別に定める場合はこの限りではありません。',
+          },
+          contact: {
+            heading: '11. お問い合わせ',
+            body: '本規約についてご不明な点は {email} までご連絡ください。',
+          },
+        },
+      },
+    },
+  },
 }
 
 export const LOCALE_LABELS: Record<Locale, { flag: string; label: string }> = {
   en: { flag: '🇬🇧', label: 'English' },
   de: { flag: '🇩🇪', label: 'Deutsch' },
+  ja: { flag: '🇯🇵', label: '日本語' },
 }

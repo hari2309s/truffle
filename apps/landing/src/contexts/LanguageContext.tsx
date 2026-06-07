@@ -11,6 +11,7 @@ function detectLocale(): Locale {
   if (stored && stored in translations) return stored
   const browser = navigator.language.slice(0, 2).toLowerCase()
   if (browser === 'de') return 'de'
+  if (browser === 'ja') return 'ja'
   return 'en'
 }
 
