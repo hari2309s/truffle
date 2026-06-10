@@ -222,6 +222,7 @@ export function buildSystemPrompt(params: {
   daysRemaining: number
   dailySpend: number
   currencyCode?: string
+  locale?: string
 }): string {
   const {
     intent,
@@ -237,6 +238,7 @@ export function buildSystemPrompt(params: {
     daysRemaining,
     dailySpend,
     currencyCode = 'EUR',
+    locale = 'en',
   } = params
 
   const decimals = currencyCode === 'JPY' ? 0 : 2
@@ -244,9 +246,16 @@ export function buildSystemPrompt(params: {
     currencyCode === 'JPY' ? '¥' : currencyCode === 'GBP' ? '£' : currencyCode === 'USD' ? '$' : '€'
   const fmt = (n: number) => `${symbol}${Math.abs(n).toFixed(decimals)}`
 
+  const languageInstruction =
+    locale === 'ja'
+      ? '\n\nIMPORTANT: Respond entirely in Japanese (日本語). Use natural, friendly Japanese suitable for a personal finance app.'
+      : locale === 'de'
+        ? '\n\nIMPORTANT: Respond entirely in German (Deutsch).'
+        : ''
+
   if (intent === 'greeting') {
     return `You are Truffle — a warm, calm personal finance companion. The user is just saying hello.
-Respond with a single warm, brief greeting. Do not mention their finances, balance, goals, or any financial data unprompted. Just say hi back.`
+Respond with a single warm, brief greeting. Do not mention their finances, balance, goals, or any financial data unprompted. Just say hi back.${languageInstruction}`
   }
 
   const transactionContext = buildTransactionContext(intent, transactions, fmt)
@@ -265,7 +274,7 @@ Respond with a single warm, brief greeting. Do not mention their finances, balan
     fmt
   )
 
-  return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.
+  return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.${languageInstruction}
 
 Tone guidance for this conversation: ${toneGuidance}
 ${transactionContext}${anomalyContext}${goalsContext}${habitsContext}${budgetContext}${habitReminderContext}
