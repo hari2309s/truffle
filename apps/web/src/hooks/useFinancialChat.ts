@@ -14,7 +14,8 @@ type StreamAnnotation = { type: string; tone?: SpeechTone }
 export function useFinancialChat(
   userId: string,
   initialMessages: Message[],
-  currency: string = 'EUR'
+  currency: string = 'EUR',
+  locale: string = 'en'
 ) {
   const { speak, isSpeaking, cancel } = useTextToSpeech()
   const lastAssistantMessageRef = useRef<string>('')
@@ -40,7 +41,7 @@ export function useFinancialChat(
 
   const chat = useChat({
     api: '/api/chat',
-    body: { userId, currency },
+    body: { userId, currency, locale },
     initialMessages,
     onResponse: () => {
       latestDataRef.current = []
