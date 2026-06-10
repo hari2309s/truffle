@@ -71,7 +71,12 @@ function detectFollowUpIntent(prevText: string, hasToolInvocations: boolean): Qu
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages: clientMessages, userId, currency = 'EUR' } = await request.json()
+    const {
+      messages: clientMessages,
+      userId,
+      currency = 'EUR',
+      locale = 'en',
+    } = await request.json()
     const message = Array.isArray(clientMessages)
       ? [...clientMessages].reverse().find((m: { role: string }) => m.role === 'user')?.content
       : undefined
@@ -265,6 +270,7 @@ export async function POST(request: NextRequest) {
       daysRemaining,
       dailySpend,
       currencyCode: currency,
+      locale,
     })
 
     type ClientMessage = {
