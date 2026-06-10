@@ -51,19 +51,23 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
     setIsLoading(false)
   }
 
-  const otherLocale = (locale === 'en' ? 'de' : 'en') as Locale
-  const other = LOCALE_LABELS[otherLocale]
+  const LOCALE_CYCLE: Locale[] = ['en', 'de', 'ja']
+  const currentIdx = LOCALE_CYCLE.indexOf(locale)
+  const nextLocale = LOCALE_CYCLE[
+    (currentIdx === -1 ? 0 : currentIdx + 1) % LOCALE_CYCLE.length
+  ] as Locale
+  const next = LOCALE_LABELS[nextLocale]
 
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-truffle-bg">
       {/* Language toggle */}
       <div className="absolute top-4 right-4">
         <button
-          onClick={() => setLocale(otherLocale)}
+          onClick={() => setLocale(nextLocale)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-truffle-muted hover:text-truffle-text bg-truffle-surface border border-truffle-border transition-colors"
         >
-          <span>{other.flag}</span>
-          <span>{other.label}</span>
+          <span>{next.flag}</span>
+          <span>{next.label}</span>
         </button>
       </div>
 

@@ -28,9 +28,9 @@ interface ChatPageProps {
 }
 
 export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
   const { formatAmount, currency } = useCurrency()
-  const chat = useFinancialChat(userId, initialMessages, currency)
+  const chat = useFinancialChat(userId, initialMessages, currency, locale)
   const voice = useVoiceRecorder(userId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const processedTranscriptRef = useRef<string | null>(null)
