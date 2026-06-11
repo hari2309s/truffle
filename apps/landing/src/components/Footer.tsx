@@ -6,9 +6,6 @@ import { useLanguage } from '@/contexts/LanguageContext'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
-const ICON_W = 155
-const GAP = 20
-
 export default function Footer() {
   const { t } = useLanguage()
   const { product, legal } = t.footer.groups
@@ -20,11 +17,6 @@ export default function Footer() {
       setTextW(textRef.current.getBBox().width)
     }
   }, [])
-
-  // viewBox is exactly as wide as the content — SVG fills 100% width on mobile,
-  // capped at max-width on desktop, perfectly centered via margin auto.
-  const totalW = ICON_W + GAP + textW
-  const textX = ICON_W + GAP
 
   return (
     <footer className="border-t border-truffle-border/60 bg-truffle-surface/20">
@@ -89,16 +81,9 @@ export default function Footer() {
         <div className="mt-12 border-t border-truffle-border/40" />
       </div>
 
-      {/*
-        Single full-width SVG. Content is a <g> translated to the horizontal center (x=720 in a 1440-wide viewBox).
-        Icon and text are offset from that center point so the whole group is visually centered.
-        Icon width ≈ 160, gap 20, "truffle" @ 170px Inter thin ≈ 700px → total ≈ 880, half ≈ 440.
-        dasharray: dash(200) + gap(3300) = 3500 ≈ total glyph perimeter → no big blank period.
-        Animate offset 3500→0 over 60s = one full smooth loop at ~58px/s.
-      */}
       <div className="overflow-hidden w-full" style={{ marginBottom: '-4px' }} aria-hidden="true">
         <svg
-          viewBox={`0 0 ${totalW} 180`}
+          viewBox={`0 0 ${textW} 180`}
           width="100%"
           height="auto"
           preserveAspectRatio="xMidYMid meet"
@@ -112,24 +97,22 @@ export default function Footer() {
             }
             .footer-glow-text { animation: truffle-dash 12s linear infinite; }
 
-            .footer-ghost { stroke: rgba(232,168,78,0.2); }
+            .footer-ghost { stroke: rgba(232,168,78,0.35); }
             .footer-glow-text { stroke: rgba(232,168,78,1); }
 
-            :root.light .footer-ghost { stroke: rgba(120,70,0,0.28); }
+            :root.light .footer-ghost { stroke: rgba(120,70,0,0.4); }
             :root.light .footer-glow-text { stroke: rgba(140,80,0,0.95); }
 
             @media (prefers-color-scheme: light) {
-              :root:not(.dark) .footer-ghost { stroke: rgba(120,70,0,0.28); }
+              :root:not(.dark) .footer-ghost { stroke: rgba(120,70,0,0.4); }
               :root:not(.dark) .footer-glow-text { stroke: rgba(140,80,0,0.95); }
             }
           `}</style>
 
-          <image href="/icons/truffle.png" x="0" y="15" width="155" height="158" />
-
-          {/* Invisible text used only for measuring — rendered first, opacity 0 */}
+          {/* Invisible measuring text */}
           <text
             ref={textRef}
-            x={textX}
+            x="0"
             y="168"
             fontFamily="'Inter', system-ui, sans-serif"
             fontWeight="100"
@@ -142,22 +125,24 @@ export default function Footer() {
             truffle
           </text>
 
+          {/* Ghost outline */}
           <text
-            x={textX}
+            x="0"
             y="168"
             fontFamily="'Inter', system-ui, sans-serif"
             fontWeight="100"
             fontSize="170"
             letterSpacing="-5"
             fill="transparent"
-            strokeWidth="0.5"
+            strokeWidth="0.8"
             className="footer-ghost"
           >
             truffle
           </text>
 
+          {/* Traveling glow dash */}
           <text
-            x={textX}
+            x="0"
             y="168"
             fontFamily="'Inter', system-ui, sans-serif"
             fontWeight="100"
