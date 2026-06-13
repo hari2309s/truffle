@@ -461,6 +461,9 @@ export async function POST(request: NextRequest) {
     // first in plain text, then optionally surface the confirmation card.
     const toolChoice = (() => {
       if (!activeTools) return undefined
+      // After a tool result has been confirmed, never force another tool call —
+      // the model should just give a text acknowledgment.
+      if (isFollowUpAfterTool) return 'auto' as const
       if (intent === INTENT.ADD_TRANSACTION) return 'required' as const
       return 'auto' as const
     })()
