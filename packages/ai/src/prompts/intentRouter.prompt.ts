@@ -21,6 +21,7 @@ export const INTENT_KEYWORDS: Record<string, string[]> = {
     'i just spent',
     'i just paid',
     'i just bought',
+    'i spent',
     'i paid',
     'i bought',
     'add a transaction',

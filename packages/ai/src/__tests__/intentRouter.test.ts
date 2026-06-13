@@ -22,6 +22,17 @@ describe('routeIntent — keyword classification (no LLM call)', () => {
     expect(await routeIntent('i just spent €50 on groceries')).toBe('add_transaction')
   })
 
+  it('classifies "i spent" as add_transaction', async () => {
+    expect(await routeIntent('i spent 12 euros on lunch today')).toBe('add_transaction')
+  })
+
+  it('does not misclassify "membership" as greeting due to "hi" substring', async () => {
+    // "membership" contains "hi" but should NOT trigger the greeting intent.
+    // Without word-boundary matching, 'hi' inside "membership" wins as greeting.
+    const result = await routeIntent('paid 45 euros for a gym membership yesterday')
+    expect(result).not.toBe('greeting')
+  })
+
   it('classifies spending question as spending_summary', async () => {
     expect(await routeIntent('how much did i spend this month?')).toBe('spending_summary')
   })

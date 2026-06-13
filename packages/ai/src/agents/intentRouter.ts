@@ -5,7 +5,13 @@ import type { QueryIntent } from '@truffle/types'
 function classifyByKeywords(query: string): QueryIntent | null {
   const lower = query.toLowerCase()
   for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
-    if (keywords.some((kw) => lower.includes(kw))) {
+    if (
+      keywords.some((kw) =>
+        // Short keywords (≤3 chars) like 'hi', 'hey', 'sup' must match as whole
+        // words — otherwise 'hi' matches inside "membership", 'hey' inside "they", etc.
+        kw.length <= 3 ? new RegExp(`\\b${kw}\\b`).test(lower) : lower.includes(kw)
+      )
+    ) {
       return intent as QueryIntent
     }
   }
