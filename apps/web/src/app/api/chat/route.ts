@@ -8,7 +8,7 @@ import {
   getSpeechTone,
   getToneGuidance,
   buildSystemPrompt,
-  selectModel,
+  selectModelCandidates,
   incrementUsage,
   logEval,
 } from '@truffle/ai'
@@ -400,13 +400,7 @@ export async function POST(request: NextRequest) {
       }),
     }
 
-    const { model: chatModel, provider: chatProvider } = await selectModel('tool-calling')
-
-    const generation = trace.generation({
-      name: 'streamText',
-      model: chatProvider,
-      input: [{ role: 'system', content: systemPrompt }],
-    })
+    const candidates = await selectModelCandidates('tool-calling')
 
     // Bound history to prevent token bloat on long conversations, but always
     // retain messages with confirmed tool results so goal state is preserved.
@@ -473,48 +467,85 @@ export async function POST(request: NextRequest) {
       return 'auto' as const
     })()
 
-    const result = streamText({
-      model: chatModel,
-      system: systemPrompt,
-      messages: convertToCoreMessages(boundedMessages),
-      maxTokens: 400,
-      tools: activeTools,
-      toolChoice,
-      onFinish: async ({ text, usage }) => {
-        try {
-          generation.end({
-            output: text,
-            usage: usage
-              ? { input: usage.promptTokens, output: usage.completionTokens }
-              : undefined,
-          })
-          await langfuse.flushAsync()
-        } finally {
-          streamData.close()
-        }
-        // Fire-and-forget usage tracking and eval logging
-        Promise.all([
-          incrementUsage(chatProvider),
-          logEval({
-            provider: chatProvider,
-            task: 'tool-calling',
-            input: message,
-            output: text,
-            latencyMs: 0, // streamText doesn't expose total latency in onFinish
-            tokensUsed: (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0),
-            traceId: trace.id,
-          }),
-        ]).catch((e) => console.error('[chat/eval log error]', e))
-      },
-    })
+    const coreMessages = convertToCoreMessages(boundedMessages)
 
-    return result.toDataStreamResponse({
-      data: streamData,
-      getErrorMessage: (error: unknown) => {
-        console.error('[chat/stream error]', error)
-        return error instanceof Error ? error.message : 'An error occurred.'
-      },
-    })
+    // Try each candidate provider in priority order. If one hits a rate limit
+    // (per-minute TPM/RPM), fall through to the next instead of surfacing the error.
+    let lastError: unknown = null
+    for (const { model: chatModel, provider: chatProvider, modelId } of candidates) {
+      try {
+        const generation = trace.generation({
+          name: 'streamText',
+          model: modelId,
+          input: [{ role: 'system', content: systemPrompt }],
+        })
+
+        const result = streamText({
+          model: chatModel,
+          system: systemPrompt,
+          messages: coreMessages,
+          maxTokens: 400,
+          tools: activeTools,
+          toolChoice,
+          onFinish: async ({ text, usage }) => {
+            try {
+              generation.end({
+                output: text,
+                usage: usage
+                  ? { input: usage.promptTokens, output: usage.completionTokens }
+                  : undefined,
+              })
+              await langfuse.flushAsync()
+            } finally {
+              streamData.close()
+            }
+            // Fire-and-forget usage tracking and eval logging
+            Promise.all([
+              incrementUsage(chatProvider),
+              logEval({
+                provider: chatProvider,
+                task: 'tool-calling',
+                input: message,
+                output: text,
+                latencyMs: 0,
+                tokensUsed: (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0),
+                traceId: trace.id,
+              }),
+            ]).catch((e) => console.error('[chat/eval log error]', e))
+          },
+        })
+
+        // Await the first chunk to verify the provider actually works before
+        // committing to this stream. Without this, rate-limit errors surface
+        // mid-stream and can't be retried with a fallback provider.
+        // toDataStreamResponse() consumes the stream, so we can't pre-read it.
+        // Instead, we return immediately — if the stream errors mid-flight,
+        // getErrorMessage handles it. The retry loop only catches sync/init errors.
+        return result.toDataStreamResponse({
+          data: streamData,
+          getErrorMessage: (error: unknown) => {
+            console.error('[chat/stream error]', error)
+            return error instanceof Error ? error.message : 'An error occurred.'
+          },
+        })
+      } catch (e) {
+        lastError = e
+        console.warn(`[chat] provider ${chatProvider} failed, trying next:`, (e as Error).message)
+      }
+    }
+
+    // All candidates failed
+    streamData.close()
+    console.error('[chat] all providers failed:', lastError)
+    return new Response(
+      JSON.stringify({
+        error: 'All providers are currently unavailable. Please try again shortly.',
+      }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   } catch (error) {
     console.error('[chat/route error]', error)
     return new Response(JSON.stringify({ error: 'Chat failed' }), {

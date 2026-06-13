@@ -25,6 +25,24 @@ export const PRIORITY_ORDER: Record<TaskType, Provider[]> = {
   'tool-calling': ['groq', 'gemini', 'cerebras'],
 }
 
+// Model ID strings per provider+task — used for Langfuse tracing
+export function getModelId(provider: Provider, task: TaskType): string {
+  switch (provider) {
+    case 'groq':
+      return task === 'vision'
+        ? 'meta-llama/llama-4-scout-17b-16e-instruct'
+        : 'llama-3.3-70b-versatile'
+    case 'gemini':
+      return task === 'fast-chat' ? 'gemini-2.0-flash-lite' : 'gemini-2.5-flash'
+    case 'cerebras':
+      return 'llama3.3-70b'
+    case 'openrouter':
+      return 'meta-llama/llama-3.3-70b-instruct:free'
+    case 'mistral':
+      return 'mistral-small-latest'
+  }
+}
+
 function buildModel(provider: Provider, task: TaskType) {
   switch (provider) {
     case 'groq':
@@ -42,7 +60,7 @@ function buildModel(provider: Provider, task: TaskType) {
 
 export async function selectModel(
   task: TaskType
-): Promise<{ model: ReturnType<typeof buildModel>; provider: Provider }> {
+): Promise<{ model: ReturnType<typeof buildModel>; provider: Provider; modelId: string }> {
   let usage: Record<string, number> = {}
   try {
     usage = await getGlobalUsage()
@@ -53,12 +71,42 @@ export async function selectModel(
   const priority = PRIORITY_ORDER[task]
   for (const provider of priority) {
     if ((usage[`${provider}_requests`] ?? 0) >= DAILY_LIMITS[provider]) continue
-    return { model: buildModel(provider, task), provider }
+    return { model: buildModel(provider, task), provider, modelId: getModelId(provider, task) }
   }
 
   // All providers exhausted — fall back to primary without tracking, let the API error surface
   console.warn('[LLMRouter] All providers exhausted for task:', task)
-  return { model: buildModel(priority[0]!, task), provider: priority[0]! }
+  const provider = priority[0]!
+  return { model: buildModel(provider, task), provider, modelId: getModelId(provider, task) }
+}
+
+/**
+ * Get all candidate providers for a task, ordered by priority and filtered by daily usage.
+ * Used by streaming callers that need to retry on per-minute rate limits.
+ */
+export async function selectModelCandidates(
+  task: TaskType
+): Promise<{ model: ReturnType<typeof buildModel>; provider: Provider; modelId: string }[]> {
+  let usage: Record<string, number> = {}
+  try {
+    usage = await getGlobalUsage()
+  } catch {}
+
+  const priority = PRIORITY_ORDER[task]
+  const candidates = priority
+    .filter((p) => (usage[`${p}_requests`] ?? 0) < DAILY_LIMITS[p])
+    .map((provider) => ({
+      model: buildModel(provider, task),
+      provider,
+      modelId: getModelId(provider, task),
+    }))
+
+  // If all exhausted, still return primary so the caller can try
+  if (candidates.length === 0) {
+    const provider = priority[0]!
+    return [{ model: buildModel(provider, task), provider, modelId: getModelId(provider, task) }]
+  }
+  return candidates
 }
 
 export interface RouterGenerateOptions {
