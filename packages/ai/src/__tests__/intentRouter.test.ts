@@ -45,6 +45,34 @@ describe('routeIntent — keyword classification (no LLM call)', () => {
     expect(await routeIntent('there is an unusual charge on my account')).toBe('anomaly_review')
   })
 
+  it('does not misclassify "Netflix subscription 15.99" as anomaly_review', async () => {
+    // Bare "subscription" previously matched anomaly_review, intercepting transaction logging
+    const result = await routeIntent('Netflix subscription 15.99')
+    expect(result).not.toBe('anomaly_review')
+  })
+
+  it('classifies "forgotten subscription" as anomaly_review', async () => {
+    expect(await routeIntent('do I have a forgotten subscription?')).toBe('anomaly_review')
+  })
+
+  // Shorthand transaction pattern: "description + amount"
+  it('classifies "Netflix subscription 15.99" as add_transaction (shorthand)', async () => {
+    expect(await routeIntent('Netflix subscription 15.99')).toBe('add_transaction')
+  })
+
+  it('classifies "Uber 12" as add_transaction (shorthand)', async () => {
+    expect(await routeIntent('Uber 12')).toBe('add_transaction')
+  })
+
+  it('classifies "coffee 5.50" as add_transaction (shorthand)', async () => {
+    expect(await routeIntent('coffee 5.50')).toBe('add_transaction')
+  })
+
+  it('does not classify questions with numbers as shorthand transactions', async () => {
+    const result = await routeIntent('how much did I spend on food?')
+    expect(result).not.toBe('add_transaction')
+  })
+
   it('classifies "end of month" as forecast_request', async () => {
     expect(await routeIntent('how much will i have at end of month?')).toBe('forecast_request')
   })

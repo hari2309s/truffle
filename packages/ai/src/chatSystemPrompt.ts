@@ -153,6 +153,7 @@ function buildToolRules(intent: QueryIntent): string {
     return `Transaction tool rules:
 - You MUST call proposeTransaction. Do NOT describe or acknowledge the transaction in plain text — the user must confirm via the card before it is logged.
 - NEVER say "I've logged that" or "I've noted that" without calling proposeTransaction first.
+- ALWAYS use the exact amount the user states in their CURRENT message. NEVER substitute an amount from transaction history even if a similar transaction exists.
 - Use a negative amount for expenses and a positive amount for income.
 - Default the date to today if the user does not specify one.
 - Choose the most appropriate category from the allowed list.

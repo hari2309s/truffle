@@ -18,10 +18,27 @@ function classifyByKeywords(query: string): QueryIntent | null {
   return null
 }
 
+// Detects shorthand transaction messages like "Netflix subscription 15.99",
+// "coffee 5.50", "Uber 12" — a description followed by a price-like number.
+// Must NOT match questions ("how much did I spend 100 times?") or goals.
+const TRANSACTION_SHORTHAND = /^[a-zA-Z][\w\s\-'']+\s\d+(?:\.\d{1,2})?$/
+
+function looksLikeTransaction(query: string): boolean {
+  const trimmed = query.trim()
+  // Must be short (likely a quick log, not a question or paragraph)
+  if (trimmed.length > 80) return false
+  // Must not contain question marks or question words
+  if (/\?|how|what|when|where|why|which|can i|do i|should|will/i.test(trimmed)) return false
+  return TRANSACTION_SHORTHAND.test(trimmed)
+}
+
 export async function routeIntent(query: string): Promise<QueryIntent> {
   // Fast keyword path first
   const keywordIntent = classifyByKeywords(query)
   if (keywordIntent) return keywordIntent
+
+  // Pattern-based detection for shorthand transactions ("Netflix 15.99", "Uber 12")
+  if (looksLikeTransaction(query)) return 'add_transaction'
 
   // Fall back to LLM classification
   try {
