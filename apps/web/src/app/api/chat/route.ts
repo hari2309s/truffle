@@ -423,12 +423,20 @@ export async function POST(request: NextRequest) {
         m.role === 'assistant' &&
         m.toolInvocations?.some((inv) => inv.state === 'call' || inv.state === 'result')
     )
+    // When addToolResult() fires the auto-callback, the last message in the
+    // array is the assistant message carrying the tool result — there is no new
+    // user message after it. On this turn, disable tools entirely so the model
+    // can only produce a text acknowledgment and cannot re-propose.
+    const lastMsg = normalizedMessages[normalizedMessages.length - 1] as ClientMessage | undefined
+    const isToolResultCallback = lastMsg?.role === 'assistant' && isFollowUpAfterTool
+
     const enableTools =
-      historyHasToolResults ||
-      (!isFollowUpAfterTool &&
-        (intent === INTENT.GOAL_SETTING ||
-          intent === INTENT.ADD_TRANSACTION ||
-          intent === INTENT.HABIT_SETTING))
+      !isToolResultCallback &&
+      (historyHasToolResults ||
+        (!isFollowUpAfterTool &&
+          (intent === INTENT.GOAL_SETTING ||
+            intent === INTENT.ADD_TRANSACTION ||
+            intent === INTENT.HABIT_SETTING)))
 
     // Scope tools strictly by intent. Groq/LLaMA does not reliably honour
     // toolChoice: { type: 'tool', toolName } when multiple tools are available —
@@ -453,16 +461,8 @@ export async function POST(request: NextRequest) {
     // ADD_TRANSACTION uses 'required' because the user is stating a known transaction.
     // HABIT_SETTING and GOAL_SETTING use 'auto' so the model can explain or calculate
     // first in plain text, then optionally surface the confirmation card.
-    // When addToolResult() fires the auto-callback, the last message in the
-    // array is the assistant message carrying the tool result — there is no new
-    // user message after it. Detect this so we avoid forcing another tool call.
-    const lastMsg = normalizedMessages[normalizedMessages.length - 1] as ClientMessage | undefined
-    const isToolResultCallback = lastMsg?.role === 'assistant' && isFollowUpAfterTool
-
     const toolChoice = (() => {
       if (!activeTools) return undefined
-      // Auto-callback after user confirmed a tool card — just acknowledge, don't re-propose.
-      if (isToolResultCallback) return 'auto' as const
       if (intent === INTENT.ADD_TRANSACTION) return 'required' as const
       return 'auto' as const
     })()

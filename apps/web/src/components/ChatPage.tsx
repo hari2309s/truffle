@@ -128,6 +128,26 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
               <div key={message.id}>
                 {/* Render goal proposal cards from tool invocations */}
                 {message.toolInvocations?.map((inv) => {
+                  // Resolve a tool invocation locally without triggering an API
+                  // callback. addToolResult() re-submits to /api/chat which causes
+                  // a visible loader flash and risks duplicate tool calls.
+                  const resolveToolLocally = (result: { confirmed: boolean }) => {
+                    chat.setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id !== message.id
+                          ? m
+                          : {
+                              ...m,
+                              toolInvocations: m.toolInvocations?.map((ti) =>
+                                ti.toolCallId === inv.toolCallId
+                                  ? { ...ti, state: 'result' as const, result }
+                                  : ti
+                              ),
+                            }
+                      )
+                    )
+                  }
+
                   if (inv.toolName === 'proposeGoal') {
                     const args = inv.args as {
                       name: string
@@ -142,12 +162,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                           key={inv.toolCallId}
                           proposal={args}
                           userId={userId}
-                          onResult={(confirmed) =>
-                            chat.addToolResult({
-                              toolCallId: inv.toolCallId,
-                              result: { confirmed },
-                            })
-                          }
+                          onResult={(confirmed) => resolveToolLocally({ confirmed })}
                         />
                       )
                     }
@@ -180,12 +195,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                           key={inv.toolCallId}
                           proposal={args}
                           userId={userId}
-                          onResult={(confirmed) =>
-                            chat.addToolResult({
-                              toolCallId: inv.toolCallId,
-                              result: { confirmed },
-                            })
-                          }
+                          onResult={(confirmed) => resolveToolLocally({ confirmed })}
                         />
                       )
                     }
@@ -224,12 +234,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                           key={inv.toolCallId}
                           proposal={args}
                           userId={userId}
-                          onResult={(confirmed) =>
-                            chat.addToolResult({
-                              toolCallId: inv.toolCallId,
-                              result: { confirmed },
-                            })
-                          }
+                          onResult={(confirmed) => resolveToolLocally({ confirmed })}
                         />
                       )
                     }
@@ -263,6 +268,15 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                   <function=...>...</function> as plain text instead of a
                   structured tool invocation) then render if content remains */}
                 {(() => {
+                  // If this assistant message has a pending tool call (state='call'),
+                  // suppress any text the model generated alongside it — the card
+                  // is the intended UI and the text is just noise (e.g. the model
+                  // echoing "Netflix subscription logged — -€15.99" before the card).
+                  const hasPendingToolCall = message.toolInvocations?.some(
+                    (inv) => inv.state === 'call'
+                  )
+                  if (hasPendingToolCall) return null
+
                   const clean = message.content
                     .replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '')
                     .trim()
