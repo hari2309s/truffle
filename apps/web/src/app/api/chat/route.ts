@@ -56,6 +56,12 @@ function detectFollowUpIntent(prevText: string, hasToolInvocations: boolean): Qu
     has('goal', 'save', 'saving', 'plan', 'trip', 'buy', 'purchase', 'afford')
   )
     return INTENT.GOAL_SETTING
+  // Deadline follow-up: AI asked "when would you like to reach this goal?" etc.
+  if (
+    has('when', 'deadline', 'target date', 'by when', 'date') &&
+    has('goal', 'save', 'saving', 'reach', 'achieve', 'trip', 'buy', 'purchase')
+  )
+    return INTENT.GOAL_SETTING
   if (
     has('how much', 'amount', 'what did', 'which category', 'what category') &&
     has('transaction', 'expense', 'purchase', 'payment', 'spent', 'paid', 'log')
@@ -319,7 +325,7 @@ export async function POST(request: NextRequest) {
     const proposeGoalTool = {
       proposeGoal: tool({
         description:
-          "Propose a savings goal card for the user to confirm. STRICT RULES: (1) NEVER call on the turn the user first names a goal — always ask for the price first in plain text. (2) Only call when the user's CURRENT message contains a specific numeric amount for THIS goal. A number from a previous turn does not count. (3) Never guess, infer, or reuse amounts from other goals in the conversation.",
+          "Propose a savings goal card for the user to confirm. STRICT RULES: (1) NEVER call on the turn the user first names a goal — always ask for the price first in plain text. (2) Only call when the user's CURRENT message contains a specific numeric amount for THIS goal. A number from a previous turn does not count. (3) Never guess, infer, or reuse amounts from other goals in the conversation. (4) After getting the amount, ask for a target deadline before calling this tool — e.g. 'When would you like to reach this goal?' If the user explicitly says they have no deadline or don't know, you may omit it.",
         parameters: z.object({
           name: z.string().describe('Short goal name, e.g. "Holiday in Greece"'),
           targetAmount: z
