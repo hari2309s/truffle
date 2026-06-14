@@ -337,7 +337,7 @@ export async function POST(request: NextRequest) {
     const proposeTransactionTool = {
       proposeTransaction: tool({
         description:
-          'Show a ONE-TIME transaction confirmation card. ONLY call this when the user explicitly states they have already made a real, past purchase or received real income — e.g. "I just bought", "I paid", "I received". DO NOT call this for hypothetical questions, jokes, future plans, impossible scenarios, or anything the user has not actually done. DO NOT use this for recurring saving habits — use proposeHabit for those. NEVER skip this and respond in plain text instead — the transaction is only logged after the user confirms the card. Use negative amounts for expenses, positive for income.',
+          'Show a ONE-TIME transaction confirmation card. ONLY call this when the user explicitly states they have already made a real, past purchase or received real income — e.g. "I just bought", "I paid", "I received". DO NOT call this for hypothetical questions ("I might buy", "should I get"), jokes, future plans, impossible scenarios, or anything the user has not actually done. For hypotheticals, give advice or an affordability check in plain text instead. DO NOT use this for recurring saving habits — use proposeHabit for those. Use negative amounts for expenses, positive for income.',
         parameters: z.object({
           description: z.string().describe('Short description, e.g. "Coffee at Costa"'),
           amount: z
@@ -399,14 +399,24 @@ export async function POST(request: NextRequest) {
       return undefined
     })()
 
-    // 'required' forces a tool call. Groq/LLaMA models don't reliably produce
-    // text + tool call together with 'auto', so we use 'required' for intents
-    // where the user has provided all necessary details. goal_setting uses 'auto'
-    // because the user may not have stated an amount yet (model needs to ask).
+    // Detect whether the user's message describes a definite past transaction
+    // (not hypothetical). If definite, force tool call; otherwise let the model
+    // decide (it may give advice instead of proposing a card).
+    const isDefiniteTransaction =
+      intent === INTENT.ADD_TRANSACTION &&
+      /\b(i\s+(just\s+)?(spent|paid|bought|got paid|received)|add\s+(a\s+)?transaction|log\s+(a\s+)?transaction)\b/i.test(
+        message
+      )
+
+    // 'required' forces a tool call — use only when the user clearly wants a
+    // card (definite past transaction, or new habit with all details and no
+    // existing habits). Otherwise 'auto' lets the model respond with text
+    // (e.g. for hypotheticals, vague requests, or acknowledging existing data).
     const toolChoice = (() => {
       if (!activeTools) return undefined
-      if (intent === INTENT.GOAL_SETTING) return 'auto' as const
-      return 'required' as const
+      if (isDefiniteTransaction) return 'required' as const
+      if (intent === INTENT.HABIT_SETTING && habitRows.length === 0) return 'required' as const
+      return 'auto' as const
     })()
 
     const coreMessages = convertToCoreMessages(boundedMessages)

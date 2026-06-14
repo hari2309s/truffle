@@ -29,8 +29,13 @@ function looksLikeTransaction(query: string): boolean {
   const trimmed = query.trim()
   // Must be short (likely a quick log, not a question or paragraph)
   if (trimmed.length > 80) return false
-  // Must not contain question marks or question words
-  if (/\?|how|what|when|where|why|which|can i|do i|should|will/i.test(trimmed)) return false
+  // Must not contain question marks, question words, or hypothetical language
+  if (
+    /\?|how|what|when|where|why|which|can i|do i|should|will|might|maybe|thinking about|planning to|i'd like to/i.test(
+      trimmed
+    )
+  )
+    return false
   return SHORTHAND_DIRECT.test(trimmed) || SHORTHAND_FOR.test(trimmed)
 }
 

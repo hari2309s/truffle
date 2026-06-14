@@ -81,6 +81,16 @@ describe('routeIntent — keyword classification (no LLM call)', () => {
     expect(result).not.toBe('add_transaction')
   })
 
+  it('does not classify "I might buy a jacket for 80" as shorthand transaction', async () => {
+    const result = await routeIntent('I might buy a jacket for 80')
+    expect(result).not.toBe('add_transaction')
+  })
+
+  it('does not classify "thinking about getting a laptop for 1500" as shorthand transaction', async () => {
+    const result = await routeIntent('thinking about getting a laptop for 1500')
+    expect(result).not.toBe('add_transaction')
+  })
+
   it('classifies "end of month" as forecast_request', async () => {
     expect(await routeIntent('how much will i have at end of month?')).toBe('forecast_request')
   })

@@ -146,14 +146,16 @@ function buildToolRules(intent: QueryIntent): string {
 - When a user mentions a new goal, ALWAYS ask for the target amount in plain text first. Never call proposeGoal on the same turn.
 - Only call proposeGoal when the user's current reply contains a specific amount for this goal. A number mentioned earlier for a different goal does not count — ask again.
 - Once you have both a goal name and an amount from the user in the same exchange, call proposeGoal immediately. Do not describe it in text first.
+- If the user already has goals (listed in context), acknowledge them. Don't propose a duplicate of an existing goal — suggest modifying it or ask if they want a new one instead.
 - After a confirmed goal, respond with one warm sentence. If the user then mentions another goal, start fresh and ask for the new amount.
 - If the user declined, respond warmly and do not re-propose.`
   }
   if (intent === 'add_transaction') {
     return `Transaction tool rules:
-- You MUST call proposeTransaction. Do NOT describe or acknowledge the transaction in plain text — the user must confirm via the card before it is logged.
+- You MUST call proposeTransaction for real, past transactions. Do NOT describe or acknowledge the transaction in plain text — the user must confirm via the card before it is logged.
 - NEVER say "I've logged that" or "I've noted that" without calling proposeTransaction first.
 - ALWAYS use the exact amount the user states in their CURRENT message. NEVER substitute an amount from transaction history even if a similar transaction exists.
+- For HYPOTHETICAL transactions ("I might buy", "I'm thinking about", "should I get"), do NOT call proposeTransaction. Instead, give helpful advice or an affordability check.
 - Use a negative amount for expenses and a positive amount for income.
 - Default the date to today if the user does not specify one.
 - Choose the most appropriate category from the allowed list.
@@ -163,8 +165,9 @@ function buildToolRules(intent: QueryIntent): string {
   }
   if (intent === 'habit_setting') {
     return `Habit tool rules:
-- ALWAYS respond in plain text first: explain your reasoning, show the calculation (e.g. €30,000 ÷ 9 months = €3,333/month), and confirm the amount with the user.
-- Only call proposeHabit AFTER you have given a text explanation. Never call it as your first and only response.
+- If the user provides a specific amount AND frequency (e.g. "save 50 euros every week"), call proposeHabit directly. Put a brief calculation in the pitch field (e.g. "50/week = ~200/month").
+- If the user is vague ("I want to start saving regularly") and has NO existing habits, ask what amount and frequency they have in mind — do NOT guess.
+- If the user already has saving habits (listed in context), acknowledge them first ("You're already saving X/week and Y/month"). Only propose a new habit if the user explicitly asks for one. Do NOT duplicate an existing habit.
 - If the user asks you to calculate a saving amount, compute it from the goal and deadline they provided — do not guess or invent a number.
 - After a confirmed habit, respond with one warm encouraging sentence.
 - If the user declined, respond warmly and do not re-propose.`
