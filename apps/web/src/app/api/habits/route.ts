@@ -149,6 +149,7 @@ export async function PATCH(request: NextRequest) {
 
     // Check if a streak milestone was reached
     const STREAK_MILESTONES = [3, 5, 7, 10, 15, 20, 30, 50, 100]
+    const today = new Date().toISOString().slice(0, 10)
     try {
       const { data: allContribs } = await db
         .from('habit_contributions')
@@ -163,6 +164,21 @@ export async function PATCH(request: NextRequest) {
         .select('name, emoji, frequency')
         .eq('id', habitId)
         .single()
+
+      // Insert a savings transaction so the contribution shows up in
+      // monthly snapshots, spending summaries, and chat context.
+      // Negative amount so it reduces spendable balance (consistent with goal deposits).
+      if (habit) {
+        await db.from('transactions').insert({
+          user_id: userId,
+          amount: -amount,
+          currency: 'EUR',
+          description: `Savings — ${habit.name}`,
+          category: 'savings',
+          date: today,
+          is_recurring: true,
+        })
+      }
 
       if (habit && allContribs) {
         const frequency = habit.frequency as 'weekly' | 'monthly'
