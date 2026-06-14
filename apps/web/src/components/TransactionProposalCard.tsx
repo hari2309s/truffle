@@ -63,7 +63,8 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
               userId,
               amount: proposal.amount,
               currency,
-              description: proposal.description,
+              description:
+                proposal.description.charAt(0).toUpperCase() + proposal.description.slice(1),
               category: proposal.category,
               merchant: proposal.merchant ?? null,
               date: proposal.date,
