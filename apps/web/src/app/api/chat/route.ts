@@ -396,9 +396,16 @@ export async function POST(request: NextRequest) {
 
     const candidates = await selectModelCandidates('tool-calling')
 
+    // Drop assistant messages that had only tool calls (empty content after stripping
+    // toolInvocations). These are meaningless in history and some providers reject
+    // empty-content assistant messages, causing a 500 on follow-up turns.
+    const filteredMessages = normalizedMessages.filter(
+      (m: ClientMessage) => !(m.role === 'assistant' && !m.content?.trim())
+    )
+
     // Bound history to prevent token bloat on long conversations.
     const boundedMessages =
-      normalizedMessages.length > 10 ? normalizedMessages.slice(-10) : normalizedMessages
+      filteredMessages.length > 10 ? filteredMessages.slice(-10) : filteredMessages
 
     // Scope tools strictly by intent. Only tool-eligible intents get a tool;
     // all other intents produce plain text only.

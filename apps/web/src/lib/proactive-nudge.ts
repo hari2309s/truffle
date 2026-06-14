@@ -37,6 +37,18 @@ async function writeNudge(
   })
 }
 
+async function getUserName(
+  db: ReturnType<typeof createServerClient>,
+  userId: string
+): Promise<string | undefined> {
+  try {
+    const { data } = await db.auth.admin.getUserById(userId)
+    return (data?.user?.user_metadata?.name as string | undefined) ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
 export async function sendAnomalyNudge(params: {
   userId: string
   anomaly: Anomaly
@@ -49,7 +61,10 @@ export async function sendAnomalyNudge(params: {
 
   if (await alreadySent(db, userId, nudgeKey)) return
 
-  const { generateProactiveMessage } = await import('@truffle/ai')
+  const [{ generateProactiveMessage }, userName] = await Promise.all([
+    import('@truffle/ai'),
+    getUserName(db, userId),
+  ])
   const message = await generateProactiveMessage(
     {
       type: 'anomaly',
@@ -57,7 +72,8 @@ export async function sendAnomalyNudge(params: {
       transactions,
       snapshot,
     },
-    userId
+    userId,
+    userName
   )
   if (!message) return
 
@@ -76,7 +92,10 @@ export async function sendGoalMilestoneNudge(params: {
 
   if (await alreadySent(db, userId, nudgeKey)) return
 
-  const { generateProactiveMessage } = await import('@truffle/ai')
+  const [{ generateProactiveMessage }, userName] = await Promise.all([
+    import('@truffle/ai'),
+    getUserName(db, userId),
+  ])
   const message = await generateProactiveMessage(
     {
       type: 'goal_milestone',
@@ -84,7 +103,8 @@ export async function sendGoalMilestoneNudge(params: {
       milestone,
       snapshot,
     },
-    userId
+    userId,
+    userName
   )
   if (!message) return
 
@@ -103,10 +123,14 @@ export async function sendGoalAtRiskNudge(params: {
 
   if (await alreadySent(db, userId, nudgeKey)) return
 
-  const { generateProactiveMessage } = await import('@truffle/ai')
+  const [{ generateProactiveMessage }, userName] = await Promise.all([
+    import('@truffle/ai'),
+    getUserName(db, userId),
+  ])
   const message = await generateProactiveMessage(
     { type: 'goal_at_risk', goal, daysRemaining, projectedShortfall },
-    userId
+    userId,
+    userName
   )
   if (!message) return
 
@@ -126,10 +150,14 @@ export async function sendHabitStreakNudge(params: {
 
   if (await alreadySent(db, userId, nudgeKey)) return
 
-  const { generateProactiveMessage } = await import('@truffle/ai')
+  const [{ generateProactiveMessage }, userName] = await Promise.all([
+    import('@truffle/ai'),
+    getUserName(db, userId),
+  ])
   const message = await generateProactiveMessage(
     { type: 'habit_streak', habitId, habitName, habitEmoji, streak },
-    userId
+    userId,
+    userName
   )
   if (!message) return
 
@@ -152,7 +180,10 @@ export async function sendHabitCheckInNudge(params: {
 
   if (await alreadySent(db, userId, nudgeKey)) return
 
-  const { generateProactiveMessage } = await import('@truffle/ai')
+  const [{ generateProactiveMessage }, userName] = await Promise.all([
+    import('@truffle/ai'),
+    getUserName(db, userId),
+  ])
   const message = await generateProactiveMessage(
     {
       type: 'habit_check_in',
@@ -164,7 +195,8 @@ export async function sendHabitCheckInNudge(params: {
       period,
       lastStreak,
     },
-    userId
+    userId,
+    userName
   )
   if (!message) return
 
@@ -247,7 +279,10 @@ export async function sendMonthlyReportNudge(userId: string): Promise<void> {
     year: 'numeric',
   })
 
-  const { generateProactiveMessage } = await import('@truffle/ai')
+  const [{ generateProactiveMessage }, userName] = await Promise.all([
+    import('@truffle/ai'),
+    getUserName(db, userId),
+  ])
   const message = await generateProactiveMessage(
     {
       type: 'monthly_report',
@@ -261,7 +296,8 @@ export async function sendMonthlyReportNudge(userId: string): Promise<void> {
       goals,
       habits,
     },
-    userId
+    userId,
+    userName
   )
   if (!message) return
 
@@ -284,7 +320,10 @@ export async function sendBudgetNudge(params: {
 
   if (await alreadySent(db, userId, nudgeKey)) return
 
-  const { generateProactiveMessage } = await import('@truffle/ai')
+  const [{ generateProactiveMessage }, userName] = await Promise.all([
+    import('@truffle/ai'),
+    getUserName(db, userId),
+  ])
   const message = await generateProactiveMessage(
     {
       type: 'budget_warning',
@@ -295,7 +334,8 @@ export async function sendBudgetNudge(params: {
       percentUsed,
       month,
     },
-    userId
+    userId,
+    userName
   )
   if (!message) return
 

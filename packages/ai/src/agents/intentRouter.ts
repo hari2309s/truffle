@@ -37,9 +37,9 @@ function looksLikeTransaction(query: string): boolean {
   const trimmed = query.trim()
   // Must be short (likely a quick log, not a question or paragraph)
   if (trimmed.length > 80) return false
-  // Must not contain question marks, question words, or hypothetical language
+  // Must not contain question marks, question words, hypothetical language, or correction phrases
   if (
-    /\?|how|what|when|where|why|which|can i|do i|should|will|might|maybe|thinking about|planning to|i'd like to/i.test(
+    /\?|how|what|when|where|why|which|can i|do i|should|will|might|maybe|thinking about|planning to|i'd like to|actually it was|actually it's|no it was|correction|i meant/i.test(
       trimmed
     )
   )
