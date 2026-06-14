@@ -319,7 +319,12 @@ export async function POST(request: NextRequest) {
       .find((m: ClientMessage) => m.role === 'assistant')
     const prevAssistantText =
       typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : ''
-    const followUpIntent = detectFollowUpIntent(prevAssistantText, false)
+    // Skip follow-up intent override when the message looks like code, SQL, or injection
+    // — let the LLM handle it as general input rather than forcing a collection flow.
+    const looksLikeCode =
+      /\b(select|insert|update|delete|drop|create|alter|truncate)\b\s+\w/i.test(message) ||
+      /[{}<>]|\/\/|\/\*|\*\/|console\.|function\s*\(/.test(message)
+    const followUpIntent = looksLikeCode ? null : detectFollowUpIntent(prevAssistantText, false)
     if (followUpIntent) intent = followUpIntent
 
     const proposeGoalTool = {
