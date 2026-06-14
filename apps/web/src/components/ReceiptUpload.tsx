@@ -112,7 +112,7 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
       })
       if (!res.ok) throw new Error('Import failed')
 
-      await queryClient.refetchQueries({ queryKey: ['transactions', userId] })
+      await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
 
       posthog.capture('receipt_imported', { transaction_count: parsed.length })
 

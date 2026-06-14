@@ -68,6 +68,14 @@ describe('routeIntent — keyword classification (no LLM call)', () => {
     expect(await routeIntent('coffee 5.50')).toBe('add_transaction')
   })
 
+  it('classifies "Add a mass transport ticket for 2.50" as add_transaction (shorthand with for)', async () => {
+    expect(await routeIntent('Add a mass transport ticket for 2.50')).toBe('add_transaction')
+  })
+
+  it('classifies "lunch at 12" as add_transaction (shorthand with at)', async () => {
+    expect(await routeIntent('lunch at 12')).toBe('add_transaction')
+  })
+
   it('does not classify questions with numbers as shorthand transactions', async () => {
     const result = await routeIntent('how much did I spend on food?')
     expect(result).not.toBe('add_transaction')

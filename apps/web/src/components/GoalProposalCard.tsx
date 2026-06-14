@@ -60,7 +60,7 @@ export const GoalProposalCard = memo(function GoalProposalCard({
         source: 'voice',
       })
 
-      await queryClient.refetchQueries({ queryKey: ['goals', userId] })
+      await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
       await supabase.from('chat_messages').insert({
         user_id: userId,
         role: 'assistant',

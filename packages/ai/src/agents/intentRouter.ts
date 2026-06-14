@@ -18,10 +18,12 @@ function classifyByKeywords(query: string): QueryIntent | null {
   return null
 }
 
-// Detects shorthand transaction messages like "Netflix subscription 15.99",
-// "coffee 5.50", "Uber 12" — a description followed by a price-like number.
-// Must NOT match questions ("how much did I spend 100 times?") or goals.
-const TRANSACTION_SHORTHAND = /^[a-zA-Z][\w\s\-'']+\s\d+(?:\.\d{1,2})?$/
+// Detects shorthand transaction messages — a description followed by a price.
+// Handles two patterns:
+//   1. "Netflix subscription 15.99"  (description + amount)
+//   2. "Add a transport ticket for 2.50"  (description + for/at + amount)
+const SHORTHAND_DIRECT = /^[a-zA-Z][\w\s\-'']+\s\d+(?:\.\d{1,2})?$/
+const SHORTHAND_FOR = /^[a-zA-Z][\w\s\-'']+\s(?:for|at)\s\d+(?:\.\d{1,2})?$/
 
 function looksLikeTransaction(query: string): boolean {
   const trimmed = query.trim()
@@ -29,16 +31,20 @@ function looksLikeTransaction(query: string): boolean {
   if (trimmed.length > 80) return false
   // Must not contain question marks or question words
   if (/\?|how|what|when|where|why|which|can i|do i|should|will/i.test(trimmed)) return false
-  return TRANSACTION_SHORTHAND.test(trimmed)
+  return SHORTHAND_DIRECT.test(trimmed) || SHORTHAND_FOR.test(trimmed)
 }
 
 export async function routeIntent(query: string): Promise<QueryIntent> {
-  // Fast keyword path first
+  // Pattern-based detection runs first — shorthand transactions like
+  // "Netflix 15.99" or "Add a transport ticket for 2.50" contain a
+  // price-like number that is a strong signal. Running this before
+  // keywords prevents broad category keywords (e.g. 'transport') from
+  // intercepting legitimate transaction logging.
+  if (looksLikeTransaction(query)) return 'add_transaction'
+
+  // Keyword path second
   const keywordIntent = classifyByKeywords(query)
   if (keywordIntent) return keywordIntent
-
-  // Pattern-based detection for shorthand transactions ("Netflix 15.99", "Uber 12")
-  if (looksLikeTransaction(query)) return 'add_transaction'
 
   // Fall back to LLM classification
   try {
