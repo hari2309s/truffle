@@ -297,6 +297,49 @@ async function detectAnomalies(
     }
   }
 
+  // Detect duplicate subscriptions: same merchant/description charged multiple
+  // times in the current month. Compare new transactions against history from
+  // the same calendar month.
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const { data: monthTxs } = await db
+    .from('transactions')
+    .select('id, amount, category, merchant, description, date')
+    .eq('user_id', userId)
+    .gte('date', `${currentMonth}-01`)
+    .lt('amount', '0')
+    .not('id', 'in', `(${newIds.join(',')})`)
+
+  if (monthTxs) {
+    for (const tx of newTxs) {
+      if (Number(tx.amount) >= 0) continue
+      const cat = tx.category as string
+      if (cat !== 'subscriptions') continue
+
+      const desc = (tx.description as string).toLowerCase()
+      const merchant = ((tx.merchant as string) ?? '').toLowerCase()
+
+      const duplicate = (monthTxs as Record<string, unknown>[]).find((existing) => {
+        const exDesc = (existing.description as string).toLowerCase()
+        const exMerchant = ((existing.merchant as string) ?? '').toLowerCase()
+        return (
+          (merchant && exMerchant && merchant === exMerchant) || (desc && exDesc && desc === exDesc)
+        )
+      })
+
+      if (duplicate) {
+        const existingAmount = Math.abs(Number(duplicate.amount)).toFixed(2)
+        const newAmount = Math.abs(Number(tx.amount)).toFixed(2)
+        anomaliesToInsert.push({
+          user_id: userId,
+          transaction_id: tx.id as string,
+          type: 'forgotten_subscription',
+          severity: 'medium',
+          description: `Possible duplicate subscription: ${tx.description} charged €${newAmount} — already charged €${existingAmount} this month`,
+        })
+      }
+    }
+  }
+
   if (anomaliesToInsert.length === 0) return []
 
   const { data: inserted } = await db
