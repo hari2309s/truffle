@@ -2,9 +2,17 @@ import { routedGenerateText } from '../router'
 import { INTENT_ROUTER_PROMPT, INTENT_KEYWORDS } from '../prompts/intentRouter.prompt'
 import type { QueryIntent } from '@truffle/types'
 
+// Questions about spending should not be classified as add_transaction
+// even though they contain keywords like "i spent" or "i paid".
+const QUESTION_PATTERN = /^(how|what|where|when|why|which|do |did |have |has |can )/i
+
 function classifyByKeywords(query: string): QueryIntent | null {
   const lower = query.toLowerCase()
+  const isQuestion = QUESTION_PATTERN.test(query.trim()) || query.trim().endsWith('?')
   for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
+    // Skip add_transaction keywords for questions — "how much have I spent
+    // on subscriptions?" should not be treated as a transaction to log.
+    if (intent === 'add_transaction' && isQuestion) continue
     if (
       keywords.some((kw) =>
         // Short keywords (≤3 chars) like 'hi', 'hey', 'sup' must match as whole
