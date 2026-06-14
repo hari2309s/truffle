@@ -266,6 +266,7 @@ export async function POST(request: NextRequest) {
         | null,
       habitRows,
       budgetRows,
+      spendByCategory,
       projectedBalance,
       daysRemaining,
       dailySpend,

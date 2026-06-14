@@ -175,6 +175,31 @@ function buildToolRules(intent: QueryIntent): string {
   return ''
 }
 
+// Live spend-by-category computed from actual transactions in route.ts.
+// Always included for all financial intents — avoids stale snapshot data
+// and doesn't depend on intent classification to be correct.
+function buildSpendByCategoryContext(
+  spendByCategory: Record<string, number> | null,
+  fmt: (n: number) => string
+): string {
+  if (!spendByCategory) return ''
+  const entries = Object.entries(spendByCategory)
+    .filter(([, v]) => v > 0)
+    .sort(([, a], [, b]) => b - a)
+  if (!entries.length) return ''
+  const total = entries.reduce((sum, [, v]) => sum + v, 0)
+  return (
+    '\nCurrent month spending by category:\n' +
+    entries
+      .map(([cat, amount]) => {
+        const pct = total > 0 ? ((amount / total) * 100).toFixed(0) : '0'
+        return `- ${cat.replace(/_/g, ' ')}: ${fmt(amount)} (${pct}%)`
+      })
+      .join('\n') +
+    `\n- Total: ${fmt(total)}`
+  )
+}
+
 function buildSnapshotContext(
   snapshots: MonthlySnapshot[],
   projectedBalance: number,
@@ -222,6 +247,7 @@ export function buildSystemPrompt(params: {
   goalRows: GoalRow[] | null
   habitRows: HabitRow[] | null
   budgetRows: BudgetRow[] | null
+  spendByCategory?: Record<string, number> | null
   projectedBalance: number
   daysRemaining: number
   dailySpend: number
@@ -238,6 +264,7 @@ export function buildSystemPrompt(params: {
     goalRows,
     habitRows,
     budgetRows,
+    spendByCategory,
     projectedBalance,
     daysRemaining,
     dailySpend,
@@ -277,13 +304,14 @@ Respond with a single warm, brief greeting. Do not mention their finances, balan
     currentMonth,
     fmt
   )
+  const categoryContext = buildSpendByCategoryContext(spendByCategory ?? null, fmt)
 
   return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.${languageInstruction}
 
 Tone guidance for this conversation: ${toneGuidance}
 ${transactionContext}${anomalyContext}${goalsContext}${habitsContext}${budgetContext}${habitReminderContext}
 
-${snapshotContext}
+${snapshotContext}${categoryContext}
 
 Intent detected: ${intent}
 

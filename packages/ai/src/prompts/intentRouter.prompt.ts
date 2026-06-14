@@ -78,6 +78,13 @@ export const INTENT_KEYWORDS: Record<string, string[]> = {
     'utilities',
     'health',
     'shopping',
+    'where does my money go',
+    'where is my money going',
+    'breakdown',
+    'by category',
+    'biggest expenses',
+    'top expenses',
+    'spending breakdown',
   ],
   savings_goal_check: [
     'savings goal',

@@ -91,6 +91,14 @@ describe('routeIntent — keyword classification (no LLM call)', () => {
     expect(result).not.toBe('add_transaction')
   })
 
+  it('classifies "where does my money go" as category_breakdown', async () => {
+    expect(await routeIntent('where does my money go?')).toBe('category_breakdown')
+  })
+
+  it('classifies "give me a spending breakdown" as category_breakdown', async () => {
+    expect(await routeIntent('give me a spending breakdown')).toBe('category_breakdown')
+  })
+
   it('classifies "end of month" as forecast_request', async () => {
     expect(await routeIntent('how much will i have at end of month?')).toBe('forecast_request')
   })
