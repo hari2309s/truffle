@@ -228,7 +228,16 @@ export async function POST(request: NextRequest) {
           (tx) => tx.date.slice(0, 7) >= dateRange.from && tx.date.slice(0, 7) <= dateRange.to
         )
       : relevantTransactions
-    const contextTransactions = filteredRelevant.length > 0 ? filteredRelevant : transactions
+    // For anomaly_review, use all current-month transactions so the model
+    // can scan the full month for duplicates, unusual amounts, etc. — RAG
+    // semantic search for "unusual charges" returns poor results.
+    // For spending_summary, also use full month data for accurate totals.
+    const needsFullMonth = intent === INTENT.ANOMALY_REVIEW || intent === INTENT.SPENDING_SUMMARY
+    const contextTransactions = needsFullMonth
+      ? transactions.filter((tx) => tx.date.startsWith(currentMonth))
+      : filteredRelevant.length > 0
+        ? filteredRelevant
+        : transactions
 
     // Compute forecast numbers for affordability / forecast intents
     const today = new Date()
