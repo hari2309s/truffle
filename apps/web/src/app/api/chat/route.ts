@@ -278,11 +278,11 @@ export async function POST(request: NextRequest) {
       content?: string
       toolInvocations?: { toolCallId: string; state: string; result?: unknown }[]
     }
-    // Resolve any tool invocations that are still in 'call' or 'partial-call' state —
-    // convertToCoreMessages throws if a toolInvocation doesn't have a result yet.
-    // Also strip leaked <function=...> XML from assistant message content so the
-    // model never sees its own malformed tool-call output in history, which causes
-    // it to assume the goal was already proposed/confirmed.
+    // Strip toolInvocations from ALL assistant messages and clean leaked XML.
+    // Tool results are resolved locally on the client (resolveToolLocally) and
+    // never sent back to the server. This ensures activeTools is always scoped
+    // strictly by the current intent, preventing the model from picking the
+    // wrong tool when multiple tools are available.
     const normalizedMessages = clientMessages.map((m: ClientMessage) => {
       if (m.role !== 'assistant') return m
 
@@ -291,39 +291,19 @@ export async function POST(request: NextRequest) {
           ? m.content.replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '').trim()
           : m.content
 
-      if (!m.toolInvocations?.length || m.toolInvocations.every((inv) => inv.state === 'result')) {
-        return { ...m, content: cleanContent }
-      }
-      return {
-        ...m,
-        content: cleanContent,
-        toolInvocations: m.toolInvocations.map((inv) =>
-          inv.state === 'result' ? inv : { ...inv, state: 'result', result: { confirmed: false } }
-        ),
-      }
+      // Drop toolInvocations entirely — the model never needs to see past tool calls
+      return { ...m, content: cleanContent, toolInvocations: undefined }
     })
-
-    // If the last assistant message already has a completed tool result we're in a
-    // follow-up turn — disable tools so the LLM just gives a text acknowledgment
-    // instead of proposing the same goal again.
-    const lastAssistant = [...normalizedMessages]
-      .reverse()
-      .find((m: ClientMessage) => m.role === 'assistant')
-    const isFollowUpAfterTool =
-      !!lastAssistant?.toolInvocations?.length &&
-      lastAssistant.toolInvocations.every(
-        (inv: { toolCallId: string; state: string; result?: unknown }) => inv.state === 'result'
-      )
 
     // If the previous assistant message was asking for a goal amount (mid-collection
     // flow), the user's reply (e.g. "20000 euros") won't match goal_setting keywords.
     // Detect this and force the intent so tools stay enabled for this turn.
+    const lastAssistant = [...normalizedMessages]
+      .reverse()
+      .find((m: ClientMessage) => m.role === 'assistant')
     const prevAssistantText =
       typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : ''
-    const followUpIntent = detectFollowUpIntent(
-      prevAssistantText,
-      !!lastAssistant?.toolInvocations?.length
-    )
+    const followUpIntent = detectFollowUpIntent(prevAssistantText, false)
     if (followUpIntent) intent = followUpIntent
 
     const proposeGoalTool = {
@@ -382,9 +362,13 @@ export async function POST(request: NextRequest) {
     const proposeHabitTool = {
       proposeHabit: tool({
         description:
-          'Show a recurring savings habit confirmation card. STRICT RULES: (1) ALWAYS explain the calculation or give a text response first before calling this tool. (2) Only call after you have already told the user the suggested amount in plain text. (3) Only call when you have a name/purpose, a specific amount, AND a frequency (weekly or monthly). Never guess the amount.',
+          'Show a recurring savings habit confirmation card. Only call when you have a specific amount AND a frequency (weekly or monthly). Never guess the amount. Put a brief calculation breakdown (e.g. "50/week = ~200/month") in the pitch field.',
         parameters: z.object({
-          name: z.string().describe('Short habit name, e.g. "Emergency fund"'),
+          name: z
+            .string()
+            .describe(
+              'Short habit name based ONLY on what the user said. If the user did not state a purpose, use a generic name like "Weekly savings" or "Monthly savings". NEVER infer a name from prior conversation or goals.'
+            ),
           amount: z
             .union([z.number(), z.string().transform((s) => parseFloat(s))])
             .refine((n) => (n as number) > 0, { message: 'amount must be positive' })
@@ -402,69 +386,27 @@ export async function POST(request: NextRequest) {
 
     const candidates = await selectModelCandidates('tool-calling')
 
-    // Bound history to prevent token bloat on long conversations, but always
-    // retain messages with confirmed tool results so goal state is preserved.
+    // Bound history to prevent token bloat on long conversations.
     const boundedMessages =
-      normalizedMessages.length > 10
-        ? [
-            ...normalizedMessages.filter((m: ClientMessage) =>
-              m.toolInvocations?.some((inv: { state: string }) => inv.state === 'result')
-            ),
-            ...normalizedMessages.slice(-6),
-          ].filter((m: ClientMessage, i: number, arr: ClientMessage[]) => arr.indexOf(m) === i)
-        : normalizedMessages
+      normalizedMessages.length > 10 ? normalizedMessages.slice(-10) : normalizedMessages
 
-    // If history contains any tool invocation — pending (state='call') or confirmed
-    // (state='result') — convertToCoreMessages emits assistant tool-call messages that
-    // Groq validates against the request's tools list. Any tool referenced in history
-    // must be present in the current request or Groq rejects with "tool not in request.tools".
-    const historyHasToolResults = boundedMessages.some(
-      (m: ClientMessage) =>
-        m.role === 'assistant' &&
-        m.toolInvocations?.some((inv) => inv.state === 'call' || inv.state === 'result')
-    )
-    // When addToolResult() fires the auto-callback, the last message in the
-    // array is the assistant message carrying the tool result — there is no new
-    // user message after it. On this turn, disable tools entirely so the model
-    // can only produce a text acknowledgment and cannot re-propose.
-    const lastMsg = normalizedMessages[normalizedMessages.length - 1] as ClientMessage | undefined
-    const isToolResultCallback = lastMsg?.role === 'assistant' && isFollowUpAfterTool
-
-    const enableTools =
-      !isToolResultCallback &&
-      (historyHasToolResults ||
-        (!isFollowUpAfterTool &&
-          (intent === INTENT.GOAL_SETTING ||
-            intent === INTENT.ADD_TRANSACTION ||
-            intent === INTENT.HABIT_SETTING)))
-
-    // Scope tools strictly by intent. Groq/LLaMA does not reliably honour
-    // toolChoice: { type: 'tool', toolName } when multiple tools are available —
-    // it still picks the wrong one. Restricting the tools list is the only
-    // reliable guard. The system prompt only injects tool rules for the current
-    // intent, so the model won't try to call a tool not in the list.
-    //
-    // When history has any tool invocation, all tools must be present so Groq
-    // can resolve { role: 'tool' } history messages without schema errors.
+    // Scope tools strictly by intent. Only tool-eligible intents get a tool;
+    // all other intents produce plain text only.
     const activeTools = (() => {
-      if (!enableTools) return undefined
-      if (historyHasToolResults) {
-        return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
-      }
       if (intent === INTENT.HABIT_SETTING) return { ...proposeHabitTool }
       if (intent === INTENT.GOAL_SETTING) return { ...proposeGoalTool }
       if (intent === INTENT.ADD_TRANSACTION) return { ...proposeTransactionTool }
-      return { ...proposeGoalTool, ...proposeTransactionTool, ...proposeHabitTool }
+      return undefined
     })()
 
-    // 'required' forces a tool call without a text response first.
-    // ADD_TRANSACTION uses 'required' because the user is stating a known transaction.
-    // HABIT_SETTING and GOAL_SETTING use 'auto' so the model can explain or calculate
-    // first in plain text, then optionally surface the confirmation card.
+    // 'required' forces a tool call. Groq/LLaMA models don't reliably produce
+    // text + tool call together with 'auto', so we use 'required' for intents
+    // where the user has provided all necessary details. goal_setting uses 'auto'
+    // because the user may not have stated an amount yet (model needs to ask).
     const toolChoice = (() => {
       if (!activeTools) return undefined
-      if (intent === INTENT.ADD_TRANSACTION) return 'required' as const
-      return 'auto' as const
+      if (intent === INTENT.GOAL_SETTING) return 'auto' as const
+      return 'required' as const
     })()
 
     const coreMessages = convertToCoreMessages(boundedMessages)

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { memo, useState } from 'react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 
@@ -54,6 +55,11 @@ export const HabitProposalCard = memo(function HabitProposalCard({
       })
       if (!res.ok) throw new Error('Failed to create habit')
       await queryClient.invalidateQueries({ queryKey: ['habits', userId] })
+      await supabase.from('chat_messages').insert({
+        user_id: userId,
+        role: 'assistant',
+        content: `${proposal.emoji} ${proposal.name} — ${formatAmount(proposal.amount)}/${periodLabel}. ${t.proposals.habit.logEachPeriod(periodLabel)}`,
+      })
       setStatus('done')
       onResult(true)
     } catch {

@@ -68,6 +68,10 @@ export function useFinancialChat(
           )
         }
 
+        // Skip saving empty assistant messages (tool-only responses with no text).
+        // The card components persist their own acknowledgement messages to Supabase.
+        if (!message.content?.trim()) return
+
         try {
           await supabase.from('chat_messages').insert({
             user_id: userId,
