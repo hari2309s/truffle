@@ -17,6 +17,7 @@ import type { MonthlySnapshot, TransactionCategory, QueryIntent } from '@truffle
 import { INTENT, TRANSACTION_CATEGORIES } from '@truffle/types'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
 import { currentYearMonth, parseDateRange } from '@/lib/date'
+import { requireUser } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -77,18 +78,17 @@ function detectFollowUpIntent(prevText: string, hasToolInvocations: boolean): Qu
 
 export async function POST(request: NextRequest) {
   try {
-    const {
-      messages: clientMessages,
-      userId,
-      currency = 'EUR',
-      locale = 'en',
-    } = await request.json()
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+    const userId = user.id
+
+    const { messages: clientMessages, currency = 'EUR', locale = 'en' } = await request.json()
     const message = Array.isArray(clientMessages)
       ? [...clientMessages].reverse().find((m: { role: string }) => m.role === 'user')?.content
       : undefined
 
-    if (!message || !userId) {
-      return new Response(JSON.stringify({ error: 'message and userId required' }), {
+    if (!message) {
+      return new Response(JSON.stringify({ error: 'message required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })

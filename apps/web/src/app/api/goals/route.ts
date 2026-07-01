@@ -3,13 +3,15 @@ import { createServerClient } from '@truffle/db'
 import type { SavingsGoal } from '@truffle/types'
 import { recomputeSnapshot } from '@/lib/server-db'
 import { sendGoalMilestoneNudge, sendGoalAtRiskNudge } from '@/lib/proactive-nudge'
+import { requireUser } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
-    if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+    const userId = user.id
 
     const db = createServerClient()
     const { data, error } = await db
@@ -59,9 +61,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, name, targetAmount, deadline, emoji } = await request.json()
-    if (!userId || !name || !targetAmount) {
-      return NextResponse.json({ error: 'userId, name, targetAmount required' }, { status: 400 })
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+    const userId = user.id
+
+    const { name, targetAmount, deadline, emoji } = await request.json()
+    if (!name || !targetAmount) {
+      return NextResponse.json({ error: 'name and targetAmount required' }, { status: 400 })
     }
 
     const db = createServerClient()
@@ -88,9 +94,13 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId, goalId, savedAmount } = await request.json()
-    if (!userId || !goalId || savedAmount === undefined) {
-      return NextResponse.json({ error: 'userId, goalId, savedAmount required' }, { status: 400 })
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+    const userId = user.id
+
+    const { goalId, savedAmount } = await request.json()
+    if (!goalId || savedAmount === undefined) {
+      return NextResponse.json({ error: 'goalId and savedAmount required' }, { status: 400 })
     }
 
     const db = createServerClient()
@@ -185,10 +195,13 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+    const userId = user.id
+
     const goalId = request.nextUrl.searchParams.get('goalId')
-    if (!userId || !goalId) {
-      return NextResponse.json({ error: 'userId and goalId required' }, { status: 400 })
+    if (!goalId) {
+      return NextResponse.json({ error: 'goalId required' }, { status: 400 })
     }
 
     const db = createServerClient()

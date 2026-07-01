@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Groq from 'groq-sdk'
 import { langfuse } from '@truffle/ai'
+import { requireUser } from '@/lib/supabase-server'
 
 function getGroq() {
   return new Groq({ apiKey: process.env.GROQ_API_KEY })
@@ -8,6 +9,9 @@ function getGroq() {
 
 export async function POST(request: NextRequest) {
   try {
+    const { errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+
     const formData = await request.formData()
     const audio = formData.get('audio') as File | null
 

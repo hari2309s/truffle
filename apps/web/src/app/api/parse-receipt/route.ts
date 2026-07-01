@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
 import { visionModel, langfuse } from '@truffle/ai'
 import type { TransactionCategory } from '@truffle/types'
+import { requireUser } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -52,6 +53,9 @@ Rules:
 
 export async function POST(req: NextRequest) {
   try {
+    const { errorResponse } = await requireUser(req)
+    if (errorResponse) return errorResponse
+
     const formData = await req.formData()
     const file = formData.get('file') as File | null
     if (!file) {

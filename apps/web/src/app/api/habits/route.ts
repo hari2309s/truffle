@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
 import { sendHabitStreakNudge, sendHabitCheckInNudge } from '@/lib/proactive-nudge'
+import { requireUser } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
-    if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+    const userId = user.id
 
     const db = createServerClient()
 
@@ -95,12 +97,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, name, amount, frequency, emoji } = await request.json()
-    if (!userId || !name || !amount || !frequency) {
-      return NextResponse.json(
-        { error: 'userId, name, amount, frequency required' },
-        { status: 400 }
-      )
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+    const userId = user.id
+
+    const { name, amount, frequency, emoji } = await request.json()
+    if (!name || !amount || !frequency) {
+      return NextResponse.json({ error: 'name, amount, frequency required' }, { status: 400 })
     }
 
     const db = createServerClient()
@@ -127,12 +130,13 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId, habitId, period, amount } = await request.json()
-    if (!userId || !habitId || !period || amount === undefined) {
-      return NextResponse.json(
-        { error: 'userId, habitId, period, amount required' },
-        { status: 400 }
-      )
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+    const userId = user.id
+
+    const { habitId, period, amount } = await request.json()
+    if (!habitId || !period || amount === undefined) {
+      return NextResponse.json({ error: 'habitId, period, amount required' }, { status: 400 })
     }
 
     const db = createServerClient()
