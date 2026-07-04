@@ -31,9 +31,9 @@ apps/web/test-results/
 apps/web/playwright-report/
 apps/web/.playwright/
 
-# Claude Code local skill/hook rules (machine-specific)
-.claude/*.local.md
-.claude/settings.local.json
+# Claude Code config (machine-specific)
+.claude/
+CLAUDE.md
 
 # next-pwa generated service worker artifacts (regenerated at build time)
 apps/web/public/sw.js

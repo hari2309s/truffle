@@ -22,8 +22,8 @@ export async function embedText(text: string): Promise<number[]> {
     throw new Error(`Gemini embed error: ${err}`)
   }
 
-  const json = await res.json()
-  return json.embedding.values as number[]
+  const json = (await res.json()) as { embedding: { values: number[] } }
+  return json.embedding.values
 }
 
 export async function embedTransaction(transaction: Transaction): Promise<number[]> {

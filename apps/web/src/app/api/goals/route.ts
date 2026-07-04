@@ -42,11 +42,12 @@ export async function GET(request: NextRequest) {
         emoji: row.emoji,
         createdAt: row.created_at,
       }
-      try {
-        await sendGoalAtRiskNudge({ userId, goal, daysRemaining, projectedShortfall: remaining })
-      } catch (e) {
-        console.error(`Goal at-risk nudge failed for "${goal.name}":`, e)
-      }
+      void sendGoalAtRiskNudge({
+        userId,
+        goal,
+        daysRemaining,
+        projectedShortfall: remaining,
+      }).catch((e) => console.error(`Goal at-risk nudge failed for "${goal.name}":`, e))
     }
 
     return NextResponse.json(

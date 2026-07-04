@@ -72,20 +72,16 @@ export async function GET(request: NextRequest) {
       if (h.currentPeriodLogged) continue
       const pastMidpoint = h.frequency === 'weekly' ? dayOfWeek >= 4 : dayOfMonth >= 15
       if (!pastMidpoint) continue
-      try {
-        await sendHabitCheckInNudge({
-          userId,
-          habitId: h.id,
-          habitName: h.name,
-          habitEmoji: h.emoji,
-          frequency: h.frequency,
-          amount: h.amount,
-          period: getCurrentPeriod(h.frequency),
-          lastStreak: h.streak,
-        })
-      } catch (e) {
-        console.error(`Habit check-in nudge failed for "${h.name}":`, e)
-      }
+      void sendHabitCheckInNudge({
+        userId,
+        habitId: h.id,
+        habitName: h.name,
+        habitEmoji: h.emoji,
+        frequency: h.frequency,
+        amount: h.amount,
+        period: getCurrentPeriod(h.frequency),
+        lastStreak: h.streak,
+      }).catch((e) => console.error(`Habit check-in nudge failed for "${h.name}":`, e))
     }
 
     return NextResponse.json({ habits: habitsWithStats })
@@ -134,7 +130,7 @@ export async function PATCH(request: NextRequest) {
     if (errorResponse) return errorResponse
     const userId = user.id
 
-    const { habitId, period, amount } = await request.json()
+    const { habitId, period, amount, currency = 'EUR' } = await request.json()
     if (!habitId || !period || amount === undefined) {
       return NextResponse.json({ error: 'habitId, period, amount required' }, { status: 400 })
     }
@@ -176,7 +172,7 @@ export async function PATCH(request: NextRequest) {
         await db.from('transactions').insert({
           user_id: userId,
           amount: -amount,
-          currency: 'EUR',
+          currency,
           description: `Savings — ${habit.name}`,
           category: 'savings',
           date: today,

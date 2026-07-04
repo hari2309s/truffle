@@ -35,12 +35,16 @@ export async function GET(req: NextRequest) {
   yesterday.setDate(yesterday.getDate() - 1)
   const dateStr = yesterday.toISOString().split('T')[0]
 
+  const today = new Date()
+  today.setDate(today.getDate())
+  const todayStr = today.toISOString().split('T')[0]
+
   const { data: logs, error } = await db
     .from('eval_logs')
     .select('id, input, output, task, trace_id')
     .is('judge_score', null)
     .gte('created_at', `${dateStr}T00:00:00Z`)
-    .lt('created_at', `${dateStr}T23:59:59Z`)
+    .lt('created_at', `${todayStr}T00:00:00Z`)
     .limit(100)
 
   if (error) {

@@ -259,13 +259,14 @@ async function detectAnomalies(
   const newIds = newTxs.map((tx) => tx.id as string)
   const since = new Date()
   since.setDate(since.getDate() - 90)
-  const { data: history } = await db
+  let historyQuery = db
     .from('transactions')
     .select('amount, category, merchant, description')
     .eq('user_id', userId)
     .gte('date', since.toISOString().slice(0, 10))
     .lt('amount', '0') // expenses only
-    .not('id', 'in', `(${newIds.join(',')})`)
+  if (newIds.length > 0) historyQuery = historyQuery.not('id', 'in', `(${newIds.join(',')})`)
+  const { data: history } = await historyQuery
 
   if (!history || history.length < 5) return [] // not enough history
 
@@ -308,13 +309,14 @@ async function detectAnomalies(
   // times in the current month. Compare new transactions against history from
   // the same calendar month.
   const currentMonth = new Date().toISOString().slice(0, 7)
-  const { data: monthTxs } = await db
+  let monthQuery = db
     .from('transactions')
     .select('id, amount, category, merchant, description, date')
     .eq('user_id', userId)
     .gte('date', `${currentMonth}-01`)
     .lt('amount', '0')
-    .not('id', 'in', `(${newIds.join(',')})`)
+  if (newIds.length > 0) monthQuery = monthQuery.not('id', 'in', `(${newIds.join(',')})`)
+  const { data: monthTxs } = await monthQuery
 
   if (monthTxs) {
     for (const tx of newTxs) {

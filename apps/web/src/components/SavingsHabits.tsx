@@ -17,6 +17,7 @@ interface SavingsHabitsProps {
 
 export function SavingsHabits({ userId }: SavingsHabitsProps) {
   const { t } = useLanguage()
+  const { currency } = useCurrency()
   const queryClient = useQueryClient()
   const [loggingId, setLoggingId] = useState<string | null>(null)
 
@@ -43,7 +44,7 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
     setLoggingId(habit.id)
     try {
       const period = getCurrentPeriod(habit.frequency)
-      const payload = { userId, habitId: habit.id, period, amount: habit.amount }
+      const payload = { userId, habitId: habit.id, period, amount: habit.amount, currency }
 
       if (!navigator.onLine) {
         await offlineDb.habitsWithStats.update(habit.id, {

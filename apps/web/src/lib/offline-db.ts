@@ -132,8 +132,8 @@ export async function flushQueuedActions(): Promise<number> {
           body: JSON.stringify(action.payload),
         })
       } else if (action.type === 'delete_goal') {
-        const { userId, goalId } = action.payload as { userId: string; goalId: string }
-        res = await fetch(`/api/goals?userId=${userId}&goalId=${goalId}`, { method: 'DELETE' })
+        const { goalId } = action.payload as { goalId: string }
+        res = await fetch(`/api/goals?goalId=${goalId}`, { method: 'DELETE' })
       } else if (action.type === 'create_habit') {
         res = await fetch('/api/habits', {
           method: 'POST',
@@ -153,10 +153,8 @@ export async function flushQueuedActions(): Promise<number> {
           body: JSON.stringify(action.payload),
         })
       } else if (action.type === 'delete_budget') {
-        const { userId, budgetId } = action.payload as { userId: string; budgetId: string }
-        res = await fetch(`/api/budgets?userId=${userId}&budgetId=${budgetId}`, {
-          method: 'DELETE',
-        })
+        const { budgetId } = action.payload as { budgetId: string }
+        res = await fetch(`/api/budgets?budgetId=${budgetId}`, { method: 'DELETE' })
       }
 
       if (res?.ok) {
