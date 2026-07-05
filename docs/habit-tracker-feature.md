@@ -147,9 +147,9 @@ if (prevWasAskingForHabitDetails) intent = 'habit_setting'
 
 File: [`apps/web/src/app/api/habits/route.ts`](../apps/web/src/app/api/habits/route.ts)
 
-### `GET /api/habits?userId=<id>`
+### `GET /api/habits`
 
-Returns all active habits with computed stats (streak, `currentPeriodLogged`, `totalSaved`).
+Returns all active habits with computed stats (streak, `currentPeriodLogged`, `totalSaved`). The user is identified from the session cookie — no `userId` parameter needed.
 
 **Response:**
 ```json
@@ -175,12 +175,11 @@ Stats are computed server-side: all contributions for the user's active habits a
 
 ### `POST /api/habits`
 
-Creates a new savings habit.
+Creates a new savings habit. `userId` is derived from the session — do not send it in the body.
 
 **Body:**
 ```json
 {
-  "userId": "uuid",
   "name": "Emergency fund",
   "amount": 50,
   "frequency": "weekly",
@@ -188,21 +187,30 @@ Creates a new savings habit.
 }
 ```
 
+**Validation:** `amount` must be a positive finite number ≤ 1,000,000. `name` must be a string under 200 characters. `frequency` must be `"weekly"` or `"monthly"`.
+
 ### `PATCH /api/habits`
 
-Logs a contribution for a specific period. Uses `upsert` on the `(habit_id, period)` unique constraint — idempotent.
+Logs a contribution for a specific period. Uses `upsert` on the `(habit_id, period)` unique constraint — idempotent. `userId` is derived from the session — do not send it in the body.
 
 **Body:**
 ```json
 {
-  "userId": "uuid",
   "habitId": "uuid",
   "period": "2026-W14",
   "amount": 50
 }
 ```
 
-**Proactive streak celebration:** After the upsert, the handler recomputes the full streak. If it lands on a milestone (3, 5, 7, 10, 15, 20, 30, 50, 100), a celebration nudge is sent via `sendHabitStreakNudge`. Dedup key: `habit-streak:{habitId}:{streak}` — one nudge per streak number per habit. See [Proactive Nudges](./proactive-nudges.md) for details.
+**Validation:**
+- `amount` must be a positive finite number ≤ 1,000,000.
+- `period` must match `YYYY-MM` (monthly) or `YYYY-WNN` (weekly ISO week), where the year is ≥ 1000. Week 53 is only accepted for years where it actually exists (ISO: Jan 1 falls on Thursday, or Wednesday in a leap year).
+
+**Response (new contribution):** `{ "contribution": { ... } }`
+
+**Response (already logged this period):** `{ "contribution": null, "alreadyLogged": true }` — 200 OK, no duplicate transaction inserted.
+
+**Proactive streak celebration:** After the upsert, the handler recomputes the full streak. If it lands on a milestone (3, 5, 7, 10, 15, 20, 30, 50, 100), a celebration nudge fires fire-and-forget via `sendHabitStreakNudge`. Dedup key: `habit-streak:{habitId}:{streak}` — one nudge per streak number per habit. See [Proactive Nudges](./proactive-nudges.md) for details.
 
 ---
 

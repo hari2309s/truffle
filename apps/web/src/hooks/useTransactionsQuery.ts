@@ -14,7 +14,7 @@ export function useTransactionsQuery(userId: string) {
     queryKey: ['transactions', userId],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/transactions?userId=${userId}`)
+        const res = await fetch('/api/transactions')
         if (!res.ok) throw new Error('Failed to fetch transactions')
         const json = await res.json()
         const transactions: Transaction[] = (json.transactions ?? []).map(mapTransactionRow)

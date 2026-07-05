@@ -20,12 +20,13 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
   const { currency } = useCurrency()
   const queryClient = useQueryClient()
   const [loggingId, setLoggingId] = useState<string | null>(null)
+  const [logError, setLogError] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['habits', userId],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/habits?userId=${userId}`)
+        const res = await fetch('/api/habits')
         if (!res.ok) throw new Error('Failed to fetch habits')
         const json = await res.json()
         const habits = json.habits as HabitWithStats[]
@@ -42,9 +43,10 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
 
   const handleLogContribution = async (habit: HabitWithStats) => {
     setLoggingId(habit.id)
+    setLogError(null)
     try {
       const period = getCurrentPeriod(habit.frequency)
-      const payload = { userId, habitId: habit.id, period, amount: habit.amount, currency }
+      const payload = { habitId: habit.id, period, amount: habit.amount, currency }
 
       if (!navigator.onLine) {
         await offlineDb.habitsWithStats.update(habit.id, {
@@ -61,11 +63,16 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
         return
       }
 
-      await fetch('/api/habits', {
+      const res = await fetch('/api/habits', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
+      if (!res.ok) {
+        console.error('Failed to log habit contribution:', res.status)
+        setLogError('Failed to log contribution. Please try again.')
+        return
+      }
       await queryClient.invalidateQueries({ queryKey: ['habits', userId] })
     } finally {
       setLoggingId(null)
@@ -102,6 +109,7 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
       animate="show"
       variants={staggerListVariants}
     >
+      {logError && <p className="text-xs text-truffle-red">{logError}</p>}
       {habits.map((habit) => (
         <motion.div key={habit.id} variants={staggerItemVariants}>
           <HabitCard

@@ -11,6 +11,15 @@ import { currentYearMonth } from './date'
 
 type ProactiveState = typeof GraphAnnotation.State
 
+function sanitize(text: unknown, maxLen = 120): string {
+  return String(text ?? '')
+    .replace(/[\r\n\t]/g, ' ')
+    .replace(/[\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, maxLen)
+}
+
 function emptySnapshot(): MonthlySnapshot {
   return {
     month: currentYearMonth(),
@@ -172,25 +181,30 @@ async function generateMonthlyReport(
   userName?: string
 ): Promise<string | null> {
   const topCatsText = trigger.topCategories
-    .map((c) => `${c.category.replace(/_/g, ' ')}: €${Math.abs(c.amount).toFixed(0)}`)
+    .map((c) => `${sanitize(c.category, 40).replace(/_/g, ' ')}: €${Math.abs(c.amount).toFixed(0)}`)
     .join(', ')
 
   const goalsText =
     trigger.goals.length > 0
-      ? trigger.goals.map((g) => `${g.emoji} ${g.name} at ${g.pct}%`).join(', ')
+      ? trigger.goals
+          .map((g) => `${sanitize(g.emoji, 10)} ${sanitize(g.name)} at ${g.pct}%`)
+          .join(', ')
       : 'no active goals'
 
   const habitsText =
     trigger.habits.length > 0
       ? trigger.habits
-          .map((h) => `${h.emoji} ${h.name}${h.streak > 0 ? ` (${h.streak} streak)` : ''}`)
+          .map(
+            (h) =>
+              `${sanitize(h.emoji, 10)} ${sanitize(h.name)}${h.streak > 0 ? ` (${h.streak} streak)` : ''}`
+          )
           .join(', ')
       : 'no active habits'
 
   const net = trigger.balance
   const netLabel = net >= 0 ? `+€${net.toFixed(0)}` : `-€${Math.abs(net).toFixed(0)}`
 
-  const addressee = userName ? userName.split(' ')[0] : null
+  const addressee = userName ? sanitize(userName.split(' ')[0] ?? '', 50) : null
   const prompt = `You are Truffle, a warm and direct AI finance assistant. Write a monthly finance summary message for the user covering ${trigger.monthName}.${addressee ? ` Address them by name: ${addressee}.` : ' Do not use "Hi there" — address them directly without a greeting or just start with the content.'}
 
 Data:
@@ -269,7 +283,7 @@ function buildGraphInput(
   userName?: string
 ) {
   const nameInstruction = userName
-    ? ` Address the user by their first name: ${userName.split(' ')[0]}.`
+    ? ` Address the user by their first name: ${sanitize(userName.split(' ')[0] ?? '', 50)}.`
     : ' Do not use "Hi there" — start directly with the insight.'
   const empty = {
     transactions: [] as Transaction[],
@@ -282,7 +296,7 @@ function buildGraphInput(
     case 'anomaly':
       return {
         ...empty,
-        userQuery: `You just detected an anomaly: "${trigger.anomaly.description}". Write a brief, warm proactive message for the user — no more than 2-3 sentences.${nameInstruction}`,
+        userQuery: `You just detected an anomaly: "${sanitize(trigger.anomaly.description, 200)}". Write a brief, warm proactive message for the user — no more than 2-3 sentences.${nameInstruction}`,
         intent: 'anomaly_review' as const,
         transactions: trigger.transactions,
         anomalies: [trigger.anomaly],
@@ -291,7 +305,7 @@ function buildGraphInput(
     case 'goal_milestone':
       return {
         ...empty,
-        userQuery: `The user just hit ${trigger.milestone}% of their "${trigger.goal.name}" goal (${trigger.goal.emoji}). Celebrate this briefly and mention their momentum — 1-2 sentences.${nameInstruction}`,
+        userQuery: `The user just hit ${trigger.milestone}% of their "${sanitize(trigger.goal.name)}" goal (${sanitize(trigger.goal.emoji, 10)}). Celebrate this briefly and mention their momentum — 1-2 sentences.${nameInstruction}`,
         intent: 'savings_goal_check' as const,
         savingsGoals: [trigger.goal],
         currentMonth: trigger.snapshot,
@@ -299,30 +313,31 @@ function buildGraphInput(
     case 'goal_at_risk':
       return {
         ...empty,
-        userQuery: `The user's "${trigger.goal.name}" savings goal (${trigger.goal.emoji}) has ${trigger.daysRemaining} days until its deadline, but they still need €${trigger.projectedShortfall.toFixed(0)} to reach their €${trigger.goal.targetAmount} target. They've saved €${trigger.goal.savedAmount} so far. Write a brief, encouraging nudge — 1-2 sentences. Motivate without being preachy.${nameInstruction}`,
+        userQuery: `The user's "${sanitize(trigger.goal.name)}" savings goal (${sanitize(trigger.goal.emoji, 10)}) has ${trigger.daysRemaining} days until its deadline, but they still need €${trigger.projectedShortfall.toFixed(0)} to reach their €${trigger.goal.targetAmount} target. They've saved €${trigger.goal.savedAmount} so far. Write a brief, encouraging nudge — 1-2 sentences. Motivate without being preachy.${nameInstruction}`,
         intent: 'savings_goal_check' as const,
         savingsGoals: [trigger.goal],
       }
     case 'habit_streak':
       return {
         ...empty,
-        userQuery: `The user just logged their "${trigger.habitName}" (${trigger.habitEmoji}) savings habit and hit a ${trigger.streak}-period streak! Write a brief, warm celebration — 1-2 sentences. Acknowledge the consistency.${nameInstruction}`,
+        userQuery: `The user just logged their "${sanitize(trigger.habitName)}" (${sanitize(trigger.habitEmoji, 10)}) savings habit and hit a ${trigger.streak}-period streak! Write a brief, warm celebration — 1-2 sentences. Acknowledge the consistency.${nameInstruction}`,
         intent: 'habit_setting' as const,
       }
     case 'habit_check_in':
       return {
         ...empty,
-        userQuery: `The user's "${trigger.habitName}" (${trigger.habitEmoji}) savings habit hasn't been logged yet this ${trigger.frequency === 'weekly' ? 'week' : 'month'}. They save €${trigger.amount} per ${trigger.frequency === 'weekly' ? 'week' : 'month'}${trigger.lastStreak > 0 ? ` and had a ${trigger.lastStreak}-period streak going` : ''}. Write a gentle, non-judgmental reminder — 1-2 sentences. Don't be pushy.${nameInstruction}`,
+        userQuery: `The user's "${sanitize(trigger.habitName)}" (${sanitize(trigger.habitEmoji, 10)}) savings habit hasn't been logged yet this ${trigger.frequency === 'weekly' ? 'week' : 'month'}. They save €${trigger.amount} per ${trigger.frequency === 'weekly' ? 'week' : 'month'}${trigger.lastStreak > 0 ? ` and had a ${trigger.lastStreak}-period streak going` : ''}. Write a gentle, non-judgmental reminder — 1-2 sentences. Don't be pushy.${nameInstruction}`,
         intent: 'habit_setting' as const,
       }
     case 'budget_warning': {
-      const catLabel = trigger.category.replace(/_/g, ' ')
+      const catLabel = sanitize(trigger.category).replace(/_/g, ' ')
+      const catEmoji = sanitize(trigger.categoryEmoji, 10)
       const isOver = trigger.percentUsed >= 100
       return {
         ...empty,
         userQuery: isOver
-          ? `The user has exceeded their ${trigger.categoryEmoji} ${catLabel} budget this month — they've spent €${trigger.spentAmount.toFixed(0)} against a €${trigger.budgetAmount.toFixed(0)} limit (${trigger.percentUsed.toFixed(0)}% used). Write a brief, calm, non-judgmental heads-up — 1-2 sentences. Don't lecture.${nameInstruction}`
-          : `The user has used ${trigger.percentUsed.toFixed(0)}% of their ${trigger.categoryEmoji} ${catLabel} budget this month — €${trigger.spentAmount.toFixed(0)} of €${trigger.budgetAmount.toFixed(0)}. Write a brief, friendly heads-up noting they're getting close — 1-2 sentences.${nameInstruction}`,
+          ? `The user has exceeded their ${catEmoji} ${catLabel} budget this month — they've spent €${trigger.spentAmount.toFixed(0)} against a €${trigger.budgetAmount.toFixed(0)} limit (${trigger.percentUsed.toFixed(0)}% used). Write a brief, calm, non-judgmental heads-up — 1-2 sentences. Don't lecture.${nameInstruction}`
+          : `The user has used ${trigger.percentUsed.toFixed(0)}% of their ${catEmoji} ${catLabel} budget this month — €${trigger.spentAmount.toFixed(0)} of €${trigger.budgetAmount.toFixed(0)}. Write a brief, friendly heads-up noting they're getting close — 1-2 sentences.${nameInstruction}`,
         intent: 'spending_summary' as const,
       }
     }

@@ -26,10 +26,10 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
     setIsExporting(true)
     try {
       const [txRes, goalsRes, budgetsRes, habitsRes] = await Promise.all([
-        fetch(`/api/transactions?userId=${userId}`),
-        fetch(`/api/goals?userId=${userId}`),
-        fetch(`/api/budgets?userId=${userId}`),
-        fetch(`/api/habits?userId=${userId}`),
+        fetch('/api/transactions'),
+        fetch('/api/goals'),
+        fetch('/api/budgets'),
+        fetch('/api/habits'),
       ])
       const [txData, goalsData, budgetsData, habitsData] = await Promise.all([
         txRes.json(),
@@ -66,7 +66,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
       const res = await fetch('/api/account/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({}),
       })
       if (!res.ok) throw new Error('server error')
       await signOut()

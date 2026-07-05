@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 import { generateText } from 'ai'
 import { chatModel, langfuse } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
@@ -6,12 +7,21 @@ import { createServerClient as createDbClient } from '@truffle/db'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
+function sanitizeForPrompt(text: string, maxLen = 500): string {
+  return String(text ?? '')
+    .replace(/[\r\n\t]/g, ' ')
+    .replace(/[\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, maxLen)
+}
+
 const JUDGE_PROMPT = (task: string, input: string, output: string) =>
   `
 You are evaluating an AI financial assistant response.
-Task type: ${task}
-User input: ${input}
-AI response: ${output}
+Task type: ${sanitizeForPrompt(task, 100)}
+User input: ${sanitizeForPrompt(input)}
+AI response: ${sanitizeForPrompt(output)}
 
 Score the response 1-5 on this scale:
 1 = Wrong, harmful, or completely irrelevant
@@ -24,20 +34,35 @@ Reply with only a single digit (1-5). No explanation.
 `.trim()
 
 export async function GET(req: NextRequest) {
+  if (!process.env.CRON_SECRET) {
+    console.warn('[eval-judge] CRON_SECRET env var is not set; all requests will be rejected')
+    return new Response('Unauthorized', { status: 401 })
+  }
   const secret = req.headers.get('x-cron-secret')
-  if (secret !== process.env.CRON_SECRET) {
+  const expected = process.env.CRON_SECRET
+  // Pad to the same length before timingSafeEqual so the comparison never
+  // short-circuits on length, preventing a length-based timing side-channel.
+  const rawA = Buffer.from(secret ?? '')
+  const rawB = Buffer.from(expected)
+  const maxLen = Math.max(rawA.length, rawB.length)
+  const bufA = Buffer.alloc(maxLen)
+  rawA.copy(bufA)
+  const bufB = Buffer.alloc(maxLen)
+  rawB.copy(bufB)
+  // Padding ensures timingSafeEqual always runs in constant time regardless of length.
+  // Different-length secrets always diverge after padding, so the length check is redundant.
+  const valid = timingSafeEqual(bufA, bufB)
+  if (!valid) {
     return new Response('Unauthorized', { status: 401 })
   }
 
   const db = createDbClient()
 
-  const yesterday = new Date()
+  const now = new Date()
+  const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
   const dateStr = yesterday.toISOString().split('T')[0]
-
-  const today = new Date()
-  today.setDate(today.getDate())
-  const todayStr = today.toISOString().split('T')[0]
+  const todayStr = now.toISOString().split('T')[0]
 
   const { data: logs, error } = await db
     .from('eval_logs')
@@ -64,7 +89,14 @@ export async function GET(req: NextRequest) {
       const parsed = parseInt(text.trim(), 10)
       if (parsed >= 1 && parsed <= 5) {
         // Write score back to eval_logs
-        await db.from('eval_logs').update({ judge_score: parsed }).eq('id', log.id)
+        const { error: updateError } = await db
+          .from('eval_logs')
+          .update({ judge_score: parsed })
+          .eq('id', log.id)
+        if (updateError) {
+          console.warn('[eval-judge] failed to persist score for log', log.id, updateError)
+          continue
+        }
 
         // Also attach the score to the Langfuse trace so it appears in the
         // observability dashboard alongside the generation that produced it
@@ -73,7 +105,7 @@ export async function GET(req: NextRequest) {
             traceId: log.trace_id,
             name: 'response_quality',
             value: parsed,
-            comment: `Automated judge score (1–5) for task: ${log.task}`,
+            comment: `Automated judge score (1–5) for task: ${sanitizeForPrompt(log.task, 100)}`,
           })
         }
 

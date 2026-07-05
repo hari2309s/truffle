@@ -133,7 +133,7 @@ export async function flushQueuedActions(): Promise<number> {
         })
       } else if (action.type === 'delete_goal') {
         const { goalId } = action.payload as { goalId: string }
-        res = await fetch(`/api/goals?goalId=${goalId}`, { method: 'DELETE' })
+        res = await fetch(`/api/goals?goalId=${encodeURIComponent(goalId)}`, { method: 'DELETE' })
       } else if (action.type === 'create_habit') {
         res = await fetch('/api/habits', {
           method: 'POST',
@@ -154,7 +154,9 @@ export async function flushQueuedActions(): Promise<number> {
         })
       } else if (action.type === 'delete_budget') {
         const { budgetId } = action.payload as { budgetId: string }
-        res = await fetch(`/api/budgets?budgetId=${budgetId}`, { method: 'DELETE' })
+        res = await fetch(`/api/budgets?budgetId=${encodeURIComponent(budgetId)}`, {
+          method: 'DELETE',
+        })
       }
 
       if (res?.ok) {

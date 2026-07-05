@@ -18,6 +18,12 @@ export async function POST(request: NextRequest) {
     if (!audio) {
       return NextResponse.json({ error: 'No audio file provided' }, { status: 400 })
     }
+    if (!audio.type.startsWith('audio/')) {
+      return NextResponse.json({ error: 'Invalid file type — must be audio' }, { status: 400 })
+    }
+    if (audio.size > 25 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Audio file too large (max 25 MB)' }, { status: 400 })
+    }
 
     const trace = langfuse.trace({
       name: 'voice_transcription',
@@ -40,8 +46,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ transcript: transcription.text })
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('Voice transcription error:', msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    console.error('Voice transcription error:', error instanceof Error ? error.message : error)
+    return NextResponse.json({ error: 'Transcription failed' }, { status: 500 })
   }
 }

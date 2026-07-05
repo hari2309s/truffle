@@ -25,7 +25,7 @@ Condition met?
                       Unread badge on Chat tab
 ```
 
-> **Important:** All nudge calls are `await`-ed before the HTTP response is returned. Earlier fire-and-forget patterns were silently killed by the Vercel serverless runtime on response. The latency impact is minimal — the `alreadySent` dedup check short-circuits on subsequent requests, so the LLM call only happens once per nudge key.
+> **Note on awaiting vs. fire-and-forget:** Nudge calls in the transaction route (`sendAnomalyNudge`, `sendBudgetNudge`) are `await`-ed because they're triggered once per transaction and latency is acceptable. Nudge calls in the goals and habits routes (milestone, at-risk, streak, check-in) use fire-and-forget — `void fn().catch(console.error)` — because they fire on every GET/PATCH and the LLM latency would otherwise block the response for the common case. The `alreadySent` dedup check still short-circuits after the first nudge so the LLM is only called once per nudge key regardless.
 
 ---
 
@@ -196,7 +196,7 @@ sendHabitStreakNudge({ userId, habitId, habitName, habitEmoji, streak })
 sendHabitCheckInNudge({ userId, habitId, habitName, habitEmoji, frequency, amount, period, lastStreak })
 ```
 
-All five are `async` and **must be `await`-ed** in route handlers. Fire-and-forget patterns are killed by the Vercel serverless runtime before they complete. Each call site wraps the await in `try/catch` with `console.error` so failures are visible in function logs without crashing the response.
+All five are `async`. Transaction-triggered nudges (`sendAnomalyNudge`, `sendBudgetNudge`) are `await`-ed in their route handlers. Response-path nudges (`sendGoalMilestoneNudge`, `sendGoalAtRiskNudge`, `sendHabitStreakNudge`, `sendHabitCheckInNudge`) use fire-and-forget — `void fn().catch(console.error)` — to avoid blocking the HTTP response. All call sites log failures to `console.error` so errors are visible in function logs.
 
 ---
 

@@ -3,23 +3,33 @@ import { createServerClient } from '@truffle/db'
 import type { Forecast } from '@truffle/types'
 import { currentYearMonth } from '@/lib/date'
 import { sendMonthlyReportNudge } from '@/lib/proactive-nudge'
+import { requireUser } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 })
-    }
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+    const userId = user.id
 
-    // Fire-and-forget: send monthly report nudge for the previous month if not yet sent
-    sendMonthlyReportNudge(userId).catch((e) =>
-      console.warn('Monthly report nudge failed (non-fatal):', e)
-    )
+    // Only fire the monthly report nudge in the first 3 days of the month to
+    // avoid re-triggering on every page load for the rest of the month.
+    const dayOfMonth = new Date().getDate()
+    if (dayOfMonth <= 3) {
+      void sendMonthlyReportNudge(userId).catch((e) =>
+        console.warn('Monthly report nudge failed (non-fatal):', e)
+      )
+    }
 
     const db = createServerClient()
     const currentMonth = currentYearMonth()
+    // Compute next month start using Date.UTC so arithmetic is timezone-independent
+    const [ymYear, ymMonth] = currentMonth.split('-')
+    const year = parseInt(ymYear!, 10)
+    const month = parseInt(ymMonth!, 10) - 1 // 0-indexed
+    const nextMonthDate = new Date(Date.UTC(year, month + 1, 1))
+    const nextMonthStart = `${nextMonthDate.getUTCFullYear()}-${String(nextMonthDate.getUTCMonth() + 1).padStart(2, '0')}-01`
 
     // Anomalies — isolated so a missing table never breaks the forecast
     let anomalies: unknown[] = []
@@ -36,20 +46,24 @@ export async function GET(request: NextRequest) {
       console.warn('Anomalies query threw (non-fatal):', e)
     }
 
-    // Compute balance live — fetch all and filter in JS to avoid date type issues
+    // Compute balance live from current-month transactions only
     const { data: txsRaw, error: txErr } = await db
       .from('transactions')
       .select('amount, category, date')
       .eq('user_id', userId)
+      .gte('date', `${currentMonth}-01`)
+      .lt('date', nextMonthStart)
       .order('date', { ascending: false })
-      .limit(500)
+      .limit(2000)
 
-    if (txErr) console.error('Transactions query error:', txErr.message)
+    if (txErr) {
+      console.error('Transactions query error:', txErr.message)
+      return NextResponse.json({ error: 'Failed to load transactions' }, { status: 500 })
+    }
+    const truncated = (txsRaw?.length ?? 0) === 2000
+    if (truncated) console.warn(`[insights] hit 2000-row cap for user ${userId.slice(0, 8)}…`)
 
-    const allTxs = (txsRaw ?? []) as { amount: number | string; category: string; date: string }[]
-
-    // Filter to current month regardless of how the date is stored
-    const txs = allTxs.filter((t) => String(t.date).startsWith(currentMonth))
+    const txs = (txsRaw ?? []) as { amount: number | string; category: string; date: string }[]
     const transactionCount = txs.length
 
     const totalIncome = txs
@@ -91,7 +105,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { anomalies, forecast },
+      { anomalies, forecast, truncated },
       { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
     )
   } catch (error) {

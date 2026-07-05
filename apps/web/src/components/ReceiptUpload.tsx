@@ -101,12 +101,10 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
           transactions: parsed.map((tx) => ({
             ...tx,
             merchant: tx.description,
             isRecurring: false,
-            userId,
           })),
         }),
       })

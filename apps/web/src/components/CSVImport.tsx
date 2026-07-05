@@ -170,7 +170,6 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
           transactions: rows.map((row) => ({
             description: row.description,
             amount: row.amount,
@@ -179,7 +178,6 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
             date: row.date,
             merchant: row.merchant,
             isRecurring: false,
-            userId,
           })),
         }),
       })

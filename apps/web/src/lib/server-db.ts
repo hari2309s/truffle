@@ -8,14 +8,27 @@ import { currentYearMonth } from './date'
 export async function recomputeSnapshot(userId: string, db: ReturnType<typeof createServerClient>) {
   const currentMonth = currentYearMonth()
   const startDate = `${currentMonth}-01`
+  const [yearStr, monthStr] = currentMonth.split('-')
+  const year = parseInt(yearStr!, 10)
+  const month = parseInt(monthStr!, 10) - 1 // 0-indexed
+  // Use Date.UTC so month rollover arithmetic is timezone-independent
+  const nextMonthDate = new Date(Date.UTC(year, month + 1, 1))
+  const nextMonthStart = `${nextMonthDate.getUTCFullYear()}-${String(nextMonthDate.getUTCMonth() + 1).padStart(2, '0')}-01`
 
-  const { data: txs } = await db
+  const { data: txs, error: txsError } = await db
     .from('transactions')
     .select('amount, category')
     .eq('user_id', userId)
     .gte('date', startDate)
+    .lt('date', nextMonthStart)
+    .order('date', { ascending: true })
+    .limit(5000)
 
+  if (txsError) throw txsError
   if (!txs) return
+  if (txs.length === 5000) {
+    console.warn(`[recomputeSnapshot] transaction cap hit for user ${userId} in ${currentMonth}`)
+  }
 
   const rows = txs as { amount: number | string; category: string }[]
 

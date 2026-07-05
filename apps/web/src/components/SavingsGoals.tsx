@@ -38,9 +38,11 @@ export function SavingsGoals({
   onAddGoalOpenChange,
 }: SavingsGoalsProps) {
   const { t } = useLanguage()
+  const { currency } = useCurrency()
   const queryClient = useQueryClient()
   const [internalShowAdd, setInternalShowAdd] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [fundsError, setFundsError] = useState<string | null>(null)
 
   const showAdd = embedded ? Boolean(addGoalOpen) : internalShowAdd
   const setShowAdd = (open: boolean) => {
@@ -52,7 +54,7 @@ export function SavingsGoals({
     queryKey: ['goals', userId],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/goals?userId=${userId}`)
+        const res = await fetch('/api/goals')
         if (!res.ok) throw new Error('Failed to fetch goals')
         const json = await res.json()
         const mapped: SavingsGoal[] = (json.goals ?? []).map(mapGoal)
@@ -66,9 +68,11 @@ export function SavingsGoals({
   })
 
   const handleAddFunds = async (goalId: string, currentSaved: number, deposit: number) => {
+    setFundsError(null)
     const goal = goals.find((g) => g.id === goalId)
-    const newAmount = Math.min(currentSaved + deposit, goal?.targetAmount ?? Infinity)
-    const payload = { userId, goalId, savedAmount: newAmount }
+    if (!goal) return
+    const newAmount = Math.min(currentSaved + deposit, goal.targetAmount)
+    const payload = { goalId, savedAmount: newAmount, currency }
 
     if (!navigator.onLine) {
       await offlineDb.goals.update(goalId, { savedAmount: newAmount })
@@ -78,11 +82,22 @@ export function SavingsGoals({
       return
     }
 
-    await fetch('/api/goals', {
+    const res = await fetch('/api/goals', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
+    if (res.status === 409) {
+      // Concurrent update — invalidate to get the latest state; the user can retry
+      await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
+      return
+    }
+    if (!res.ok) {
+      // Invalidate stale cache (e.g. targetAmount changed concurrently) before showing error
+      await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
+      setFundsError('Failed to add funds. Please try again.')
+      return
+    }
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['goals', userId] }),
       queryClient.invalidateQueries({ queryKey: ['transactions', userId] }),
@@ -96,7 +111,7 @@ export function SavingsGoals({
         await offlineDb.goals.delete(goalId)
         await offlineDb.queuedActions.add({
           type: 'delete_goal',
-          payload: { userId, goalId },
+          payload: { goalId },
           createdAt: Date.now(),
         })
         await registerBackgroundSync()
@@ -104,7 +119,7 @@ export function SavingsGoals({
         return
       }
 
-      await fetch(`/api/goals?userId=${userId}&goalId=${goalId}`, { method: 'DELETE' })
+      await fetch(`/api/goals?goalId=${encodeURIComponent(goalId)}`, { method: 'DELETE' })
       await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
     } finally {
       setDeletingId(null)
@@ -137,6 +152,8 @@ export function SavingsGoals({
           }}
         />
       )}
+
+      {fundsError && <p className="text-xs text-truffle-red mb-2">{fundsError}</p>}
 
       {isLoading ? (
         <div className="space-y-2">
@@ -274,29 +291,33 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
   const posthog = usePostHog()
   const [form, setForm] = useState({ name: '', targetAmount: '', deadline: '', emoji: '🎯' })
   const [isLoading, setIsLoading] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name || !form.targetAmount) return
     setIsLoading(true)
+    setSubmitError(null)
+    // Capture form values immediately so concurrent React renders can't change them mid-submit
+    const { name, targetAmount: targetAmountStr, deadline, emoji } = form
+    const targetAmount = parseFloat(targetAmountStr)
     try {
       const payload = {
-        userId,
-        name: form.name,
-        targetAmount: parseFloat(form.targetAmount),
-        deadline: form.deadline || undefined,
-        emoji: form.emoji,
+        name,
+        targetAmount,
+        deadline: deadline || undefined,
+        emoji,
       }
 
       if (!navigator.onLine) {
         const optimisticGoal: SavingsGoal = {
           id: crypto.randomUUID(),
           userId,
-          name: form.name,
-          targetAmount: parseFloat(form.targetAmount),
+          name,
+          targetAmount,
           savedAmount: 0,
-          deadline: form.deadline || undefined,
-          emoji: form.emoji,
+          deadline: deadline || undefined,
+          emoji,
           createdAt: new Date().toISOString(),
         }
         await offlineDb.goals.add(optimisticGoal)
@@ -304,27 +325,30 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
         await registerBackgroundSync()
         await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
         posthog.capture('goal_created', {
-          target_amount: parseFloat(form.targetAmount),
-          has_deadline: Boolean(form.deadline),
+          target_amount: targetAmount,
+          has_deadline: Boolean(deadline),
           is_offline: true,
         })
         onDone()
         return
       }
 
-      await fetch('/api/goals', {
+      const res = await fetch('/api/goals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
+      if (!res.ok) throw new Error('Failed to create goal')
 
       posthog.capture('goal_created', {
-        target_amount: parseFloat(form.targetAmount),
-        has_deadline: Boolean(form.deadline),
+        target_amount: targetAmount,
+        has_deadline: Boolean(deadline),
         is_offline: false,
       })
 
       onDone()
+    } catch {
+      setSubmitError('Failed to create goal. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -378,6 +402,7 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
         />
       </div>
 
+      {submitError && <p className="text-xs text-truffle-red">{submitError}</p>}
       <button type="submit" disabled={isLoading} className="btn-primary w-full disabled:opacity-50">
         {isLoading ? t.savingsGoals.creating : t.savingsGoals.createGoal}
       </button>
