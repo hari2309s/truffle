@@ -35,6 +35,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 
 ![Vitest](https://img.shields.io/badge/Vitest-unit_tests-6E9F18?logo=vitest&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-e2e_tests-2EAD33?logo=playwright&logoColor=white)
+![Weco](https://img.shields.io/badge/Weco-prompt_optimization-7C3AED?logoColor=white)
 
 </div>
 
@@ -310,6 +311,29 @@ pnpm --filter @truffle/ai eval
 ```
 
 Runs 15 predefined queries through the router, logs all results to `eval_logs`, and prints a pass/fail summary. Run the judge cron afterwards to get quality scores.
+
+**Transaction categorization accuracy:**
+
+```bash
+pnpm --filter @truffle/ai run eval:categorize          # scores a 30-row stratified sample of transactions.csv
+pnpm --filter @truffle/ai run eval:categorize:holdout   # scores the full held-out transactions_tokyo.csv
+```
+
+Both score `CATEGORY_GUIDANCE` (`packages/ai/src/prompts/categorization.prompt.ts`) — the instruction the LLM gets when deciding a transaction's category — against curated ground-truth CSVs, and print `accuracy: N` to stdout.
+
+That guidance string can be iteratively improved with [Weco](https://weco.ai), an LLM-guided tree-search code optimizer:
+
+```bash
+pip install weco
+weco run \
+  -s packages/ai/src/prompts/categorization.prompt.ts \
+  -c "pnpm --filter @truffle/ai run eval:categorize" \
+  -m accuracy -g maximize \
+  -n 15 \
+  --api-key gemini=$GEMINI_API_KEY
+```
+
+Weco rewrites `categorization.prompt.ts` between steps, re-runs the eval, and keeps the best-scoring version — restoring the original unless you confirm applying the winner at the end (or pass `--apply-change`). Run the holdout eval afterwards to confirm the change generalizes rather than overfitting to the sampled rows.
 
 ---
 
