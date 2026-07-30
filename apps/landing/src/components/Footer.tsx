@@ -13,9 +13,12 @@ export default function Footer() {
   const [textW, setTextW] = useState(720)
 
   useEffect(() => {
-    if (textRef.current) {
-      setTextW(textRef.current.getBBox().width)
+    const measure = () => {
+      if (textRef.current) {
+        setTextW(textRef.current.getBBox().width)
+      }
     }
+    document.fonts.ready.then(measure)
   }, [])
 
   return (
@@ -88,7 +91,7 @@ export default function Footer() {
           height="auto"
           preserveAspectRatio="xMidYMid meet"
           className="select-none block mx-auto"
-          style={{ maxWidth: '1100px', overflow: 'visible' }}
+          style={{ maxWidth: '1100px' }}
         >
           <style>{`
             @keyframes truffle-dash {
