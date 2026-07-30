@@ -44,3 +44,7 @@ apps/web/public/worker-*.js
 apps/web/public/worker-*.js.map
 apps/web/public/fallback-*.js
 apps/web/public/fallback-*.js.map
+
+# weco.ai local run state/history
+.runs/
+.weco/
