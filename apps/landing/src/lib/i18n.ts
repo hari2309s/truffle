@@ -162,7 +162,7 @@ export const translations: Record<Locale, LandingTranslations> = {
       socialProof: 'Free to start · No credit card · No bank credentials',
       mockupQuestion: 'How much did I spend on food this week?',
       mockupAnswer:
-        'You spent $284 on food this week — $47 over last week. Most of it was DoorDash (5 orders) and Whole Foods (2 visits).',
+        'You spent €284 on food this week — €47 over last week. Most of it was food delivery (5 orders) and groceries (2 visits).',
       holdToSpeak: 'Hold to speak',
       aiAssistant: 'AI assistant',
     },
@@ -206,6 +206,18 @@ export const translations: Record<Locale, LandingTranslations> = {
           title: 'Privacy First',
           desc: 'No bank linking. Ever. You enter your data — Truffle analyzes it. Nothing is sold, shared, or synced without you.',
         },
+        {
+          title: 'Subscription Tracker',
+          desc: 'Truffle spots recurring charges automatically and flags the ones you forgot about — before they quietly drain your account.',
+        },
+        {
+          title: 'Monthly Budgets',
+          desc: 'Set a limit per category. Get a heads-up at 80% before you go over — no spreadsheets, just a gentle nudge.',
+        },
+        {
+          title: 'Works Offline',
+          desc: 'No connection? No problem. Truffle is offline-first — check your finances and log spend anywhere.',
+        },
       ],
     },
     howItWorks: {
@@ -243,11 +255,11 @@ export const translations: Record<Locale, LandingTranslations> = {
         description: 'Everything you need to get started. No card required.',
         features: [
           'Manual transaction entry',
-          'AI chat — 50 messages/month',
+          'AI chat',
           'Spending insights & heatmap',
-          '3 savings goals',
-          '2 savings habits',
-          'CSV export — last 30 days',
+          'Savings goals',
+          'Savings habits',
+          'CSV export',
         ],
         cta: 'Get Started Free',
       },
@@ -550,6 +562,18 @@ export const translations: Record<Locale, LandingTranslations> = {
           title: 'Datenschutz an erster Stelle',
           desc: 'Kein Bank-Linking. Jemals. Du gibst deine Daten ein — Truffle analysiert sie. Nichts wird ohne dich verkauft, geteilt oder synchronisiert.',
         },
+        {
+          title: 'Abo-Tracker',
+          desc: 'Truffle erkennt wiederkehrende Zahlungen automatisch und markiert vergessene Abos — bevor sie still dein Konto belasten.',
+        },
+        {
+          title: 'Monatsbudgets',
+          desc: 'Setze ein Limit pro Kategorie. Erhalte einen Hinweis bei 80 % — keine Tabellen, nur eine sanfte Erinnerung.',
+        },
+        {
+          title: 'Offline nutzbar',
+          desc: 'Keine Verbindung? Kein Problem. Truffle funktioniert offline-first — sieh deine Finanzen und erfasse Ausgaben überall.',
+        },
       ],
     },
     howItWorks: {
@@ -588,11 +612,11 @@ export const translations: Record<Locale, LandingTranslations> = {
         description: 'Alles, was du zum Starten brauchst. Keine Kreditkarte nötig.',
         features: [
           'Manuelle Transaktionseingabe',
-          'KI-Chat — 50 Nachrichten/Monat',
+          'KI-Chat',
           'Ausgabenanalyse & Heatmap',
-          '3 Sparziele',
-          '2 Spargewohnheiten',
-          'CSV-Export — letzte 30 Tage',
+          'Sparziele',
+          'Spargewohnheiten',
+          'CSV-Export',
         ],
         cta: 'Kostenlos starten',
       },
@@ -900,6 +924,18 @@ export const translations: Record<Locale, LandingTranslations> = {
           title: 'プライバシー最優先',
           desc: '銀行連携は一切なし。あなたがデータを入力し、Truffleが分析します。同意なく販売・共有・同期されることはありません。',
         },
+        {
+          title: 'サブスク管理',
+          desc: '定期的な支払いを自動で検出し、忘れているサブスクにも気づかせてくれます。知らないうちに引き落とされる前に。',
+        },
+        {
+          title: '月次予算',
+          desc: 'カテゴリごとに上限を設定。80%に達したら通知が届きます。表計算は不要、そっと知らせてくれるだけです。',
+        },
+        {
+          title: 'オフライン対応',
+          desc: '接続がなくても大丈夫。Truffleはオフラインファーストのアプリ。どこでも家計を確認・記録できます。',
+        },
       ],
     },
     howItWorks: {
@@ -937,11 +973,11 @@ export const translations: Record<Locale, LandingTranslations> = {
         description: '始めるために必要なすべてが揃っています。クレジットカード不要。',
         features: [
           '手動取引入力',
-          'AIチャット — 月50メッセージ',
+          'AIチャット',
           '支出分析 & ヒートマップ',
-          '貯蓄目標 3件',
-          '貯蓄習慣 2件',
-          'CSVエクスポート — 過去30日分',
+          '貯蓄目標',
+          '貯蓄習慣',
+          'CSVエクスポート',
         ],
         cta: '無料で始める',
       },
