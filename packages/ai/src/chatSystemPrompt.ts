@@ -1,4 +1,5 @@
 import type { MonthlySnapshot, TransactionCategory, QueryIntent } from '@truffle/types'
+import { CATEGORY_GUIDANCE } from './prompts/categorization.prompt'
 
 type Transaction = {
   date: string
@@ -158,7 +159,7 @@ function buildToolRules(intent: QueryIntent): string {
 - For HYPOTHETICAL transactions ("I might buy", "I'm thinking about", "should I get"), do NOT call proposeTransaction. Instead, give helpful advice or an affordability check.
 - Use a negative amount for expenses and a positive amount for income.
 - Default the date to today if the user does not specify one.
-- Choose the most appropriate category from the allowed list.
+- ${CATEGORY_GUIDANCE}
 - If the merchant is not clear, omit it.
 - After a confirmed transaction, respond with one warm sentence. Do not log the same transaction twice.
 - If the user declined, respond warmly and do not re-propose.`

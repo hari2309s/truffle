@@ -6,7 +6,9 @@
   "scripts": {
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
-    "eval": "tsx evals/run-golden.ts"
+    "eval": "tsx evals/run-golden.ts",
+    "eval:categorize": "tsx evals/categorize-eval.ts",
+    "eval:categorize:holdout": "tsx evals/categorize-holdout.ts"
   },
   "dependencies": {
     "@langchain/langgraph": "^0.2.0",
