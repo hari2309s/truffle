@@ -162,7 +162,7 @@ export const translations: Record<Locale, LandingTranslations> = {
       socialProof: 'Free to start · No credit card · No bank credentials',
       mockupQuestion: 'How much did I spend on food this week?',
       mockupAnswer:
-        'You spent €284 on food this week — €47 over last week. Most of it was food delivery (5 orders) and groceries (2 visits).',
+        'You spent €200 on food this week — €23 over last week. Most of it was food delivery (5 orders) and groceries (2 visits).',
       holdToSpeak: 'Hold to speak',
       aiAssistant: 'AI assistant',
     },
@@ -518,7 +518,7 @@ export const translations: Record<Locale, LandingTranslations> = {
       socialProof: 'Kostenlos starten · Keine Kreditkarte · Keine Bankdaten',
       mockupQuestion: 'Wie viel habe ich diese Woche für Essen ausgegeben?',
       mockupAnswer:
-        'Du hast diese Woche 284 € für Essen ausgegeben — 47 € mehr als letzte Woche. Größtenteils Lieferando (5 Bestellungen) und Rewe (2 Besuche).',
+        'Du hast diese Woche 200 € für Essen ausgegeben — 23 € mehr als letzte Woche. Größtenteils Lieferando (5 Bestellungen) und Rewe (2 Besuche).',
       holdToSpeak: 'Halten zum Sprechen',
       aiAssistant: 'KI-Assistent',
     },
@@ -880,7 +880,7 @@ export const translations: Record<Locale, LandingTranslations> = {
       socialProof: '無料で開始 · クレジットカード不要 · 銀行情報不要',
       mockupQuestion: '今週、食費にいくら使った？',
       mockupAnswer:
-        '今週の食費は¥38,400でした — 先週より¥6,200多いです。主にUber Eats（5回）とライフ（2回）です。',
+        '今週の食費は¥27,000でした — 先週より¥3,000多いです。主にフードデリバリー（5回）とスーパー（2回）です。',
       holdToSpeak: '押して話す',
       aiAssistant: 'AIアシスタント',
     },
