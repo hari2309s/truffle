@@ -3,9 +3,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePostHog } from 'posthog-js/react'
-import type { Transaction, TransactionCategory } from '@truffle/types'
-import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
-import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import type { TransactionCategory } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 
@@ -50,8 +48,6 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
   const queryClient = useQueryClient()
   const posthog = usePostHog()
   const [isLoading, setIsLoading] = useState(false)
-  const [queued, setQueued] = useState(false)
-  const { isOnline } = useNetworkStatus()
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -79,32 +75,6 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
         userId,
       }
 
-      if (!isOnline) {
-        const localId = crypto.randomUUID()
-        await offlineDb.transactions.add({
-          id: localId,
-          ...transaction,
-          currency: transaction.currency as Transaction['currency'],
-          category: transaction.category,
-          merchant: transaction.merchant ?? '',
-        })
-        await offlineDb.queuedActions.add({
-          type: 'add_transaction',
-          payload: { userId, transactions: [transaction] },
-          createdAt: Date.now(),
-        })
-        await registerBackgroundSync()
-        await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
-        posthog.capture('transaction_added', {
-          category: form.category,
-          is_expense: form.isExpense,
-          is_offline: true,
-        })
-        setQueued(true)
-        setTimeout(() => onClose?.(), 1200)
-        return
-      }
-
       const res = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,7 +86,6 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
       posthog.capture('transaction_added', {
         category: form.category,
         is_expense: form.isExpense,
-        is_offline: false,
       })
 
       await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
@@ -136,15 +105,6 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
     } finally {
       setIsLoading(false)
     }
-  }
-
-  if (queued) {
-    return (
-      <div className="card text-center py-6 space-y-2">
-        <p className="text-truffle-text font-medium">{t.addTransaction.savedOffline}</p>
-        <p className="text-xs text-truffle-muted">{t.addTransaction.savedOfflineDesc}</p>
-      </div>
-    )
   }
 
   return (
@@ -230,11 +190,7 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
         disabled={isLoading}
         className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isLoading
-          ? t.addTransaction.saving
-          : isOnline
-            ? t.addTransaction.add
-            : t.addTransaction.saveOffline}
+        {isLoading ? t.addTransaction.saving : t.addTransaction.add}
       </button>
     </form>
   )

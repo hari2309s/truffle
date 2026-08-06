@@ -6,7 +6,6 @@ import { PostHogProvider } from './posthog-provider'
 import { PostHogPageView } from './posthog-pageview'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { CurrencyProvider } from '@/contexts/CurrencyContext'
-import { OfflineBanner } from '@/components/OfflineBanner'
 import { CookieBanner } from '@/components/CookieBanner'
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -17,23 +16,23 @@ export function Providers({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 5 * 60 * 1000, // 5 minutes
             retry: 1,
-            networkMode: 'always', // let queryFn handle offline fallback
           },
         },
       })
   )
 
-  // Listen for SW sync-complete messages and refresh queries
+  // Clean up any service worker + caches left behind by the app's old
+  // offline-support build, so previously-installed clients stop being
+  // served stale cached responses.
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type === 'SYNC_COMPLETE') {
-        queryClient.invalidateQueries()
-      }
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => registration.unregister())
+    })
+    if ('caches' in window) {
+      caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)))
     }
-    navigator.serviceWorker.addEventListener('message', handler)
-    return () => navigator.serviceWorker.removeEventListener('message', handler)
-  }, [queryClient])
+  }, [])
 
   return (
     <PostHogProvider>
@@ -43,10 +42,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <LanguageProvider>
         <CurrencyProvider>
           <QueryClientProvider client={queryClient}>
-            <div className="flex flex-col h-dvh overflow-hidden">
-              <OfflineBanner />
-              {children}
-            </div>
+            <div className="flex flex-col h-dvh overflow-hidden">{children}</div>
             <CookieBanner />
           </QueryClientProvider>
         </CurrencyProvider>

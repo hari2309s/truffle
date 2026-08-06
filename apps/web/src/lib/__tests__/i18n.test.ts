@@ -225,18 +225,6 @@ describe('proposals.goal.addedToGoals', () => {
   })
 })
 
-// ─── offlineBanner.pendingChanges ────────────────────────────────────────────
-
-describe('offlineBanner.pendingChanges', () => {
-  it.each([
-    ['en', en],
-    ['de', de],
-    ['ja', ja],
-  ] as const)('%s: contains count', (_locale, t) => {
-    expect(t.offlineBanner.pendingChanges(4)).toContain('4')
-  })
-})
-
 // ─── weeklySummary interpolations ────────────────────────────────────────────
 
 describe('weeklySummary', () => {

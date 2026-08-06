@@ -73,14 +73,10 @@ export interface Translations {
     descriptionPlaceholder: string
     saving: string
     add: string
-    saveOffline: string
-    savedOffline: string
-    savedOfflineDesc: string
   }
   transactions: {
     noTransactions: string
     noTransactionsHint: string
-    fromCache: string
     filteredCount: (filtered: number, total: number) => string
     count: (n: number) => string
     clear: string
@@ -214,11 +210,6 @@ export interface Translations {
     setBudget: string
     removeBudget: string
   }
-  offlineBanner: {
-    offline: string
-    syncing: string
-    pendingChanges: (n: number) => string
-  }
   cookieBanner: {
     message: string
     accept: string
@@ -239,7 +230,6 @@ export interface Translations {
     unmute: string
     failedToSend: string
     resend: string
-    offlineMessage: string
     anErrorOccurred: string
   }
   proposals: {
@@ -267,11 +257,6 @@ export interface Translations {
       settingUp: string
       error: string
     }
-  }
-  offline: {
-    title: string
-    description: string
-    tryAgain: string
   }
 }
 
@@ -379,14 +364,10 @@ export const translations: Record<Locale, Translations> = {
       descriptionPlaceholder: 'Description (e.g. Coffee at Rewe)',
       saving: 'Saving...',
       add: 'Add Transaction',
-      saveOffline: 'Save Offline',
-      savedOffline: 'Saved offline',
-      savedOfflineDesc: "Will sync when you're back online.",
     },
     transactions: {
       noTransactions: 'No transactions yet.',
       noTransactionsHint: 'Add one below to get started.',
-      fromCache: 'Showing cached data',
       filteredCount: (filtered, total) => `${filtered} of ${total} transactions`,
       count: (n) => `${n} transactions`,
       clear: 'Clear',
@@ -529,11 +510,6 @@ export const translations: Record<Locale, Translations> = {
       setBudget: 'Set budget',
       removeBudget: 'Remove budget',
     },
-    offlineBanner: {
-      offline: 'Offline — changes will sync when reconnected',
-      syncing: 'Syncing…',
-      pendingChanges: (n) => `${n} pending change${n > 1 ? 's' : ''} — tap to sync`,
-    },
     cookieBanner: {
       message:
         'We use analytics cookies to understand how Truffle is used and improve the experience.',
@@ -559,7 +535,6 @@ export const translations: Record<Locale, Translations> = {
       unmute: 'Unmute voice',
       failedToSend: 'Failed to send',
       resend: 'Resend',
-      offlineMessage: 'Offline — messages will be answered when you reconnect',
       anErrorOccurred: 'An error occurred.',
     },
     proposals: {
@@ -588,11 +563,6 @@ export const translations: Record<Locale, Translations> = {
         settingUp: 'Setting up…',
         error: 'Something went wrong — please try again.',
       },
-    },
-    offline: {
-      title: "You're offline",
-      description: 'No internet connection detected. Check your connection and try again.',
-      tryAgain: 'Try again',
     },
   },
 
@@ -701,14 +671,10 @@ export const translations: Record<Locale, Translations> = {
       descriptionPlaceholder: 'Beschreibung (z.B. Kaffee bei Rewe)',
       saving: 'Wird gespeichert...',
       add: 'Transaktion hinzufügen',
-      saveOffline: 'Offline speichern',
-      savedOffline: 'Offline gespeichert',
-      savedOfflineDesc: 'Wird synchronisiert, sobald du wieder online bist.',
     },
     transactions: {
       noTransactions: 'Noch keine Transaktionen.',
       noTransactionsHint: 'Füge unten eine hinzu, um zu beginnen.',
-      fromCache: 'Zeige zwischengespeicherte Daten',
       filteredCount: (filtered, total) => `${filtered} von ${total} Transaktionen`,
       count: (n) => `${n} Transaktionen`,
       clear: 'Zurücksetzen',
@@ -855,12 +821,6 @@ export const translations: Record<Locale, Translations> = {
       setBudget: 'Budget festlegen',
       removeBudget: 'Budget entfernen',
     },
-    offlineBanner: {
-      offline: 'Offline — Änderungen werden synchronisiert, wenn du wieder verbunden bist',
-      syncing: 'Wird synchronisiert…',
-      pendingChanges: (n) =>
-        `${n} ausstehende Änderung${n > 1 ? 'en' : ''} — tippe zum Synchronisieren`,
-    },
     cookieBanner: {
       message:
         'Wir verwenden Analyse-Cookies, um zu verstehen, wie Truffle genutzt wird, und die Erfahrung zu verbessern.',
@@ -886,7 +846,6 @@ export const translations: Record<Locale, Translations> = {
       unmute: 'Ton an',
       failedToSend: 'Senden fehlgeschlagen',
       resend: 'Erneut senden',
-      offlineMessage: 'Offline — Nachrichten werden beantwortet, wenn du wieder verbunden bist',
       anErrorOccurred: 'Ein Fehler ist aufgetreten.',
     },
     proposals: {
@@ -915,12 +874,6 @@ export const translations: Record<Locale, Translations> = {
         settingUp: 'Wird eingerichtet…',
         error: 'Etwas ist schiefgelaufen — bitte erneut versuchen.',
       },
-    },
-    offline: {
-      title: 'Du bist offline',
-      description:
-        'Keine Internetverbindung erkannt. Überprüfe deine Verbindung und versuche es erneut.',
-      tryAgain: 'Erneut versuchen',
     },
   },
 
@@ -1028,14 +981,10 @@ export const translations: Record<Locale, Translations> = {
       descriptionPlaceholder: '説明（例：スタバでコーヒー）',
       saving: '保存中...',
       add: '取引を追加',
-      saveOffline: 'オフラインで保存',
-      savedOffline: 'オフラインで保存済み',
-      savedOfflineDesc: 'オンラインに戻ったら同期されます。',
     },
     transactions: {
       noTransactions: 'まだ取引がありません。',
       noTransactionsHint: '下で追加して始めましょう。',
-      fromCache: 'キャッシュされたデータを表示中',
       filteredCount: (filtered, total) => `${total}件中${filtered}件`,
       count: (n) => `${n}件の取引`,
       clear: 'クリア',
@@ -1175,11 +1124,6 @@ export const translations: Record<Locale, Translations> = {
       setBudget: '予算を設定',
       removeBudget: '予算を削除',
     },
-    offlineBanner: {
-      offline: 'オフライン — 接続が回復したら同期されます',
-      syncing: '同期中…',
-      pendingChanges: (n) => `${n}件の未同期の変更 — タップして同期`,
-    },
     cookieBanner: {
       message: 'Truffleの利用状況を把握し、サービスを改善するために分析クッキーを使用しています。',
       accept: '同意する',
@@ -1200,7 +1144,6 @@ export const translations: Record<Locale, Translations> = {
       unmute: '音声をミュート解除',
       failedToSend: '送信に失敗しました',
       resend: '再送信',
-      offlineMessage: 'オフライン — 接続が回復したらメッセージが返答されます',
       anErrorOccurred: 'エラーが発生しました。',
     },
     proposals: {
@@ -1229,12 +1172,6 @@ export const translations: Record<Locale, Translations> = {
         settingUp: '設定中…',
         error: '問題が発生しました — もう一度お試しください。',
       },
-    },
-    offline: {
-      title: 'オフラインです',
-      description:
-        'インターネット接続が検出されませんでした。接続を確認してもう一度お試しください。',
-      tryAgain: 'もう一度試す',
     },
   },
 }

@@ -283,8 +283,6 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                   const annotations = message.annotations as
                     | { type: string; traceId?: string }[]
                     | undefined
-                  const isOfflineFallback = annotations?.some((a) => a.type === 'offline_fallback')
-                  const isAnsweredJustNow = annotations?.some((a) => a.type === 'answered_just_now')
                   const traceId = annotations?.find((a) => a.type === 'trace_id')?.traceId
                   return clean ? (
                     <ChatBubble
@@ -292,8 +290,6 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                       content={clean}
                       name={name}
                       timestamp={message.createdAt?.toISOString()}
-                      isOfflineFallback={isOfflineFallback}
-                      isAnsweredJustNow={isAnsweredJustNow}
                       traceId={traceId}
                       reaction={reactions[message.id] ?? null}
                       onReact={(tid, score) => handleReact(tid, score, message.id)}
@@ -371,9 +367,6 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
 
       {/* Input area */}
       <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-lg bg-truffle-bg/95 backdrop-blur-sm border-t border-truffle-border px-4 py-4">
-        {!chat.isOnline && (
-          <p className="text-center text-xs text-truffle-muted mb-3">{t.chat.offlineMessage}</p>
-        )}
         <div className="flex flex-col items-center gap-4">
           <VoiceButton
             isRecording={voice.isRecording}

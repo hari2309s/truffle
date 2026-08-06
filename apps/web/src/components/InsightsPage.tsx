@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import { useCallback, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Anomaly } from '@truffle/types'
-import { offlineDb } from '@/lib/offline-db'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { detectSubscriptions } from '@/lib/subscriptions'
 import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
@@ -42,19 +41,11 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   const { data: anomalyData, isLoading: anomalyLoading } = useQuery({
     queryKey: ['anomalies', userId],
     queryFn: async () => {
-      try {
-        const res = await fetch(`/api/insights?userId=${userId}`)
-        if (!res.ok) throw new Error('Failed to fetch anomalies')
-        const json = await res.json()
-        const anomalies = (json.anomalies ?? []) as Anomaly[]
-        await offlineDb.anomalies.bulkPut(anomalies.map((a) => ({ ...a, userId })))
-        return anomalies
-      } catch {
-        const cached = await offlineDb.anomalies.where('userId').equals(userId).toArray()
-        return cached as Anomaly[]
-      }
+      const res = await fetch(`/api/insights?userId=${userId}`)
+      if (!res.ok) throw new Error('Failed to fetch anomalies')
+      const json = await res.json()
+      return (json.anomalies ?? []) as Anomaly[]
     },
-    networkMode: 'always',
   })
 
   const { formatAmount } = useCurrency()

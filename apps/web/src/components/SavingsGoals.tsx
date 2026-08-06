@@ -5,7 +5,6 @@ import { SkeletonPulse } from './PageMotion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePostHog } from 'posthog-js/react'
 import type { SavingsGoal } from '@truffle/types'
-import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 
@@ -53,18 +52,11 @@ export function SavingsGoals({
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals', userId],
     queryFn: async () => {
-      try {
-        const res = await fetch('/api/goals')
-        if (!res.ok) throw new Error('Failed to fetch goals')
-        const json = await res.json()
-        const mapped: SavingsGoal[] = (json.goals ?? []).map(mapGoal)
-        await offlineDb.goals.bulkPut(mapped)
-        return mapped
-      } catch {
-        return offlineDb.goals.where('userId').equals(userId).toArray()
-      }
+      const res = await fetch('/api/goals')
+      if (!res.ok) throw new Error('Failed to fetch goals')
+      const json = await res.json()
+      return (json.goals ?? []).map(mapGoal) as SavingsGoal[]
     },
-    networkMode: 'always',
   })
 
   const handleAddFunds = async (goalId: string, currentSaved: number, deposit: number) => {
@@ -73,14 +65,6 @@ export function SavingsGoals({
     if (!goal) return
     const newAmount = Math.min(currentSaved + deposit, goal.targetAmount)
     const payload = { goalId, savedAmount: newAmount, currency }
-
-    if (!navigator.onLine) {
-      await offlineDb.goals.update(goalId, { savedAmount: newAmount })
-      await offlineDb.queuedActions.add({ type: 'fund_goal', payload, createdAt: Date.now() })
-      await registerBackgroundSync()
-      await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
-      return
-    }
 
     const res = await fetch('/api/goals', {
       method: 'PATCH',
@@ -107,18 +91,6 @@ export function SavingsGoals({
   const handleDelete = async (goalId: string) => {
     setDeletingId(goalId)
     try {
-      if (!navigator.onLine) {
-        await offlineDb.goals.delete(goalId)
-        await offlineDb.queuedActions.add({
-          type: 'delete_goal',
-          payload: { goalId },
-          createdAt: Date.now(),
-        })
-        await registerBackgroundSync()
-        await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
-        return
-      }
-
       await fetch(`/api/goals?goalId=${encodeURIComponent(goalId)}`, { method: 'DELETE' })
       await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
     } finally {
@@ -309,30 +281,6 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
         emoji,
       }
 
-      if (!navigator.onLine) {
-        const optimisticGoal: SavingsGoal = {
-          id: crypto.randomUUID(),
-          userId,
-          name,
-          targetAmount,
-          savedAmount: 0,
-          deadline: deadline || undefined,
-          emoji,
-          createdAt: new Date().toISOString(),
-        }
-        await offlineDb.goals.add(optimisticGoal)
-        await offlineDb.queuedActions.add({ type: 'create_goal', payload, createdAt: Date.now() })
-        await registerBackgroundSync()
-        await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
-        posthog.capture('goal_created', {
-          target_amount: targetAmount,
-          has_deadline: Boolean(deadline),
-          is_offline: true,
-        })
-        onDone()
-        return
-      }
-
       const res = await fetch('/api/goals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -343,7 +291,6 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
       posthog.capture('goal_created', {
         target_amount: targetAmount,
         has_deadline: Boolean(deadline),
-        is_offline: false,
       })
 
       onDone()

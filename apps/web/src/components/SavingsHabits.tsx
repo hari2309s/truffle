@@ -7,7 +7,6 @@ import { getCurrentPeriod } from '@/lib/habits'
 import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
 import type { HabitWithStats } from '@truffle/types'
-import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 
@@ -25,18 +24,11 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
   const { data, isLoading } = useQuery({
     queryKey: ['habits', userId],
     queryFn: async () => {
-      try {
-        const res = await fetch('/api/habits')
-        if (!res.ok) throw new Error('Failed to fetch habits')
-        const json = await res.json()
-        const habits = json.habits as HabitWithStats[]
-        await offlineDb.habitsWithStats.bulkPut(habits)
-        return habits
-      } catch {
-        return offlineDb.habitsWithStats.where('userId').equals(userId).toArray()
-      }
+      const res = await fetch('/api/habits')
+      if (!res.ok) throw new Error('Failed to fetch habits')
+      const json = await res.json()
+      return json.habits as HabitWithStats[]
     },
-    networkMode: 'always',
   })
 
   const habits = data ?? []
@@ -47,21 +39,6 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
     try {
       const period = getCurrentPeriod(habit.frequency)
       const payload = { habitId: habit.id, period, amount: habit.amount, currency }
-
-      if (!navigator.onLine) {
-        await offlineDb.habitsWithStats.update(habit.id, {
-          currentPeriodLogged: true,
-          totalSaved: habit.totalSaved + habit.amount,
-        })
-        await offlineDb.queuedActions.add({
-          type: 'log_habit_contribution',
-          payload,
-          createdAt: Date.now(),
-        })
-        await registerBackgroundSync()
-        await queryClient.invalidateQueries({ queryKey: ['habits', userId] })
-        return
-      }
 
       const res = await fetch('/api/habits', {
         method: 'PATCH',

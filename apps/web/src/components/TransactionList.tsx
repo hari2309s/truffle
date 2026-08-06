@@ -185,7 +185,6 @@ export function TransactionList({ userId }: TransactionListProps) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const allTransactions = data?.transactions ?? []
-  const fromCache = data?.fromCache ?? false
   const [visibleMonthCount, setVisibleMonthCount] = useState(1)
 
   const filters = useTransactionFilters(allTransactions)
@@ -267,10 +266,6 @@ export function TransactionList({ userId }: TransactionListProps) {
 
   return (
     <div className="space-y-3">
-      {fromCache && (
-        <p className="text-xs text-truffle-muted text-center">{t.transactions.fromCache}</p>
-      )}
-
       <TransactionFilterPanel {...filters} />
 
       <div className="flex items-center justify-between">

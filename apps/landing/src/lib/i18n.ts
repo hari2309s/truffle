@@ -214,10 +214,6 @@ export const translations: Record<Locale, LandingTranslations> = {
           title: 'Monthly Budgets',
           desc: 'Set a limit per category. Get a heads-up at 80% before you go over — no spreadsheets, just a gentle nudge.',
         },
-        {
-          title: 'Works Offline',
-          desc: 'No connection? No problem. Truffle is offline-first — check your finances and log spend anywhere.',
-        },
       ],
     },
     howItWorks: {
@@ -569,10 +565,6 @@ export const translations: Record<Locale, LandingTranslations> = {
         {
           title: 'Monatsbudgets',
           desc: 'Setze ein Limit pro Kategorie. Erhalte einen Hinweis bei 80 % — keine Tabellen, nur eine sanfte Erinnerung.',
-        },
-        {
-          title: 'Offline nutzbar',
-          desc: 'Keine Verbindung? Kein Problem. Truffle funktioniert offline-first — sieh deine Finanzen und erfasse Ausgaben überall.',
         },
       ],
     },
@@ -931,10 +923,6 @@ export const translations: Record<Locale, LandingTranslations> = {
         {
           title: '月次予算',
           desc: 'カテゴリごとに上限を設定。80%に達したら通知が届きます。表計算は不要、そっと知らせてくれるだけです。',
-        },
-        {
-          title: 'オフライン対応',
-          desc: '接続がなくても大丈夫。Truffleはオフラインファーストのアプリ。どこでも家計を確認・記録できます。',
         },
       ],
     },

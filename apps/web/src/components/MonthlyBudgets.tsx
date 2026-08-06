@@ -5,7 +5,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { CategoryBudget, Transaction, TransactionCategory } from '@truffle/types'
 import { TRANSACTION_CATEGORIES } from '@truffle/types'
 import { CATEGORY_EMOJI } from '@/lib/categories'
-import { offlineDb, registerBackgroundSync } from '@/lib/offline-db'
 import { SkeletonPulse } from './PageMotion'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
@@ -51,34 +50,16 @@ export function MonthlyBudgets({
   const { data: budgets = [], isLoading } = useQuery({
     queryKey: ['budgets', userId],
     queryFn: async () => {
-      try {
-        const res = await fetch(`/api/budgets?userId=${userId}`)
-        if (!res.ok) throw new Error('Failed to fetch budgets')
-        const json = await res.json()
-        const mapped: CategoryBudget[] = (json.budgets ?? []).map(mapBudget)
-        await offlineDb.budgets.bulkPut(mapped)
-        return mapped
-      } catch {
-        return offlineDb.budgets.where('userId').equals(userId).toArray()
-      }
+      const res = await fetch(`/api/budgets?userId=${userId}`)
+      if (!res.ok) throw new Error('Failed to fetch budgets')
+      const json = await res.json()
+      return (json.budgets ?? []).map(mapBudget) as CategoryBudget[]
     },
-    networkMode: 'always',
   })
 
   const handleDelete = async (budgetId: string) => {
     setDeletingId(budgetId)
     try {
-      if (!navigator.onLine) {
-        await offlineDb.budgets.delete(budgetId)
-        await offlineDb.queuedActions.add({
-          type: 'delete_budget',
-          payload: { userId, budgetId },
-          createdAt: Date.now(),
-        })
-        await registerBackgroundSync()
-        await queryClient.invalidateQueries({ queryKey: ['budgets', userId] })
-        return
-      }
       await fetch(`/api/budgets?userId=${userId}&budgetId=${budgetId}`, { method: 'DELETE' })
       await queryClient.invalidateQueries({ queryKey: ['budgets', userId] })
     } finally {
@@ -232,26 +213,6 @@ function AddBudgetForm({
     setIsLoading(true)
     try {
       const payload = { userId, category, amount: amt }
-
-      if (!navigator.onLine) {
-        const optimistic: CategoryBudget = {
-          id: crypto.randomUUID(),
-          userId,
-          category,
-          amount: amt,
-          createdAt: new Date().toISOString(),
-        }
-        await offlineDb.budgets.put(optimistic)
-        await offlineDb.queuedActions.add({
-          type: 'upsert_budget',
-          payload,
-          createdAt: Date.now(),
-        })
-        await registerBackgroundSync()
-        await queryClient.invalidateQueries({ queryKey: ['budgets', userId] })
-        onDone()
-        return
-      }
 
       await fetch('/api/budgets', {
         method: 'POST',
