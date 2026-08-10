@@ -179,9 +179,7 @@ export default function Footer() {
           </a>
           .
         </p>
-        <p className="text-xs text-truffle-muted">
-          Made with ♥ in Berlin &nbsp;·&nbsp; {t.footer.bottomTagline}
-        </p>
+        <p className="text-xs text-truffle-muted">{t.footer.bottomTagline}</p>
       </div>
     </footer>
   )
