@@ -40,7 +40,7 @@ export async function queryTransactions(
     id: row.id as string,
     userId: row.user_id as string,
     amount: Number(row.amount),
-    currency: (row.currency as 'EUR' | 'GBP' | 'USD' | 'JPY') ?? 'EUR',
+    currency: (row.currency as 'EUR' | 'GBP' | 'USD') ?? 'EUR',
     description: row.description as string,
     category: (row.category as Transaction['category']) ?? 'other',
     merchant: (row.merchant as string | null) ?? undefined,

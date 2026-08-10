@@ -129,7 +129,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
             {t.settings.currency}
           </h3>
           <div className="grid grid-cols-2 gap-2">
-            {(['EUR', 'GBP', 'USD', 'JPY'] as const).map((c) => (
+            {(['EUR', 'GBP', 'USD'] as const).map((c) => (
               <button
                 key={c}
                 onClick={() => handleCurrencyChange(c)}
@@ -139,7 +139,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
                     : 'bg-truffle-surface text-truffle-muted border border-truffle-border'
                 }`}
               >
-                {c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : c === 'USD' ? '$ USD' : '¥ JPY'}
+                {c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : '$ USD'}
               </button>
             ))}
           </div>

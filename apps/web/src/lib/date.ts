@@ -1,5 +1,5 @@
-export function toDateLocale(locale: string): string {
-  return locale === 'de' ? 'de-DE' : 'en-GB'
+export function toDateLocale(_locale: string): string {
+  return 'en-GB'
 }
 
 export function currentYearMonth(): string {

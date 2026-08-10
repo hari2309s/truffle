@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { CURRENCY_SYMBOLS, CURRENCY_DECIMALS } from '@/lib/currency'
 import { supabase } from '@/lib/supabase'
 
-export type Currency = 'EUR' | 'GBP' | 'USD' | 'JPY'
+export type Currency = 'EUR' | 'GBP' | 'USD'
 
 const STORAGE_KEY = 'truffle-currency'
 

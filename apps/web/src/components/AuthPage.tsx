@@ -51,7 +51,7 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
     setIsLoading(false)
   }
 
-  const LOCALE_CYCLE: Locale[] = ['en', 'de', 'ja']
+  const LOCALE_CYCLE: Locale[] = ['en']
   const currentIdx = LOCALE_CYCLE.indexOf(locale)
   const nextLocale = LOCALE_CYCLE[
     (currentIdx === -1 ? 0 : currentIdx + 1) % LOCALE_CYCLE.length

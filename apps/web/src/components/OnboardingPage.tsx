@@ -15,7 +15,7 @@ interface OnboardingPageProps {
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const { t, locale, setLocale } = useLanguage()
   const [name, setName] = useState('')
-  const [currency, setCurrency] = useState<'EUR' | 'GBP' | 'USD' | 'JPY'>('EUR')
+  const [currency, setCurrency] = useState<'EUR' | 'GBP' | 'USD'>('EUR')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tourStep, setTourStep] = useState<number | null>(null)
@@ -137,7 +137,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
               {t.onboarding.currencyLabel}
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {(['EUR', 'GBP', 'USD', 'JPY'] as const).map((c) => (
+              {(['EUR', 'GBP', 'USD'] as const).map((c) => (
                 <button
                   key={c}
                   type="button"
@@ -148,7 +148,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                       : 'bg-truffle-surface text-truffle-muted border border-truffle-border'
                   }`}
                 >
-                  {c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : c === 'USD' ? '$ USD' : '¥ JPY'}
+                  {c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : '$ USD'}
                 </button>
               ))}
             </div>

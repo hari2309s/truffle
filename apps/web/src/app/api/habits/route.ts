@@ -169,7 +169,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const VALID_CURRENCIES = ['EUR', 'GBP', 'USD', 'JPY'] as const
+    const VALID_CURRENCIES = ['EUR', 'GBP', 'USD'] as const
     type ValidCurrency = (typeof VALID_CURRENCIES)[number]
     if (!VALID_CURRENCIES.includes(currency as ValidCurrency)) {
       return NextResponse.json({ error: 'Invalid currency' }, { status: 400 })

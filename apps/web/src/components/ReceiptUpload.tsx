@@ -10,7 +10,7 @@ interface ParsedTransaction {
   date: string
   description: string
   amount: number
-  currency: 'EUR' | 'GBP' | 'USD' | 'JPY'
+  currency: 'EUR' | 'GBP' | 'USD'
   category: TransactionCategory
 }
 

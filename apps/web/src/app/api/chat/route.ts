@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       id: row.id as string,
       userId: row.user_id as string,
       amount: Number(row.amount),
-      currency: row.currency as 'EUR' | 'GBP' | 'USD' | 'JPY',
+      currency: row.currency as 'EUR' | 'GBP' | 'USD',
       description: row.description as string,
       category: row.category as TransactionCategory,
       merchant: (row.merchant as string | null) ?? undefined,

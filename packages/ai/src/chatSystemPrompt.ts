@@ -270,20 +270,13 @@ export function buildSystemPrompt(params: {
     daysRemaining,
     dailySpend,
     currencyCode = 'EUR',
-    locale = 'en',
   } = params
 
-  const decimals = currencyCode === 'JPY' ? 0 : 2
-  const symbol =
-    currencyCode === 'JPY' ? '¥' : currencyCode === 'GBP' ? '£' : currencyCode === 'USD' ? '$' : '€'
+  const decimals = 2
+  const symbol = currencyCode === 'GBP' ? '£' : currencyCode === 'USD' ? '$' : '€'
   const fmt = (n: number) => `${symbol}${Math.abs(n).toFixed(decimals)}`
 
-  const languageInstruction =
-    locale === 'ja'
-      ? '\n\nIMPORTANT: Respond entirely in Japanese (日本語). Use natural, friendly Japanese suitable for a personal finance app.'
-      : locale === 'de'
-        ? '\n\nIMPORTANT: Respond entirely in German (Deutsch).'
-        : ''
+  const languageInstruction = ''
 
   if (intent === 'greeting') {
     return `You are Truffle — a warm, calm personal finance companion. The user is just saying hello.

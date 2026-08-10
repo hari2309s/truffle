@@ -6,7 +6,6 @@ describe('CURRENCY_SYMBOLS', () => {
     expect(CURRENCY_SYMBOLS['EUR']).toBe('€')
     expect(CURRENCY_SYMBOLS['GBP']).toBe('£')
     expect(CURRENCY_SYMBOLS['USD']).toBe('$')
-    expect(CURRENCY_SYMBOLS['JPY']).toBe('¥')
   })
 })
 
@@ -15,9 +14,5 @@ describe('CURRENCY_DECIMALS', () => {
     expect(CURRENCY_DECIMALS['EUR']).toBe(2)
     expect(CURRENCY_DECIMALS['GBP']).toBe(2)
     expect(CURRENCY_DECIMALS['USD']).toBe(2)
-  })
-
-  it('JPY uses 0 decimal places', () => {
-    expect(CURRENCY_DECIMALS['JPY']).toBe(0)
   })
 })
