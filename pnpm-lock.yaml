@@ -179,8 +179,8 @@ importers:
         specifier: ^16.0.0
         version: 16.6.1
       langfuse:
-        specifier: ^3.0.0
-        version: 3.38.6
+        specifier: ^3.38.20
+        version: 3.38.20
     devDependencies:
       tsx:
         specifier: ^4.0.0
@@ -2103,12 +2103,12 @@ packages:
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
 
-  langfuse-core@3.38.6:
-    resolution: {integrity: sha512-EcZXa+DK9FJdi1I30+u19eKjuBJ04du6j2Nybk19KKCuraLczg/ppkTQcGvc4QOk//OAi3qUHrajUuV74RXsBQ==}
+  langfuse-core@3.38.20:
+    resolution: {integrity: sha512-zBKVmQN/1oT5VWZUBYlWzvokIlkC/6mnpgr/2atMyTeAm+jR3ia7w2iJMjlrF5/oG8ukO1s8+LDRCzJpF1QeEA==}
     engines: {node: '>=18'}
 
-  langfuse@3.38.6:
-    resolution: {integrity: sha512-mtwfsNGIYvObRh+NYNGlJQJDiBN+Wr3Hnr++wN25mxuOpSTdXX+JQqVCyAqGL5GD2TAXRZ7COsN42Vmp9krYmg==}
+  langfuse@3.38.20:
+    resolution: {integrity: sha512-MAmBAASSzJtmK1O9HQegA1mFsQhT8Yf+OJRGvE7FXkyv3g/eiBE0glLD0Ohg3pkxhoPdggM5SejK7ue9ctlaMA==}
     engines: {node: '>=18'}
 
   langsmith@0.3.87:
@@ -5094,13 +5094,13 @@ snapshots:
     dependencies:
       json-buffer: 3.0.1
 
-  langfuse-core@3.38.6:
+  langfuse-core@3.38.20:
     dependencies:
       mustache: 4.2.0
 
-  langfuse@3.38.6:
+  langfuse@3.38.20:
     dependencies:
-      langfuse-core: 3.38.6
+      langfuse-core: 3.38.20
 
   langsmith@0.3.87(@opentelemetry/api@1.9.0)(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0)):
     dependencies:

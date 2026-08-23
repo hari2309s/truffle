@@ -225,8 +225,7 @@ Write 4–6 sentences in flowing prose (no bullet points). Lead with a one-line 
     input: prompt,
   })
 
-  const gen = langfuse.generation({
-    traceId: trace.id,
+  const gen = trace.generation({
     name: 'generateMonthlyReport',
     model: 'llama-3.3-70b-versatile',
     input: prompt,
