@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { langfuse } from '@truffle/ai'
+import { langfuseClient } from '@truffle/ai'
 import { requireUser } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
@@ -13,14 +13,14 @@ export async function POST(request: NextRequest) {
     if (!traceId || (score !== 1 && score !== -1)) {
       return NextResponse.json({ error: 'traceId and score (1 or -1) required' }, { status: 400 })
     }
-    await langfuse.score({
+    langfuseClient.score.create({
       traceId,
       name: 'user-feedback',
       value: score,
       dataType: 'NUMERIC',
       comment: score === 1 ? 'thumbs_up' : 'thumbs_down',
     })
-    await langfuse.flushAsync()
+    await langfuseClient.score.flush()
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('Feedback error:', error)

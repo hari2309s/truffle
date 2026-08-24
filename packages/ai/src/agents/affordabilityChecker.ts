@@ -1,5 +1,5 @@
+import type { LangfuseSpan } from '@langfuse/tracing'
 import { routedGenerateText } from '../router'
-import { langfuse } from '../langfuse'
 import { AFFORDABILITY_CHECKER_PROMPT } from '../prompts/affordabilityChecker.prompt'
 import type { Transaction, MonthlySnapshot } from '@truffle/types'
 
@@ -7,7 +7,7 @@ export async function checkAffordability(
   query: string,
   transactions: Transaction[],
   snapshot: MonthlySnapshot,
-  traceId?: string
+  parentSpan?: LangfuseSpan
 ): Promise<string> {
   const today = new Date()
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
@@ -37,20 +37,24 @@ export async function checkAffordability(
     .replace('{context}', context)
     .replace('{question}', query)
 
-  const gen = traceId
-    ? langfuse.generation({ traceId, name: 'checkAffordability', model: 'routed', input: prompt })
-    : null
+  const gen = parentSpan?.startObservation(
+    'checkAffordability',
+    { model: 'routed', input: prompt },
+    { asType: 'generation' }
+  )
 
   const { text, usage } = await routedGenerateText(
     'reasoning',
     { prompt, maxTokens: 300 },
-    { traceId }
+    { traceId: parentSpan?.traceId }
   )
 
-  gen?.end({
-    output: text,
-    usage: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
-  })
+  gen
+    ?.update({
+      output: text,
+      usageDetails: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
+    })
+    .end()
 
   return text
 }

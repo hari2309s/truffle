@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { generateText } from 'ai'
-import { chatModel, langfuse } from '@truffle/ai'
+import { chatModel, langfuseClient } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
 
 export const runtime = 'nodejs'
@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
         // Also attach the score to the Langfuse trace so it appears in the
         // observability dashboard alongside the generation that produced it
         if (log.trace_id) {
-          langfuse.score({
+          langfuseClient.score.create({
             traceId: log.trace_id,
             name: 'response_quality',
             value: parsed,
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Flush Langfuse scores before the function exits
-  await langfuse.flushAsync()
+  await langfuseClient.score.flush()
 
   return Response.json({ scored, total: logs?.length ?? 0 })
 }

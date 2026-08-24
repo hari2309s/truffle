@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { visionModel, langfuse } from '@truffle/ai'
+import { startObservation } from '@langfuse/tracing'
+import { visionModel, langfuseSpanProcessor } from '@truffle/ai'
 import type { TransactionCategory } from '@truffle/types'
 import { requireUser } from '@/lib/supabase-server'
 
@@ -85,16 +86,15 @@ export async function POST(req: NextRequest) {
           mimeType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
         }
 
-    const trace = langfuse.trace({
-      name: 'parse_receipt',
+    const trace = startObservation('parse_receipt', {
       input: EXTRACT_PROMPT(today),
       metadata: { fileType: isPDF ? 'pdf' : 'image', mimeType, fileSize: file.size },
     })
-    const generation = trace.generation({
-      name: 'extractTransactions',
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      input: EXTRACT_PROMPT(today),
-    })
+    const generation = trace.startObservation(
+      'extractTransactions',
+      { model: 'meta-llama/llama-4-scout-17b-16e-instruct', input: EXTRACT_PROMPT(today) },
+      { asType: 'generation' }
+    )
 
     const { text, usage } = await generateText({
       model: visionModel,
@@ -106,11 +106,14 @@ export async function POST(req: NextRequest) {
       ],
     })
 
-    generation.end({
-      output: text,
-      usage: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
-    })
-    await langfuse.flushAsync()
+    generation
+      .update({
+        output: text,
+        usageDetails: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
+      })
+      .end()
+    trace.end()
+    await langfuseSpanProcessor.forceFlush()
 
     // Strip markdown fences if model wraps despite instructions
     const cleaned = text

@@ -1,5 +1,5 @@
+import type { LangfuseSpan } from '@langfuse/tracing'
 import { routedGenerateText } from '../router'
-import { langfuse } from '../langfuse'
 import { SAVINGS_GOAL_ADVISOR_PROMPT } from '../prompts/savingsGoalAdvisor.prompt'
 import type { SavingsGoal, MonthlySnapshot } from '@truffle/types'
 
@@ -7,7 +7,7 @@ export async function adviseSavingsGoals(
   query: string,
   goals: SavingsGoal[],
   snapshot: MonthlySnapshot,
-  traceId?: string
+  parentSpan?: LangfuseSpan
 ): Promise<string> {
   const goalsText =
     goals.length > 0
@@ -27,20 +27,24 @@ export async function adviseSavingsGoals(
     .replace('{currentBalance}', snapshot.balance.toFixed(2))
     .replace('{question}', query)
 
-  const gen = traceId
-    ? langfuse.generation({ traceId, name: 'adviseSavingsGoals', model: 'routed', input: prompt })
-    : null
+  const gen = parentSpan?.startObservation(
+    'adviseSavingsGoals',
+    { model: 'routed', input: prompt },
+    { asType: 'generation' }
+  )
 
   const { text, usage } = await routedGenerateText(
     'reasoning',
     { prompt, maxTokens: 300 },
-    { traceId }
+    { traceId: parentSpan?.traceId }
   )
 
-  gen?.end({
-    output: text,
-    usage: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
-  })
+  gen
+    ?.update({
+      output: text,
+      usageDetails: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
+    })
+    .end()
 
   return text
 }

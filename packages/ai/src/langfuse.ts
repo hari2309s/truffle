@@ -1,7 +1,12 @@
-import Langfuse from 'langfuse'
+import { NodeSDK } from '@opentelemetry/sdk-node'
+import { LangfuseSpanProcessor } from '@langfuse/otel'
+import { LangfuseClient } from '@langfuse/client'
 
-export const langfuse = new Langfuse({
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  baseUrl: process.env.LANGFUSE_BASE_URL,
+export const langfuseSpanProcessor = new LangfuseSpanProcessor()
+
+const otelSdk = new NodeSDK({
+  spanProcessors: [langfuseSpanProcessor],
 })
+otelSdk.start()
+
+export const langfuseClient = new LangfuseClient()

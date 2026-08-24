@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Groq from 'groq-sdk'
-import { langfuse } from '@truffle/ai'
+import { startObservation } from '@langfuse/tracing'
+import { langfuseSpanProcessor } from '@truffle/ai'
 import { requireUser } from '@/lib/supabase-server'
 
 function getGroq() {
@@ -25,12 +26,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Audio file too large (max 25 MB)' }, { status: 400 })
     }
 
-    const trace = langfuse.trace({
-      name: 'voice_transcription',
+    const trace = startObservation('voice_transcription', {
       metadata: { model: 'whisper-large-v3', mimeType: audio.type, fileSize: audio.size },
     })
-    const span = trace.span({
-      name: 'whisper_transcribe',
+    const span = trace.startObservation('whisper_transcribe', {
       input: { model: 'whisper-large-v3', language: 'en' },
     })
 
@@ -41,8 +40,9 @@ export async function POST(request: NextRequest) {
       response_format: 'json',
     })
 
-    span.end({ output: transcription.text })
-    await langfuse.flushAsync()
+    span.update({ output: transcription.text }).end()
+    trace.end()
+    await langfuseSpanProcessor.forceFlush()
 
     return NextResponse.json({ transcript: transcription.text })
   } catch (error) {

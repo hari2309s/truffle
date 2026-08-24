@@ -11,20 +11,24 @@
     "eval:categorize:holdout": "tsx evals/categorize-holdout.ts"
   },
   "dependencies": {
-    "@langchain/langgraph": "^0.2.0",
-    "@langchain/core": "^0.3.0",
-    "@supabase/supabase-js": "^2.43.0",
-    "ai": "^4.0.0",
-    "@ai-sdk/groq": "^1.0.0",
     "@ai-sdk/google": "^1.0.0",
-    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/groq": "^1.0.0",
     "@ai-sdk/mistral": "^1.0.0",
+    "@ai-sdk/openai": "^1.0.0",
+    "@langchain/core": "^0.3.0",
+    "@langchain/langgraph": "^0.2.0",
+    "@langfuse/client": "5.10.1",
+    "@langfuse/otel": "5.10.1",
+    "@langfuse/tracing": "5.10.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.205.0",
+    "@opentelemetry/sdk-node": "^0.221.0",
+    "@supabase/supabase-js": "^2.43.0",
     "@truffle/types": "workspace:*",
-    "langfuse": "^3.38.20",
+    "ai": "^4.0.0",
     "dotenv": "^16.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "tsx": "^4.0.0"
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0"
   }
 }

@@ -1,12 +1,13 @@
 import { generateText } from 'ai'
 import { StateGraph, END, START } from '@langchain/langgraph'
+import { startObservation, propagateAttributes, type LangfuseSpan } from '@langfuse/tracing'
 import type { Transaction, Anomaly, SavingsGoal, MonthlySnapshot } from '@truffle/types'
 import { reviewAnomalies } from './agents/anomalyReviewer'
 import { adviseSavingsGoals } from './agents/savingsGoalAdvisor'
 import { adviseHabit } from './agents/habitAdvisor'
 import { GraphAnnotation } from './graph'
 import { chatModel } from './llm'
-import { langfuse } from './langfuse'
+import { langfuseSpanProcessor } from './langfuse'
 import { currentYearMonth } from './date'
 
 type ProactiveState = typeof GraphAnnotation.State
@@ -43,13 +44,13 @@ function routeByIntent(state: ProactiveState): string {
  * traceId is threaded via closure so each node can attach child generations to
  * the parent Langfuse trace.
  */
-function buildProactiveGraph(traceId: string) {
+function buildProactiveGraph(parentSpan: LangfuseSpan) {
   async function anomalyNudgeNode(state: ProactiveState): Promise<Partial<ProactiveState>> {
     const response = await reviewAnomalies(
       state.userQuery,
       state.transactions,
       state.anomalies,
-      traceId
+      parentSpan
     )
     return { agentResponse: response }
   }
@@ -59,13 +60,13 @@ function buildProactiveGraph(traceId: string) {
       state.userQuery,
       state.savingsGoals,
       state.currentMonth ?? emptySnapshot(),
-      traceId
+      parentSpan
     )
     return { agentResponse: response }
   }
 
   async function habitNudgeNode(state: ProactiveState): Promise<Partial<ProactiveState>> {
-    const response = await adviseHabit(state.userQuery, traceId)
+    const response = await adviseHabit(state.userQuery, parentSpan)
     return { agentResponse: response }
   }
 
@@ -218,33 +219,35 @@ Data:
 
 Write 4–6 sentences in flowing prose (no bullet points). Lead with a one-line verdict on the month using the net figure. Call out 1–2 specific spending patterns by name and amount. Weave in a brief mention of goal or habit progress if relevant. Close with one concrete, forward-looking nudge for the coming month. Be specific, warm, and honest — not generic. Do not start with "I".`
 
-  const trace = langfuse.trace({
-    name: 'monthly_report_nudge',
-    userId,
-    metadata: { month: trigger.month },
-    input: prompt,
-  })
+  return propagateAttributes({ userId }, async () => {
+    const trace = startObservation('monthly_report_nudge', {
+      metadata: { month: trigger.month },
+      input: prompt,
+    })
 
-  const gen = trace.generation({
-    name: 'generateMonthlyReport',
-    model: 'llama-3.3-70b-versatile',
-    input: prompt,
-  })
+    const gen = trace.startObservation(
+      'generateMonthlyReport',
+      { model: 'llama-3.3-70b-versatile', input: prompt },
+      { asType: 'generation' }
+    )
 
-  const { text, usage } = await generateText({
-    model: chatModel,
-    prompt,
-    maxTokens: 400,
-  })
+    const { text, usage } = await generateText({
+      model: chatModel,
+      prompt,
+      maxTokens: 400,
+    })
 
-  gen.end({
-    output: text,
-    usage: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
-  })
-  trace.update({ output: text })
-  await langfuse.flushAsync()
+    gen
+      .update({
+        output: text,
+        usageDetails: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
+      })
+      .end()
+    trace.update({ output: text }).end()
+    await langfuseSpanProcessor.forceFlush()
 
-  return text.trim() || null
+    return text.trim() || null
+  })
 }
 
 export async function generateProactiveMessage(
@@ -261,20 +264,20 @@ export async function generateProactiveMessage(
 
   const input = buildGraphInput(trigger, userName)
 
-  const trace = langfuse.trace({
-    name: 'proactive_nudge',
-    userId,
-    input: input.userQuery,
-    metadata: { triggerType: trigger.type, nudgeKey },
+  return propagateAttributes({ userId }, async () => {
+    const trace = startObservation('proactive_nudge', {
+      input: input.userQuery,
+      metadata: { triggerType: trigger.type, nudgeKey },
+    })
+
+    const graph = buildProactiveGraph(trace)
+    const result = await graph.invoke(input)
+    const message = result.agentResponse?.trim() || null
+
+    trace.update({ output: message ?? '' }).end()
+    await langfuseSpanProcessor.forceFlush()
+    return message
   })
-
-  const graph = buildProactiveGraph(trace.id)
-  const result = await graph.invoke(input)
-  const message = result.agentResponse?.trim() || null
-
-  trace.update({ output: message ?? '' })
-  await langfuse.flushAsync()
-  return message
 }
 
 function buildGraphInput(

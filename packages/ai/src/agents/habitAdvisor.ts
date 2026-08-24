@@ -1,21 +1,25 @@
+import type { LangfuseSpan } from '@langfuse/tracing'
 import { routedGenerateText } from '../router'
-import { langfuse } from '../langfuse'
 
-export async function adviseHabit(query: string, traceId?: string): Promise<string> {
-  const gen = traceId
-    ? langfuse.generation({ traceId, name: 'adviseHabit', model: 'routed', input: query })
-    : null
+export async function adviseHabit(query: string, parentSpan?: LangfuseSpan): Promise<string> {
+  const gen = parentSpan?.startObservation(
+    'adviseHabit',
+    { model: 'routed', input: query },
+    { asType: 'generation' }
+  )
 
   const { text, usage } = await routedGenerateText(
     'fast-chat',
     { prompt: query, maxTokens: 150 },
-    { traceId }
+    { traceId: parentSpan?.traceId }
   )
 
-  gen?.end({
-    output: text,
-    usage: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
-  })
+  gen
+    ?.update({
+      output: text,
+      usageDetails: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
+    })
+    .end()
 
   return text
 }
