@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     })
     const generation = trace.startObservation(
       'extractTransactions',
-      { model: 'meta-llama/llama-4-scout-17b-16e-instruct', input: EXTRACT_PROMPT(today) },
+      { model: 'gemini-3.7-flash', input: EXTRACT_PROMPT(today) },
       { asType: 'generation' }
     )
 

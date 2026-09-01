@@ -1,8 +1,17 @@
 import { createGroq } from '@ai-sdk/groq'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 
 export const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 })
 
-export const chatModel = groq('llama-3.3-70b-versatile')
-export const visionModel = groq('meta-llama/llama-4-scout-17b-16e-instruct')
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY })
+
+// Groq retired the Llama 3.x chat models in 2026 — GPT-OSS 120B is the current
+// general-purpose / reasoning workhorse on GroqCloud.
+export const chatModel = groq('openai/gpt-oss-120b')
+
+// Groq's Llama 4 Scout (the old vision model) was deprecated in 2026. Receipt /
+// statement extraction now runs on Gemini 3.7 Flash, which handles both images
+// and PDFs natively and is the primary provider for the router's `vision` task.
+export const visionModel = google('gemini-3.7-flash')

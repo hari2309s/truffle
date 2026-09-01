@@ -1,12 +1,13 @@
 import type { Transaction } from '@truffle/types'
 
-// Uses Gemini gemini-embedding-001 API — works in any serverless environment
+// Uses the Gemini `gemini-embedding-2` API — works in any serverless environment.
+// Output is truncated to 768 dims (MRL) to match the Supabase pgvector column size.
 export async function embedText(text: string): Promise<number[]> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -23,7 +24,13 @@ export async function embedText(text: string): Promise<number[]> {
   }
 
   const json = (await res.json()) as { embedding: { values: number[] } }
-  return json.embedding.values
+  const values = json.embedding?.values ?? []
+  // The `transactions.embedding` column is `vector(768)` — a wrong length would
+  // be rejected on write (or silently corrupt search). Fail loudly instead.
+  if (values.length !== 768) {
+    throw new Error(`Gemini embed returned ${values.length} dims, expected 768`)
+  }
+  return values
 }
 
 export async function embedTransaction(transaction: Transaction): Promise<number[]> {

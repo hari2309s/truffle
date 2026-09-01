@@ -19,8 +19,8 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 
 ![LangGraph](https://img.shields.io/badge/LangGraph.js-agent_orchestration-1C3C3C?logo=langchain&logoColor=white)
 ![LLM Router](https://img.shields.io/badge/LLM_Router-5_providers-F55036?logoColor=white)
-![Groq](https://img.shields.io/badge/Groq-Llama_3.3_70B_%2B_Whisper-F55036?logoColor=white)
-![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash_%2B_embedding-4285F4?logo=google&logoColor=white)
+![Groq](https://img.shields.io/badge/Groq-GPT--OSS_120B_%2B_Whisper-F55036?logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-3.7_Flash_%2B_embedding-4285F4?logo=google&logoColor=white)
 ![Web Speech API](https://img.shields.io/badge/Web_Speech_API-STT_%2B_TTS-orange?logo=googlechrome&logoColor=white)
 
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_%2B_Auth-3ECF8E?logo=supabase&logoColor=white)
@@ -47,7 +47,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 - 🔍 **Anomaly detection** — spots unusual charges automatically
 - 📈 **Spending forecast** — projects your end-of-month balance with daily spend rate
 - 😌 **Emotionally aware** — calm, warm tone always. Never a lecture
-- 🧾 **Receipt & statement scanning** — photograph a receipt or upload a PDF bank statement; extracted by Groq Llama 4 Scout (vision-capable)
+- 🧾 **Receipt & statement scanning** — photograph a receipt or upload a PDF bank statement; extracted by Gemini 3.7 Flash (vision-capable, handles images and PDFs)
 - 📂 **CSV import** — drag-and-drop with column auto-detection and category guessing
 - ✏️ **Transaction edit & delete** — inline edit form and confirm-before-delete directly in the transaction list; changes sync immediately via TanStack Query cache invalidation
 - 🔄 **Subscription tracker** — automatically detects recurring charges from your history
@@ -94,11 +94,11 @@ Your recent transactions are passed directly as context to the model on every qu
 | Text → Voice | Web Speech API (browser native) |
 | AI orchestration | LangGraph.js |
 | LLM router | Custom multi-provider router (`packages/ai/src/router.ts`) |
-| LLM — fast chat | Groq `llama-3.3-70b-versatile` → Cerebras → OpenRouter → Mistral (in priority order) |
-| LLM — reasoning | Gemini `gemini-2.5-flash` → Groq → Cerebras → OpenRouter (in priority order) |
-| LLM — tool calling | Groq `llama-3.3-70b-versatile` → Gemini → Cerebras (in priority order) |
-| LLM — vision | Gemini `gemini-2.5-flash` → OpenRouter (in priority order) |
-| Embeddings | Gemini `text-embedding-004` (Google AI Studio) |
+| LLM — fast chat | Groq `openai/gpt-oss-20b` → Cerebras → OpenRouter → Mistral (in priority order) |
+| LLM — reasoning | Gemini `gemini-3.7-flash` → Groq `openai/gpt-oss-120b` → Cerebras → OpenRouter (in priority order) |
+| LLM — tool calling | Groq `openai/gpt-oss-120b` → Gemini → Cerebras (in priority order) |
+| LLM — vision | Gemini `gemini-3.7-flash` → Groq `qwen/qwen3.6-27b` (in priority order) |
+| Embeddings | Gemini `gemini-embedding-2` (Google AI Studio, 768-dim) |
 | Eval layer | Supabase `eval_logs` table + nightly LLM-as-judge cron |
 | Database | Supabase (PostgreSQL + Auth + Storage) |
 | Observability | Langfuse (traces, generations, token usage) |
@@ -143,8 +143,8 @@ truffle/
 - Node.js >= 18
 - pnpm >= 8
 - Supabase account (free)
-- Groq account — Whisper STT + Llama chat (free tier)
-- Google AI Studio account — Gemini embeddings + reasoning fallback (free tier)
+- Groq account — Whisper STT + GPT-OSS chat (free tier)
+- Google AI Studio account — Gemini embeddings + reasoning / vision (free tier)
 
 Optional (router falls back gracefully without these):
 - Cerebras account — [cloud.cerebras.ai](https://cloud.cerebras.ai) (free tier)
@@ -169,7 +169,7 @@ Fill in your keys:
 
 ```bash
 # Required
-GROQ_API_KEY=                        # Groq — Whisper STT + Llama (free tier)
+GROQ_API_KEY=                        # Groq — Whisper STT + GPT-OSS (free tier)
 GEMINI_API_KEY=                      # Google AI Studio — embeddings + Gemini (free tier)
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
@@ -181,8 +181,8 @@ NEXT_PUBLIC_POSTHOG_KEY=
 NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 
 # Optional — LLM router fallback providers (add as many as you like)
-CEREBRAS_API_KEY=                    # Cerebras — llama3.3-70b (free tier)
-OPENROUTER_API_KEY=                  # OpenRouter — llama-3.3-70b:free (free tier)
+CEREBRAS_API_KEY=                    # Cerebras — gpt-oss-120b (free tier)
+OPENROUTER_API_KEY=                  # OpenRouter — llama-3.3-70b-instruct:free (free tier)
 MISTRAL_API_KEY=                     # Mistral — mistral-small-latest (free tier)
 
 # Required for nightly eval judge cron
@@ -254,7 +254,7 @@ Each agent node calls `routedGenerateText(taskType, options)` which transparentl
 | `fast-chat` | Groq → Cerebras → OpenRouter → Mistral |
 | `reasoning` | Gemini → Groq → Cerebras → OpenRouter |
 | `tool-calling` | Groq → Gemini → Cerebras |
-| `vision` | Gemini → OpenRouter |
+| `vision` | Gemini → Groq |
 
 Daily limits (conservative — ~10% below actual free tier caps):
 
