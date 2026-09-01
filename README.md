@@ -366,7 +366,3 @@ pnpm test:e2e:ui       # interactive Playwright UI
 ## License
 
 MIT
-
----
-
-Made with ♥ in Berlin
