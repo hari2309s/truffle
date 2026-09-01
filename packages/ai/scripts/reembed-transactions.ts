@@ -55,7 +55,8 @@ import type { Transaction } from '@truffle/types'
 import { embedTransaction } from '../src/embeddings'
 
 const PAGE_SIZE = 200
-const MAX_RETRIES = 6
+const MAX_RETRIES = 3
+const MAX_RETRY_WAIT_MS = 20_000
 
 // Read a positive-integer env var, falling back to `def` on unset / garbage / <1.
 function intEnv(name: string, def: number): number {
@@ -86,6 +87,14 @@ function isTransient(e: unknown): boolean {
   return /429|RESOURCE_EXHAUSTED|rate limit|quota|timeout|ECONN|ETIMEDOUT|\b50[0234]\b/i.test(msg)
 }
 
+// A blown *daily* quota (vs. a brief per-minute spike) won't recover during this
+// run — grinding through every row is pointless. After this many back-to-back
+// failures, set `aborted` so in-flight retries bail immediately too.
+const CIRCUIT_BREAK_AFTER = 12
+let consecutiveFailures = 0
+let aborted = false
+class QuotaExhaustedError extends Error {}
+
 // Pull the server-suggested wait out of a 429 body ("retry in 35.4s" / "retryDelay":"35s").
 function retryDelayMs(e: unknown): number | null {
   const msg = (e as Error).message ?? ''
@@ -102,12 +111,13 @@ function shortErr(e: unknown): string {
 
 async function embedWithRetry(tx: Transaction): Promise<number[]> {
   for (let attempt = 0; ; attempt++) {
+    if (aborted) throw new QuotaExhaustedError('aborted')
     await rateLimit()
     try {
       return await embedTransaction(tx)
     } catch (e) {
-      if (attempt >= MAX_RETRIES || !isTransient(e)) throw e
-      const wait = retryDelayMs(e) ?? Math.min(1000 * 2 ** attempt, 40_000)
+      if (aborted || attempt >= MAX_RETRIES || !isTransient(e)) throw e
+      const wait = Math.min(retryDelayMs(e) ?? 1000 * 2 ** attempt, MAX_RETRY_WAIT_MS)
       await sleep(wait)
     }
   }
@@ -183,9 +193,19 @@ async function main() {
       const { error } = await db.from('transactions').update({ embedding }).eq('id', row.id)
       if (error) throw error
       processed++
+      consecutiveFailures = 0
       return true
     } catch (e) {
+      if (e instanceof QuotaExhaustedError) return false // already aborting
       console.error(`  ✗ ${row.id}: ${shortErr(e)}`)
+      if (++consecutiveFailures >= CIRCUIT_BREAK_AFTER) {
+        aborted = true
+        throw new QuotaExhaustedError(
+          `${consecutiveFailures} failures in a row — stopping. The Gemini embeddings ` +
+            `quota is likely exhausted for the window (free tier is 1000/day, ~100/min). ` +
+            `Enable billing on the API project, or wait for the daily reset, then re-run.`
+        )
+      }
       return false
     }
   }
@@ -217,10 +237,11 @@ async function main() {
     console.log(`re-embedded ${processed} rows (${failedRows.length} failed so far)…`)
   }
 
-  // One more pass over anything that failed (usually transient quota exhaustion).
+  // One more pass over anything that failed (usually transient per-minute limits).
   if (failedRows.length > 0) {
     const retry = failedRows.splice(0)
     console.log(`\nretrying ${retry.length} failed row(s)…`)
+    consecutiveFailures = 0
     await runInBatches(retry)
   }
 
@@ -233,6 +254,11 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e)
+  if (e instanceof QuotaExhaustedError) {
+    console.error(`\n${e.message}`)
+    console.error('Re-run the same command (no REEMBED_AFTER_ID) once quota is back — writes are idempotent.')
+  } else {
+    console.error(e)
+  }
   process.exit(1)
 })
