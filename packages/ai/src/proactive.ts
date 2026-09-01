@@ -227,7 +227,7 @@ Write 4–6 sentences in flowing prose (no bullet points). Lead with a one-line 
 
     const gen = trace.startObservation(
       'generateMonthlyReport',
-      { model: 'llama-3.3-70b-versatile', input: prompt },
+      { model: 'openai/gpt-oss-120b', input: prompt },
       { asType: 'generation' }
     )
 

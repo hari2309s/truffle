@@ -10,6 +10,9 @@ dist/
 # Environment
 .env
 .env.local
+.env*.local
+.env.production*
+.env.development*
 
 # ChromaDB
 chroma_data/
@@ -38,3 +41,4 @@ CLAUDE.md
 # weco.ai local run state/history
 .runs/
 .weco/
+.vercel

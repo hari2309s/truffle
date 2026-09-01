@@ -20,7 +20,8 @@ export const DAILY_LIMITS: Record<Provider, number> = {
 // Priority order per task type. First available provider wins.
 export const PRIORITY_ORDER: Record<TaskType, Provider[]> = {
   'fast-chat': ['groq', 'cerebras', 'openrouter', 'mistral'],
-  vision: ['gemini', 'openrouter'],
+  // Only genuinely multimodal models — OpenRouter's free Llama is text-only.
+  vision: ['gemini', 'groq'],
   reasoning: ['gemini', 'groq', 'cerebras', 'openrouter'],
   'tool-calling': ['groq', 'gemini', 'cerebras'],
 }
@@ -29,13 +30,12 @@ export const PRIORITY_ORDER: Record<TaskType, Provider[]> = {
 export function getModelId(provider: Provider, task: TaskType): string {
   switch (provider) {
     case 'groq':
-      return task === 'vision'
-        ? 'meta-llama/llama-4-scout-17b-16e-instruct'
-        : 'llama-3.3-70b-versatile'
+      if (task === 'vision') return 'qwen/qwen3.6-27b'
+      return task === 'fast-chat' ? 'openai/gpt-oss-20b' : 'openai/gpt-oss-120b'
     case 'gemini':
-      return task === 'fast-chat' ? 'gemini-2.0-flash-lite' : 'gemini-2.5-flash'
+      return task === 'fast-chat' ? 'gemini-3.5-flash-lite' : 'gemini-3.7-flash'
     case 'cerebras':
-      return 'llama3.3-70b'
+      return 'gpt-oss-120b'
     case 'openrouter':
       return 'meta-llama/llama-3.3-70b-instruct:free'
     case 'mistral':
