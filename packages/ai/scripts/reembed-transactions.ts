@@ -56,7 +56,10 @@ import { embedTransaction } from '../src/embeddings'
 
 const PAGE_SIZE = 200
 const MAX_RETRIES = 3
-const MAX_RETRY_WAIT_MS = 20_000
+// Honor a server-supplied `retryDelay` up to this (covers a full per-minute
+// window); the blind exponential fallback is capped much lower.
+const MAX_SERVER_RETRY_MS = 65_000
+const MAX_BACKOFF_MS = 8_000
 
 // Read a positive-integer env var, falling back to `def` on unset / garbage / <1.
 function intEnv(name: string, def: number): number {
@@ -88,12 +91,18 @@ function isTransient(e: unknown): boolean {
 }
 
 // A blown *daily* quota (vs. a brief per-minute spike) won't recover during this
-// run — grinding through every row is pointless. After this many back-to-back
-// failures, set `aborted` so in-flight retries bail immediately too.
-const CIRCUIT_BREAK_AFTER = 12
-let consecutiveFailures = 0
+// run — grinding through every row is pointless. Count consecutive quota errors
+// (across all workers and their retries); once we hit the threshold, set
+// `aborted` so in-flight retries bail immediately too. Any success resets it.
+const CIRCUIT_BREAK_AFTER = 15
+let consecutiveQuotaErrors = 0
 let aborted = false
 class QuotaExhaustedError extends Error {}
+
+function noteQuotaError(e: unknown) {
+  if (!/429|RESOURCE_EXHAUSTED|quota/i.test((e as Error).message ?? '')) return
+  if (++consecutiveQuotaErrors >= CIRCUIT_BREAK_AFTER) aborted = true
+}
 
 // Pull the server-suggested wait out of a 429 body ("retry in 35.4s" / "retryDelay":"35s").
 function retryDelayMs(e: unknown): number | null {
@@ -114,10 +123,17 @@ async function embedWithRetry(tx: Transaction): Promise<number[]> {
     if (aborted) throw new QuotaExhaustedError('aborted')
     await rateLimit()
     try {
-      return await embedTransaction(tx)
+      const v = await embedTransaction(tx)
+      consecutiveQuotaErrors = 0
+      return v
     } catch (e) {
+      noteQuotaError(e)
       if (aborted || attempt >= MAX_RETRIES || !isTransient(e)) throw e
-      const wait = Math.min(retryDelayMs(e) ?? 1000 * 2 ** attempt, MAX_RETRY_WAIT_MS)
+      const server = retryDelayMs(e)
+      const wait =
+        server != null
+          ? Math.min(server, MAX_SERVER_RETRY_MS)
+          : Math.min(1000 * 2 ** attempt, MAX_BACKOFF_MS)
       await sleep(wait)
     }
   }
@@ -193,30 +209,29 @@ async function main() {
       const { error } = await db.from('transactions').update({ embedding }).eq('id', row.id)
       if (error) throw error
       processed++
-      consecutiveFailures = 0
       return true
     } catch (e) {
-      if (e instanceof QuotaExhaustedError) return false // already aborting
-      console.error(`  ✗ ${row.id}: ${shortErr(e)}`)
-      if (++consecutiveFailures >= CIRCUIT_BREAK_AFTER) {
-        aborted = true
-        throw new QuotaExhaustedError(
-          `${consecutiveFailures} failures in a row — stopping. The Gemini embeddings ` +
-            `quota is likely exhausted for the window (free tier is 1000/day, ~100/min). ` +
-            `Enable billing on the API project, or wait for the daily reset, then re-run.`
-        )
-      }
+      if (!(e instanceof QuotaExhaustedError)) console.error(`  ✗ ${row.id}: ${shortErr(e)}`)
       return false
     }
   }
 
   const runInBatches = async (rows: Row[]) => {
-    for (let i = 0; i < rows.length; i += CONCURRENCY) {
+    for (let i = 0; i < rows.length && !aborted; i += CONCURRENCY) {
       const batch = rows.slice(i, i + CONCURRENCY)
       const results = await Promise.all(batch.map(runRow))
       results.forEach((ok, j) => {
         if (!ok) failedRows.push(batch[j]!)
       })
+    }
+    if (aborted) {
+      throw new QuotaExhaustedError(
+        `Hit ${CIRCUIT_BREAK_AFTER} consecutive quota errors — stopping. Gemini embeddings ` +
+          `free tier is ~100/min and 1000/day.\n` +
+          `  • per-minute limit -> wait ~1 min and re-run\n` +
+          `  • daily limit / large table -> enable billing on the API project, or wait for ` +
+          `the daily reset (midnight Pacific), then re-run`
+      )
     }
   }
 
@@ -241,7 +256,7 @@ async function main() {
   if (failedRows.length > 0) {
     const retry = failedRows.splice(0)
     console.log(`\nretrying ${retry.length} failed row(s)…`)
-    consecutiveFailures = 0
+    consecutiveQuotaErrors = 0
     await runInBatches(retry)
   }
 
