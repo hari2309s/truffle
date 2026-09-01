@@ -24,8 +24,15 @@
  * (pnpm runs this with cwd=packages/ai, so ENV_FILE is resolved from the repo
  * root, not the current directory.)
  *
- * Add `--dry-run` (or DRY_RUN=1) to just verify the connection and print the row
- * count without writing anything or calling the embeddings API.
+ * Tuning knobs (env vars):
+ *   DRY_RUN=1              — verify connection + print row count, write nothing
+ *   REEMBED_RPM=90         — max embedding requests/minute (free tier caps at 100)
+ *   REEMBED_CONCURRENCY=2  — parallel in-flight requests (RPM is the real limiter)
+ *   REEMBED_AFTER_ID=<uuid>— skip all rows with id <= this (resume a partial run)
+ *
+ * On the Gemini free tier the embeddings endpoint is limited to ~100 req/min
+ * (and a daily cap), so a full backfill takes ~10+ min. Enabling billing on the
+ * API project lifts both limits substantially.
  */
 
 // Load env before importing anything that reads process.env
@@ -48,27 +55,60 @@ import type { Transaction } from '@truffle/types'
 import { embedTransaction } from '../src/embeddings'
 
 const PAGE_SIZE = 200
-const CONCURRENCY = Number(process.env.REEMBED_CONCURRENCY ?? 3)
-const MAX_RETRIES = 4
+const MAX_RETRIES = 6
+
+// Read a positive-integer env var, falling back to `def` on unset / garbage / <1.
+function intEnv(name: string, def: number): number {
+  const n = Math.floor(Number(process.env[name]))
+  return Number.isFinite(n) && n >= 1 ? n : def
+}
+
+const CONCURRENCY = intEnv('REEMBED_CONCURRENCY', 2)
+const RPM = intEnv('REEMBED_RPM', 90)
+const MIN_GAP_MS = 60_000 / RPM
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-// Retry embedding calls with exponential backoff — the Gemini embeddings free
-// tier is RPM-limited and returns 429s under load. Config errors (wrong model,
-// wrong dimensionality) are not transient, so fail fast on those.
+// Global pacing: space out request *starts* so we stay under the RPM cap even
+// with multiple workers. Each caller awaits its slot.
+let nextSlot = 0
+async function rateLimit() {
+  const now = Date.now()
+  const slot = Math.max(now, nextSlot)
+  nextSlot = slot + MIN_GAP_MS
+  if (slot > now) await sleep(slot - now)
+}
+
+// Config errors (wrong model, wrong dimensionality) are not transient.
 function isTransient(e: unknown): boolean {
   const msg = (e as Error).message ?? ''
   if (/expected 768/.test(msg)) return false
-  return /429|rate limit|timeout|ECONN|ETIMEDOUT|50[023]/i.test(msg)
+  return /429|RESOURCE_EXHAUSTED|rate limit|quota|timeout|ECONN|ETIMEDOUT|\b50[0234]\b/i.test(msg)
+}
+
+// Pull the server-suggested wait out of a 429 body ("retry in 35.4s" / "retryDelay":"35s").
+function retryDelayMs(e: unknown): number | null {
+  const msg = (e as Error).message ?? ''
+  const m = msg.match(/retry in (\d+(?:\.\d+)?)s/i) ?? msg.match(/"retryDelay":\s*"(\d+(?:\.\d+)?)s"/)
+  return m ? Math.ceil(parseFloat(m[1]!) * 1000) + 500 : null
+}
+
+function shortErr(e: unknown): string {
+  const msg = (e as Error).message ?? String(e)
+  const code = msg.match(/"code":\s*(\d+)/)?.[1]
+  const reason = msg.match(/"message":\s*"([^"]+)"/)?.[1]
+  return code || reason ? `${code ?? '?'} ${reason ?? ''}`.trim() : msg.slice(0, 200)
 }
 
 async function embedWithRetry(tx: Transaction): Promise<number[]> {
   for (let attempt = 0; ; attempt++) {
+    await rateLimit()
     try {
       return await embedTransaction(tx)
     } catch (e) {
       if (attempt >= MAX_RETRIES || !isTransient(e)) throw e
-      await sleep(1000 * 2 ** attempt)
+      const wait = retryDelayMs(e) ?? Math.min(1000 * 2 ** attempt, 40_000)
+      await sleep(wait)
     }
   }
 }
@@ -100,58 +140,96 @@ async function main() {
     return
   }
 
-  let from = 0
+  type Row = Record<string, unknown> & { id: string }
+  const toTx = (row: Row): Transaction =>
+    ({
+      id: row.id,
+      userId: row.user_id as string,
+      amount: Number(row.amount),
+      currency: (row.currency as Transaction['currency']) ?? 'EUR',
+      description: row.description as string,
+      category: (row.category as Transaction['category']) ?? 'other',
+      merchant: (row.merchant as string | null) ?? undefined,
+      date: row.date as string,
+      isRecurring: Boolean(row.is_recurring),
+    }) as Transaction
+
+  let pageStart = process.env.REEMBED_AFTER_ID ?? '' // last fully-completed page boundary
   let processed = 0
-  let failed = 0
+  const failedRows: Row[] = []
+
+  // On Ctrl-C, print a resume hint and exit. `pageStart` only advances past a
+  // page once every row in it has been *attempted*, so resuming from it skips
+  // rows that failed — only offer it when nothing has failed.
+  process.on('SIGINT', () => {
+    const canFastResume = failedRows.length === 0 && pageStart
+    console.log(
+      `\nInterrupted after ${processed} ok / ${failedRows.length} failed.\n` +
+        (canFastResume
+          ? `Resume:  REEMBED_AFTER_ID=${pageStart} <same command>`
+          : `Re-run the same command (no REEMBED_AFTER_ID) to finish — writes are idempotent.`)
+    )
+    process.exit(130)
+  })
+
+  console.log(
+    `pacing at ${RPM} req/min, concurrency ${CONCURRENCY}` +
+      (pageStart ? `, resuming after id ${pageStart}` : '')
+  )
+
+  const runRow = async (row: Row) => {
+    try {
+      const embedding = await embedWithRetry(toTx(row))
+      const { error } = await db.from('transactions').update({ embedding }).eq('id', row.id)
+      if (error) throw error
+      processed++
+      return true
+    } catch (e) {
+      console.error(`  ✗ ${row.id}: ${shortErr(e)}`)
+      return false
+    }
+  }
+
+  const runInBatches = async (rows: Row[]) => {
+    for (let i = 0; i < rows.length; i += CONCURRENCY) {
+      const batch = rows.slice(i, i + CONCURRENCY)
+      const results = await Promise.all(batch.map(runRow))
+      results.forEach((ok, j) => {
+        if (!ok) failedRows.push(batch[j]!)
+      })
+    }
+  }
 
   for (;;) {
-    const { data, error } = await db
+    let query = db
       .from('transactions')
       .select('id, user_id, amount, currency, description, category, merchant, date, is_recurring')
       .order('id', { ascending: true })
-      .range(from, from + PAGE_SIZE - 1)
+      .limit(PAGE_SIZE)
+    if (pageStart) query = query.gt('id', pageStart)
 
+    const { data, error } = await query
     if (error) throw error
     if (!data || data.length === 0) break
 
-    for (let i = 0; i < data.length; i += CONCURRENCY) {
-      const batch = data.slice(i, i + CONCURRENCY)
-      await Promise.all(
-        batch.map(async (row) => {
-          const tx = {
-            id: row.id as string,
-            userId: row.user_id as string,
-            amount: Number(row.amount),
-            currency: (row.currency as Transaction['currency']) ?? 'EUR',
-            description: row.description as string,
-            category: (row.category as Transaction['category']) ?? 'other',
-            merchant: (row.merchant as string | null) ?? undefined,
-            date: row.date as string,
-            isRecurring: Boolean(row.is_recurring),
-          } as Transaction
-
-          try {
-            const embedding = await embedWithRetry(tx)
-            const { error: updateError } = await db
-              .from('transactions')
-              .update({ embedding })
-              .eq('id', tx.id)
-            if (updateError) throw updateError
-            processed++
-          } catch (e) {
-            failed++
-            console.error(`  ✗ ${tx.id}:`, (e as Error).message)
-          }
-        })
-      )
-    }
-
-    console.log(`re-embedded ${processed} rows (${failed} failed)…`)
-    from += PAGE_SIZE
+    await runInBatches(data as Row[])
+    pageStart = (data[data.length - 1] as Row).id
+    console.log(`re-embedded ${processed} rows (${failedRows.length} failed so far)…`)
   }
 
-  console.log(`\nDone. ${processed} transactions re-embedded, ${failed} failed.`)
-  if (failed > 0) process.exit(1)
+  // One more pass over anything that failed (usually transient quota exhaustion).
+  if (failedRows.length > 0) {
+    const retry = failedRows.splice(0)
+    console.log(`\nretrying ${retry.length} failed row(s)…`)
+    await runInBatches(retry)
+  }
+
+  console.log(`\nDone. ${processed} transactions re-embedded, ${failedRows.length} still failing.`)
+  if (failedRows.length > 0) {
+    console.log('Still-failing ids:', failedRows.map((r) => r.id).join(', '))
+    console.log('Re-run the same command (without REEMBED_AFTER_ID) to retry — writes are idempotent.')
+    process.exit(1)
+  }
 }
 
 main().catch((e) => {
