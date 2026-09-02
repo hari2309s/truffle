@@ -8,7 +8,6 @@
     "type-check": "tsc --noEmit",
     "eval": "tsx evals/run-golden.ts",
     "eval:categorize": "tsx evals/categorize-eval.ts",
-    "eval:categorize:holdout": "tsx evals/categorize-holdout.ts",
     "reembed": "tsx scripts/reembed-transactions.ts"
   },
   "dependencies": {

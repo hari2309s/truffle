@@ -333,11 +333,10 @@ Runs 15 predefined queries through the router, logs all results to `eval_logs`, 
 **Transaction categorization accuracy:**
 
 ```bash
-pnpm --filter @truffle/ai run eval:categorize          # scores a 30-row stratified sample of transactions.csv
-pnpm --filter @truffle/ai run eval:categorize:holdout   # scores the full held-out transactions_tokyo.csv
+pnpm --filter @truffle/ai run eval:categorize   # scores a 30-row stratified sample of transactions.csv
 ```
 
-Both score `CATEGORY_GUIDANCE` (`packages/ai/src/prompts/categorization.prompt.ts`) — the instruction the LLM gets when deciding a transaction's category — against curated ground-truth CSVs, and print `accuracy: N` to stdout.
+Scores `CATEGORY_GUIDANCE` (`packages/ai/src/prompts/categorization.prompt.ts`) — the instruction the LLM gets when deciding a transaction's category — against a curated ground-truth CSV, and prints `accuracy: N` to stdout.
 
 That guidance string can be iteratively improved with [Weco](https://weco.ai), an LLM-guided tree-search code optimizer:
 
@@ -351,7 +350,7 @@ weco run \
   --api-key gemini=$GEMINI_API_KEY
 ```
 
-Weco rewrites `categorization.prompt.ts` between steps, re-runs the eval, and keeps the best-scoring version — restoring the original unless you confirm applying the winner at the end (or pass `--apply-change`). Run the holdout eval afterwards to confirm the change generalizes rather than overfitting to the sampled rows.
+Weco rewrites `categorization.prompt.ts` between steps, re-runs the eval, and keeps the best-scoring version — restoring the original unless you confirm applying the winner at the end (or pass `--apply-change`). Review the winning prompt before keeping it, since a small sample can be gamed.
 
 ---
 
