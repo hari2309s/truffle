@@ -62,7 +62,7 @@ export async function runCategoryEval(rows: TransactionRow[]): Promise<void> {
     const { text } = await routedGenerateText('tool-calling', {
       system: systemPrompt,
       prompt: userPrompt,
-      maxTokens: 10,
+      maxOutputTokens: 10,
     })
 
     const predicted = parseCategoryToken(text)

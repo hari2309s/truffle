@@ -79,11 +79,11 @@ export async function POST(req: NextRequest) {
     const today = new Date().toISOString().slice(0, 10)
 
     const mediaPart = isPDF
-      ? { type: 'file' as const, data: base64, mimeType: 'application/pdf' as const }
+      ? { type: 'file' as const, data: base64, mediaType: 'application/pdf' as const }
       : {
           type: 'image' as const,
           image: base64,
-          mimeType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
+          mediaType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
         }
 
     const trace = startObservation('parse_receipt', {
@@ -109,7 +109,9 @@ export async function POST(req: NextRequest) {
     generation
       .update({
         output: text,
-        usageDetails: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
+        usageDetails: usage
+          ? { input: usage.inputTokens ?? 0, output: usage.outputTokens ?? 0 }
+          : undefined,
       })
       .end()
     trace.end()

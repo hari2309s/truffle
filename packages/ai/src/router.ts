@@ -1,5 +1,5 @@
 import { generateText } from 'ai'
-import type { CoreMessage } from 'ai'
+import type { ModelMessage } from 'ai'
 import type { Provider, TaskType } from './types'
 import { groqProviderOptions } from './llm'
 import { logEval, incrementUsage, getGlobalUsage } from './eval'
@@ -115,8 +115,8 @@ export async function selectModelCandidates(
 export interface RouterGenerateOptions {
   prompt?: string
   system?: string
-  messages?: CoreMessage[]
-  maxTokens?: number
+  messages?: ModelMessage[]
+  maxOutputTokens?: number
   temperature?: number
 }
 
@@ -146,11 +146,12 @@ export async function routedGenerateText(
         ...(options as object),
         model,
         providerOptions: groqProviderOptions,
-      } as Parameters<typeof generateText>[0])
+      } as unknown as Parameters<typeof generateText>[0])
 
       const latencyMs = Date.now() - start
-      const promptTokens = result.usage?.promptTokens ?? 0
-      const completionTokens = result.usage?.completionTokens ?? 0
+      // AI SDK v5 renamed usage fields; the router keeps the old public shape.
+      const promptTokens = result.usage?.inputTokens ?? 0
+      const completionTokens = result.usage?.outputTokens ?? 0
 
       Promise.all([
         incrementUsage(provider),

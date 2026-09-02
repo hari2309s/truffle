@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Message } from 'ai/react'
+import type { TruffleUIMessage } from '@/hooks/useFinancialChat'
 import { supabase } from '@/lib/supabase'
 import { ChatPage } from '@/components/ChatPage'
 import { LoadingSpinner } from '@/components/PageMotion'
@@ -13,7 +13,7 @@ export default function Chat() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null | undefined>(undefined)
   const [name, setName] = useState<string>('')
-  const [initialMessages, setInitialMessages] = useState<Message[] | undefined>(undefined)
+  const [initialMessages, setInitialMessages] = useState<TruffleUIMessage[] | undefined>(undefined)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,15 +39,15 @@ export default function Chat() {
       .then(({ data }) => {
         const rows = (data ?? []).reverse()
         setInitialMessages(
-          rows.length > 0
-            ? rows.map((row) => ({
-                id: row.id as string,
-                role: row.role as 'user' | 'assistant',
-                content: row.content as string,
-                createdAt: new Date(row.created_at as string),
-                annotations: row.is_proactive ? [{ type: 'proactive' }] : undefined,
-              }))
-            : []
+          rows.map((row) => ({
+            id: row.id as string,
+            role: row.role as 'user' | 'assistant',
+            parts: [{ type: 'text' as const, text: (row.content as string) ?? '' }],
+            metadata: {
+              createdAt: row.created_at as string,
+              proactive: Boolean(row.is_proactive),
+            },
+          }))
         )
       })
 
