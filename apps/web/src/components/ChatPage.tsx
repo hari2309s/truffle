@@ -4,8 +4,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
-import type { Message } from 'ai/react'
-import { useFinancialChat } from '@/hooks/useFinancialChat'
+import { isToolUIPart, getToolName } from 'ai'
+import { useFinancialChat, type TruffleUIMessage } from '@/hooks/useFinancialChat'
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { ChatBubble } from './ChatBubble'
 import { GoalProposalCard } from './GoalProposalCard'
@@ -24,7 +24,7 @@ import { useCurrency } from '@/contexts/CurrencyContext'
 interface ChatPageProps {
   userId: string
   name: string
-  initialMessages: Message[]
+  initialMessages: TruffleUIMessage[]
 }
 
 export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
@@ -107,11 +107,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                     key={suggestion}
                     type="button"
                     variants={staggerItemVariants}
-                    onClick={() => {
-                      chat.setInput(suggestion)
-                      const form = document.getElementById('chat-form') as HTMLFormElement | null
-                      form?.requestSubmit()
-                    }}
+                    onClick={() => chat.sendText(suggestion)}
                     className="text-xs bg-truffle-surface border border-truffle-border rounded-full px-3 py-1.5 text-truffle-text-secondary hover:border-truffle-amber hover:text-truffle-text transition-all"
                   >
                     {suggestion}
@@ -124,54 +120,67 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
           {chat.messages.map((message, idx) => {
             const isLastMessage = idx === chat.messages.length - 1
             const showError = isLastMessage && !!chat.error && message.role === 'user'
+
+            const toolParts = message.parts.filter(isToolUIPart)
+
+            // Resolve a tool call locally without hitting the API again.
+            // addToolResult() re-submits to /api/chat — a visible loader flash
+            // and a risk of duplicate tool calls.
+            const resolveTool = (toolCallId: string, result: { confirmed: boolean }) => {
+              chat.setMessages((prev) =>
+                prev.map((m) => {
+                  if (m.id !== message.id) return m
+                  return {
+                    ...m,
+                    parts: m.parts.map((p) =>
+                      isToolUIPart(p) && p.toolCallId === toolCallId
+                        ? {
+                            type: p.type,
+                            toolCallId: p.toolCallId,
+                            state: 'output-available' as const,
+                            input: p.input,
+                            output: result,
+                          }
+                        : p
+                    ),
+                  } as TruffleUIMessage
+                })
+              )
+            }
+
+            const isPending = (state: string) =>
+              state === 'input-available' || state === 'input-streaming'
+
             return (
               <div key={message.id}>
-                {/* Render goal proposal cards from tool invocations */}
-                {message.toolInvocations?.map((inv) => {
-                  // Resolve a tool invocation locally without triggering an API
-                  // callback. addToolResult() re-submits to /api/chat which causes
-                  // a visible loader flash and risks duplicate tool calls.
-                  const resolveToolLocally = (result: { confirmed: boolean }) => {
-                    chat.setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id !== message.id
-                          ? m
-                          : {
-                              ...m,
-                              toolInvocations: m.toolInvocations?.map((ti) =>
-                                ti.toolCallId === inv.toolCallId
-                                  ? { ...ti, state: 'result' as const, result }
-                                  : ti
-                              ),
-                            }
-                      )
-                    )
-                  }
+                {/* Proposal cards from tool parts */}
+                {toolParts.map((part) => {
+                  const toolName = getToolName(part) as string
+                  const confirmed =
+                    part.state === 'output-available' &&
+                    (part.output as { confirmed?: boolean } | undefined)?.confirmed
 
-                  if (inv.toolName === 'proposeGoal') {
-                    const args = inv.args as {
+                  if (toolName === 'proposeGoal') {
+                    const args = part.input as {
                       name: string
                       targetAmount: number
                       deadline?: string
                       emoji: string
                       pitch: string
                     }
-                    if (inv.state === 'call') {
+                    if (isPending(part.state)) {
                       return (
                         <GoalProposalCard
-                          key={inv.toolCallId}
+                          key={part.toolCallId}
                           proposal={args}
                           userId={userId}
-                          onResult={(confirmed) => resolveToolLocally({ confirmed })}
+                          onResult={(c) => resolveTool(part.toolCallId, { confirmed: c })}
                         />
                       )
                     }
-                    if (
-                      inv.state === 'result' &&
-                      (inv.result as { confirmed: boolean })?.confirmed
-                    ) {
+                    if (confirmed) {
                       return (
-                        <div key={inv.toolCallId} className="flex justify-start mb-3">
+                        <div key={part.toolCallId} className="flex justify-start mb-3">
                           <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
                             <p className="text-sm text-truffle-text">
                               {t.proposals.goal.addedToGoals(args.emoji, args.name)}
@@ -181,32 +190,29 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                       )
                     }
                   }
-                  if (inv.toolName === 'proposeTransaction') {
-                    const args = inv.args as {
+                  if (toolName === 'proposeTransaction') {
+                    const args = part.input as {
                       description: string
                       amount: number
                       category: TransactionCategory
                       merchant?: string
                       date: string
                     }
-                    if (inv.state === 'call') {
+                    if (isPending(part.state)) {
                       return (
                         <TransactionProposalCard
-                          key={inv.toolCallId}
+                          key={part.toolCallId}
                           proposal={args}
                           userId={userId}
-                          onResult={(confirmed) => resolveToolLocally({ confirmed })}
+                          onResult={(c) => resolveTool(part.toolCallId, { confirmed: c })}
                         />
                       )
                     }
-                    if (
-                      inv.state === 'result' &&
-                      (inv.result as { confirmed: boolean })?.confirmed
-                    ) {
+                    if (confirmed) {
                       const isExpense = args.amount < 0
                       const formattedAmount = `${isExpense ? '-' : '+'}${formatAmount(args.amount)}`
                       return (
-                        <div key={inv.toolCallId} className="flex justify-start mb-3">
+                        <div key={part.toolCallId} className="flex justify-start mb-3">
                           <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
                             <p className="text-sm text-truffle-text">
                               {CATEGORY_EMOJI[args.category] ?? '📝'}{' '}
@@ -220,34 +226,31 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                       )
                     }
                   }
-                  if (inv.toolName === 'proposeHabit') {
-                    const args = inv.args as {
+                  if (toolName === 'proposeHabit') {
+                    const args = part.input as {
                       name: string
                       amount: number
                       frequency: 'weekly' | 'monthly'
                       emoji: string
                       pitch: string
                     }
-                    if (inv.state === 'call') {
+                    if (isPending(part.state)) {
                       return (
                         <HabitProposalCard
-                          key={inv.toolCallId}
+                          key={part.toolCallId}
                           proposal={args}
                           userId={userId}
-                          onResult={(confirmed) => resolveToolLocally({ confirmed })}
+                          onResult={(c) => resolveTool(part.toolCallId, { confirmed: c })}
                         />
                       )
                     }
-                    if (
-                      inv.state === 'result' &&
-                      (inv.result as { confirmed: boolean })?.confirmed
-                    ) {
+                    if (confirmed) {
                       const periodLabel =
                         args.frequency === 'weekly'
                           ? t.savingsHabits.periodWeek
                           : t.savingsHabits.periodMonth
                       return (
-                        <div key={inv.toolCallId} className="flex justify-start mb-3">
+                        <div key={part.toolCallId} className="flex justify-start mb-3">
                           <div className="max-w-[85%] bg-truffle-card border border-truffle-green/40 rounded-2xl rounded-bl-sm px-4 py-3">
                             <p className="text-sm text-truffle-text">
                               {args.emoji} <span className="font-medium">{args.name}</span>{' '}
@@ -264,32 +267,24 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                   }
                   return null
                 })}
-                {/* Strip leaked tool-call XML (Groq/LLaMA occasionally emits
-                  <function=...>...</function> as plain text instead of a
-                  structured tool invocation) then render if content remains */}
+                {/* Strip leaked tool-call XML (models occasionally emit
+                  <function=...>...</function> as plain text) then render text. */}
                 {(() => {
-                  // If this assistant message has a pending tool call (state='call'),
-                  // suppress any text the model generated alongside it — the card
-                  // is the intended UI and the text is just noise (e.g. the model
-                  // echoing "Netflix subscription logged — -€15.99" before the card).
-                  const hasPendingToolCall = message.toolInvocations?.some(
-                    (inv) => inv.state === 'call'
-                  )
-                  if (hasPendingToolCall) return null
+                  // If a tool call is still pending, suppress any text the model
+                  // generated alongside it — the card is the intended UI.
+                  if (toolParts.some((p) => isPending(p.state))) return null
 
-                  const clean = message.content
+                  const clean = chat
+                    .messageText(message)
                     .replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '')
                     .trim()
-                  const annotations = message.annotations as
-                    | { type: string; traceId?: string }[]
-                    | undefined
-                  const traceId = annotations?.find((a) => a.type === 'trace_id')?.traceId
+                  const traceId = message.metadata?.traceId
                   return clean ? (
                     <ChatBubble
-                      role={message.role as 'user' | 'assistant'}
+                      role={message.role === 'assistant' ? 'assistant' : 'user'}
                       content={clean}
                       name={name}
-                      timestamp={message.createdAt?.toISOString()}
+                      timestamp={message.metadata?.createdAt}
                       traceId={traceId}
                       reaction={reactions[message.id] ?? null}
                       onReact={(tid, score) => handleReact(tid, score, message.id)}
@@ -301,7 +296,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                   <div className="flex justify-end items-center gap-2 mb-3 pr-1">
                     <span className="text-xs text-truffle-red">{t.chat.failedToSend}</span>
                     <button
-                      onClick={() => chat.reload()}
+                      onClick={() => chat.regenerate()}
                       className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
                     >
                       {t.chat.resend}
@@ -376,10 +371,10 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
             onStop={voice.stopRecording}
           />
 
-          <form id="chat-form" onSubmit={chat.handleSubmit} className="w-full flex gap-2">
+          <form id="chat-form" onSubmit={chat.submit} className="w-full flex gap-2">
             <input
               value={chat.input}
-              onChange={chat.handleInputChange}
+              onChange={(e) => chat.setInput(e.target.value)}
               placeholder={t.chat.typePlaceholder}
               className="flex-1 bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
             />

@@ -1,22 +1,39 @@
 'use client'
 
-import { useChat } from 'ai/react'
+import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport, type UIMessage } from 'ai'
 import { useRef, useEffect, useCallback, useState } from 'react'
-import type { Message } from 'ai/react'
 import { useTextToSpeech, type SpeechTone } from './useTextToSpeech'
 import { supabase } from '@/lib/supabase'
 
-type StreamAnnotation = { type: string; tone?: SpeechTone }
+// Metadata the chat route attaches to each assistant message (see chat/route.ts).
+export type ChatMetadata = {
+  traceId?: string
+  speechTone?: SpeechTone
+  proactive?: boolean
+  createdAt?: string
+}
+
+export type TruffleUIMessage = UIMessage<ChatMetadata>
+
+/** Concatenate the text parts of a UI message (v5 messages have no `content`). */
+export function messageText(m: TruffleUIMessage): string {
+  return m.parts
+    .filter((p): p is { type: 'text'; text: string; state?: 'streaming' | 'done' } => p.type === 'text')
+    .map((p) => p.text)
+    .join('')
+}
 
 export function useFinancialChat(
   userId: string,
-  initialMessages: Message[],
+  initialMessages: TruffleUIMessage[],
   currency: string = 'EUR',
   locale: string = 'en'
 ) {
   const { speak, isSpeaking, cancel } = useTextToSpeech()
   const lastAssistantMessageRef = useRef<string>('')
-  const latestDataRef = useRef<StreamAnnotation[]>([])
+
+  const [input, setInput] = useState('')
 
   const isMutedRef = useRef(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -35,46 +52,39 @@ export function useFinancialChat(
     localStorage.setItem('truffle_voice_muted', String(next))
   }, [cancel])
 
-  const chat = useChat({
-    api: '/api/chat',
-    body: { userId, currency, locale },
-    initialMessages,
-    onResponse: () => {
-      latestDataRef.current = []
-    },
+  const chat = useChat<TruffleUIMessage>({
+    messages: initialMessages,
+    transport: new DefaultChatTransport({
+      api: '/api/chat',
+      body: { userId, currency, locale },
+    }),
     onError: (error) => {
       console.error('[useFinancialChat] stream error:', error, error?.message, error?.cause)
     },
-    onFinish: async (message, { finishReason }) => {
-      if (message.role === 'assistant' && message.content !== lastAssistantMessageRef.current) {
-        lastAssistantMessageRef.current = message.content
-        const toneAnnotation = latestDataRef.current.find((d) => d.type === 'speech_tone')
-        if (!isMutedRef.current) speak(message.content, { tone: toneAnnotation?.tone })
+    onFinish: async ({ message, isAbort, isError }) => {
+      if (message.role !== 'assistant') return
+      const text = messageText(message)
+
+      if (text && text !== lastAssistantMessageRef.current) {
+        lastAssistantMessageRef.current = text
+        if (!isMutedRef.current) speak(text, { tone: message.metadata?.speechTone })
       }
 
-      if (finishReason === 'stop' || finishReason === 'length') {
-        // Skip saving empty assistant messages (tool-only responses with no text).
-        // The card components persist their own acknowledgement messages to Supabase.
-        if (!message.content?.trim()) return
+      // Skip saving empty (tool-only) responses and aborted/errored streams.
+      // Card components persist their own acknowledgement messages to Supabase.
+      if (isAbort || isError || !text.trim()) return
 
-        try {
-          await supabase.from('chat_messages').insert({
-            user_id: userId,
-            role: message.role,
-            content: message.content,
-          })
-        } catch (e) {
-          console.warn('Failed to save chat message:', e)
-        }
+      try {
+        await supabase.from('chat_messages').insert({
+          user_id: userId,
+          role: message.role,
+          content: text,
+        })
+      } catch (e) {
+        console.warn('Failed to save chat message:', e)
       }
     },
   })
-
-  useEffect(() => {
-    if (chat.data) {
-      latestDataRef.current = chat.data as StreamAnnotation[]
-    }
-  }, [chat.data])
 
   const saveUserMessage = async (content: string) => {
     try {
@@ -84,20 +94,34 @@ export function useFinancialChat(
     }
   }
 
-  const startVoice = async (transcript: string) => {
-    if (!transcript.trim()) return
-    await saveUserMessage(transcript)
-    await chat.append({ role: 'user', content: transcript })
+  const sendText = (text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    // Persist in the background — don't block the send on a DB round-trip.
+    void saveUserMessage(trimmed)
+    chat.sendMessage({ text: trimmed })
   }
 
-  const handleSubmit: typeof chat.handleSubmit = (e, options) => {
-    if (chat.input.trim()) saveUserMessage(chat.input.trim())
-    return chat.handleSubmit(e, options)
+  const startVoice = sendText
+
+  const submit = (e?: { preventDefault?: () => void }) => {
+    e?.preventDefault?.()
+    const text = input.trim()
+    if (!text) return
+    setInput('')
+    sendText(text)
   }
+
+  const isLoading = chat.status === 'submitted' || chat.status === 'streaming'
 
   return {
     ...chat,
-    handleSubmit,
+    messageText,
+    input,
+    setInput,
+    submit,
+    sendText,
+    isLoading,
     isSpeaking,
     cancelSpeech: cancel,
     startVoice,

@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
         // chatModel is GPT-OSS (a reasoning model): it emits reasoning tokens
         // before the answer, so `maxTokens: 1` returned an empty string and no
         // row was ever scored. `providerOptions` keeps reasoning out of `text`.
-        maxTokens: 256,
+        maxOutputTokens: 256,
         providerOptions: groqProviderOptions,
       })
 

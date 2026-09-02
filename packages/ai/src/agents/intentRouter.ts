@@ -66,7 +66,7 @@ export async function routeIntent(query: string): Promise<QueryIntent> {
       prompt: query,
       // GPT-OSS spends part of the budget on reasoning tokens before the label,
       // so a tight cap (was 20) truncates the answer to an empty string.
-      maxTokens: 256,
+      maxOutputTokens: 256,
     })
     const validIntents: QueryIntent[] = [
       'spending_summary',

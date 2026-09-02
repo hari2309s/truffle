@@ -234,14 +234,16 @@ Write 4–6 sentences in flowing prose (no bullet points). Lead with a one-line 
     const { text, usage } = await generateText({
       model: chatModel,
       prompt,
-      maxTokens: 700, // headroom for GPT-OSS reasoning tokens + the 4-6 sentence report
+      maxOutputTokens: 700, // headroom for GPT-OSS reasoning tokens + the 4-6 sentence report
       providerOptions: groqProviderOptions,
     })
 
     gen
       .update({
         output: text,
-        usageDetails: usage ? { input: usage.promptTokens, output: usage.completionTokens } : undefined,
+        usageDetails: usage
+          ? { input: usage.inputTokens ?? 0, output: usage.outputTokens ?? 0 }
+          : undefined,
       })
       .end()
     trace.update({ output: text }).end()

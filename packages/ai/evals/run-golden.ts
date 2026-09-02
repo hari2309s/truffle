@@ -104,7 +104,7 @@ async function run() {
     try {
       const { text } = await routedGenerateText(
         tc.task,
-        { prompt: tc.input, maxTokens: 150 },
+        { prompt: tc.input, maxOutputTokens: 150 },
         { expectedIntent: tc.expectedIntent }
       )
 

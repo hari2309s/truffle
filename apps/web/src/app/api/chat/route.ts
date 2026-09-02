@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { streamText, tool, convertToCoreMessages, StreamData } from 'ai'
+import { streamText, tool, convertToModelMessages, type UIMessage } from 'ai'
 import { z } from 'zod'
 import { startObservation, propagateAttributes } from '@langfuse/tracing'
 import {
@@ -84,10 +84,22 @@ export async function POST(request: NextRequest) {
     if (errorResponse) return errorResponse
     const userId = user.id
 
-    const { messages: clientMessages, currency = 'EUR', locale = 'en' } = await request.json()
+    const {
+      messages: clientMessages,
+      currency = 'EUR',
+      locale = 'en',
+    } = (await request.json()) as { messages: UIMessage[]; currency?: string; locale?: string }
+
+    // v5 UIMessages carry text in `parts`, not a `content` string.
+    const textOf = (m: UIMessage | undefined): string =>
+      (m?.parts ?? [])
+        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .map((p) => p.text)
+        .join('')
+
     const message = Array.isArray(clientMessages)
-      ? [...clientMessages].reverse().find((m: { role: string }) => m.role === 'user')?.content
-      : undefined
+      ? textOf([...clientMessages].reverse().find((m) => m.role === 'user'))
+      : ''
 
     if (!message) {
       return new Response(JSON.stringify({ error: 'message required' }), {
@@ -261,10 +273,6 @@ export async function POST(request: NextRequest) {
       const speechTone = getSpeechTone(currentMonthSnapshot)
       const toneGuidance = getToneGuidance(currentMonthSnapshot)
 
-      const streamData = new StreamData()
-      streamData.append({ type: 'speech_tone', tone: speechTone })
-      streamData.append({ type: 'trace_id', traceId: trace.traceId })
-
       const systemPrompt = buildSystemPrompt({
         intent,
         toneGuidance,
@@ -291,36 +299,26 @@ export async function POST(request: NextRequest) {
         locale,
       })
 
-      type ClientMessage = {
-        role: string
-        content?: string
-        toolInvocations?: { toolCallId: string; state: string; result?: unknown }[]
-      }
-      // Strip toolInvocations from ALL assistant messages and clean leaked XML.
-      // Tool results are resolved locally on the client (resolveToolLocally) and
-      // never sent back to the server. This ensures activeTools is always scoped
-      // strictly by the current intent, preventing the model from picking the
-      // wrong tool when multiple tools are available.
-      const normalizedMessages = clientMessages.map((m: ClientMessage) => {
+      // Keep only text parts on assistant history and strip any leaked
+      // <function=…> XML. Tool parts are resolved locally on the client and
+      // never replayed to the server, so `activeTools` stays scoped strictly by
+      // the current intent and the model can't pick a stale tool.
+      const normalizedMessages: UIMessage[] = clientMessages.map((m) => {
         if (m.role !== 'assistant') return m
-
-        const cleanContent =
-          m.content && typeof m.content === 'string'
-            ? m.content.replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '').trim()
-            : m.content
-
-        // Drop toolInvocations entirely — the model never needs to see past tool calls
-        return { ...m, content: cleanContent, toolInvocations: undefined }
+        const parts = (m.parts ?? [])
+          .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+          .map((p) => ({
+            ...p,
+            text: p.text.replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '').trim(),
+          }))
+        return { ...m, parts }
       })
 
       // If the previous assistant message was asking for a goal amount (mid-collection
       // flow), the user's reply (e.g. "20000 euros") won't match goal_setting keywords.
       // Detect this and force the intent so tools stay enabled for this turn.
-      const lastAssistant = [...normalizedMessages]
-        .reverse()
-        .find((m: ClientMessage) => m.role === 'assistant')
-      const prevAssistantText =
-        typeof lastAssistant?.content === 'string' ? lastAssistant.content.toLowerCase() : ''
+      const lastAssistant = [...normalizedMessages].reverse().find((m) => m.role === 'assistant')
+      const prevAssistantText = textOf(lastAssistant).toLowerCase()
       // Skip follow-up intent override when the message looks like code, SQL, or injection
       // — let the LLM handle it as general input rather than forcing a collection flow.
       const looksLikeCode =
@@ -333,7 +331,7 @@ export async function POST(request: NextRequest) {
         proposeGoal: tool({
           description:
             "Propose a savings goal card for the user to confirm. STRICT RULES: (1) NEVER call on the turn the user first names a goal — always ask for the price first in plain text. (2) Only call when the user's CURRENT message contains a specific numeric amount for THIS goal. A number from a previous turn does not count. (3) Never guess, infer, or reuse amounts from other goals in the conversation. (4) After getting the amount, ask for a target deadline before calling this tool — e.g. 'When would you like to reach this goal?' If the user explicitly says they have no deadline or don't know, you may omit it.",
-          parameters: z.object({
+          inputSchema: z.object({
             name: z.string().describe('Short goal name, e.g. "Holiday in Greece"'),
             targetAmount: z
               .union([z.number(), z.string().transform((s) => parseFloat(s))])
@@ -361,7 +359,7 @@ export async function POST(request: NextRequest) {
         proposeTransaction: tool({
           description:
             'Show a ONE-TIME transaction confirmation card. ONLY call this when the user explicitly states they have already made a real, past purchase or received real income — e.g. "I just bought", "I paid", "I received". DO NOT call this for hypothetical questions ("I might buy", "should I get"), jokes, future plans, impossible scenarios, or anything the user has not actually done. For hypotheticals, give advice or an affordability check in plain text instead. DO NOT use this for recurring saving habits — use proposeHabit for those. Use negative amounts for expenses, positive for income.',
-          parameters: z.object({
+          inputSchema: z.object({
             description: z.string().describe('Short description, e.g. "Coffee at Costa"'),
             amount: z
               .union([z.number(), z.string().transform((s) => parseFloat(s))])
@@ -386,7 +384,7 @@ export async function POST(request: NextRequest) {
         proposeHabit: tool({
           description:
             'Show a recurring savings habit confirmation card. Only call when you have a specific amount AND a frequency (weekly or monthly). Never guess the amount. Put a brief calculation breakdown (e.g. "50/week = ~200/month") in the pitch field.',
-          parameters: z.object({
+          inputSchema: z.object({
             name: z
               .string()
               .describe(
@@ -413,7 +411,7 @@ export async function POST(request: NextRequest) {
       // toolInvocations). These are meaningless in history and some providers reject
       // empty-content assistant messages, causing a 500 on follow-up turns.
       const filteredMessages = normalizedMessages.filter(
-        (m: ClientMessage) => !(m.role === 'assistant' && !m.content?.trim())
+        (m) => !(m.role === 'assistant' && !textOf(m).trim())
       )
 
       // Bound history to prevent token bloat on long conversations.
@@ -449,7 +447,7 @@ export async function POST(request: NextRequest) {
         return 'auto' as const
       })()
 
-      const coreMessages = convertToCoreMessages(boundedMessages)
+      const modelMessages = convertToModelMessages(boundedMessages)
 
       // Try each candidate provider in priority order. If one hits a rate limit
       // (per-minute TPM/RPM), fall through to the next instead of surfacing the error.
@@ -465,11 +463,11 @@ export async function POST(request: NextRequest) {
           const result = streamText({
             model: chatModel,
             system: systemPrompt,
-            messages: coreMessages,
+            messages: modelMessages,
             // Was 400 — GPT-OSS (now the primary Groq model) spends part of the
             // budget on reasoning tokens; too low a cap truncates the reply or
-            // the tool call. `providerOptions` moves reasoning out of `text`.
-            maxTokens: 900,
+            // the tool call. `providerOptions` keeps reasoning short and out of `text`.
+            maxOutputTokens: 900,
             providerOptions: groqProviderOptions,
             tools: activeTools,
             toolChoice,
@@ -479,14 +477,14 @@ export async function POST(request: NextRequest) {
                   .update({
                     output: text,
                     usageDetails: usage
-                      ? { input: usage.promptTokens, output: usage.completionTokens }
+                      ? { input: usage.inputTokens ?? 0, output: usage.outputTokens ?? 0 }
                       : undefined,
                   })
                   .end()
                 trace.end()
                 await langfuseSpanProcessor.forceFlush()
-              } finally {
-                streamData.close()
+              } catch (e) {
+                console.error('[chat/langfuse teardown]', e)
               }
               // Fire-and-forget usage tracking and eval logging
               Promise.all([
@@ -497,22 +495,23 @@ export async function POST(request: NextRequest) {
                   input: message,
                   output: text,
                   latencyMs: 0,
-                  tokensUsed: (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0),
+                  tokensUsed: (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0),
                   traceId: trace.traceId,
                 }),
               ]).catch((e) => console.error('[chat/eval log error]', e))
             },
           })
 
-          // Await the first chunk to verify the provider actually works before
-          // committing to this stream. Without this, rate-limit errors surface
-          // mid-stream and can't be retried with a fallback provider.
-          // toDataStreamResponse() consumes the stream, so we can't pre-read it.
-          // Instead, we return immediately — if the stream errors mid-flight,
-          // getErrorMessage handles it. The retry loop only catches sync/init errors.
-          return result.toDataStreamResponse({
-            data: streamData,
-            getErrorMessage: (error: unknown) => {
+          // If the stream errors mid-flight, `onError` maps it to a client
+          // message. The retry loop only catches sync/init errors.
+          return result.toUIMessageStreamResponse({
+            // Attach tone (for TTS), trace id (for feedback) and a timestamp to
+            // the assistant message.
+            messageMetadata: ({ part }) =>
+              part.type === 'start'
+                ? { traceId: trace.traceId, speechTone, createdAt: new Date().toISOString() }
+                : undefined,
+            onError: (error: unknown) => {
               console.error('[chat/stream error]', error)
               return error instanceof Error ? error.message : 'An error occurred.'
             },
@@ -527,7 +526,6 @@ export async function POST(request: NextRequest) {
       }
 
       // All candidates failed
-      streamData.close()
       console.error('[chat] all providers failed:', lastError)
       trace.end()
       await langfuseSpanProcessor.forceFlush()

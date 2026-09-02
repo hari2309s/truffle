@@ -12,7 +12,7 @@ export async function synthesizeResponse(analysis: string, question: string) {
     prompt,
     // Was 200 — GPT-OSS reasoning tokens share this budget and were truncating
     // the spoken answer. `providerOptions` keeps the reasoning out of `text`.
-    maxTokens: 600,
+    maxOutputTokens: 600,
     providerOptions: groqProviderOptions,
   })
 }

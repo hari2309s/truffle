@@ -35,7 +35,7 @@ export async function adviseSavingsGoals(
 
   const { text, usage } = await routedGenerateText(
     'reasoning',
-    { prompt, maxTokens: 600 }, // headroom for GPT-OSS reasoning tokens + the answer
+    { prompt, maxOutputTokens: 600 }, // headroom for GPT-OSS reasoning tokens + the answer
     { traceId: parentSpan?.traceId }
   )
 

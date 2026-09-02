@@ -16,12 +16,12 @@ export const chatModel = groq('openai/gpt-oss-120b')
 // and PDFs natively and is the primary provider for the router's `vision` task.
 export const visionModel = google('gemini-3.7-flash')
 
-// GPT-OSS models are reasoning models — by default Groq inlines the chain of
-// thought as `<think>…</think>` in the message content, which corrupts callers
-// that parse `text` (intent labels, judge scores) and pollutes streamed answers.
-// `parsed` moves it to a separate `reasoning` field so `text` is only the answer.
-// Pass this as `providerOptions` on every Groq generateText/streamText call.
-// (Harmless for non-Groq providers — they ignore the `groq` key.)
-// NOTE: this SDK (`@ai-sdk/groq` v1) has no `reasoningEffort` knob, so reasoning
-// still consumes part of `maxTokens` — budgets below are sized with headroom.
-export const groqProviderOptions = { groq: { reasoningFormat: 'parsed' as const } }
+// GPT-OSS models are reasoning models. `reasoningEffort: 'low'` keeps the
+// chain-of-thought short so it barely eats into `maxOutputTokens`, and
+// `reasoningFormat: 'parsed'` moves whatever reasoning remains into a separate
+// field so `text` is only the answer (callers parse intent labels / judge
+// scores out of it). Pass as `providerOptions` on every Groq
+// generateText/streamText call — non-Groq providers ignore the `groq` key.
+export const groqProviderOptions = {
+  groq: { reasoningFormat: 'parsed' as const, reasoningEffort: 'low' as const },
+}
