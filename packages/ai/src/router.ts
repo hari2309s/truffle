@@ -1,6 +1,7 @@
 import { generateText } from 'ai'
 import type { CoreMessage } from 'ai'
 import type { Provider, TaskType } from './types'
+import { groqProviderOptions } from './llm'
 import { logEval, incrementUsage, getGlobalUsage } from './eval'
 import { getModel as getGroqModel } from './providers/groq'
 import { getModel as getGeminiModel } from './providers/gemini'
@@ -90,7 +91,9 @@ export async function selectModelCandidates(
   let usage: Record<string, number> = {}
   try {
     usage = await getGlobalUsage()
-  } catch {}
+  } catch {
+    // usage check is best-effort — fall through with an empty map
+  }
 
   const priority = PRIORITY_ORDER[task]
   const candidates = priority
@@ -125,7 +128,9 @@ export async function routedGenerateText(
   let usage: Record<string, number> = {}
   try {
     usage = await getGlobalUsage()
-  } catch {}
+  } catch {
+    // usage check is best-effort — fall through with an empty map
+  }
 
   const priority = PRIORITY_ORDER[task]
   const input = options.prompt ?? options.system ?? ''
@@ -137,9 +142,11 @@ export async function routedGenerateText(
     const start = Date.now()
 
     try {
-      const result = await generateText({ ...(options as object), model } as Parameters<
-        typeof generateText
-      >[0])
+      const result = await generateText({
+        ...(options as object),
+        model,
+        providerOptions: groqProviderOptions,
+      } as Parameters<typeof generateText>[0])
 
       const latencyMs = Date.now() - start
       const promptTokens = result.usage?.promptTokens ?? 0

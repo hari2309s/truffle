@@ -10,7 +10,7 @@ export async function adviseHabit(query: string, parentSpan?: LangfuseSpan): Pro
 
   const { text, usage } = await routedGenerateText(
     'fast-chat',
-    { prompt: query, maxTokens: 150 },
+    { prompt: query, maxTokens: 450 }, // headroom for GPT-OSS reasoning tokens + the answer
     { traceId: parentSpan?.traceId }
   )
 

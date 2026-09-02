@@ -1,4 +1,4 @@
--- Resize embedding column from 384 (MiniLM) to 768 (Gemini text-embedding-004)
+-- Resize embedding column from 384 (MiniLM) to 768 (Gemini embeddings, MRL-truncated)
 -- Drop existing index and column, re-add with correct dimensions
 alter table transactions drop column if exists embedding;
 alter table transactions add column embedding vector(768);

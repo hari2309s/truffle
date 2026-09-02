@@ -10,6 +10,7 @@ import {
   getToneGuidance,
   buildSystemPrompt,
   selectModelCandidates,
+  groqProviderOptions,
   incrementUsage,
   logEval,
 } from '@truffle/ai'
@@ -465,7 +466,11 @@ export async function POST(request: NextRequest) {
             model: chatModel,
             system: systemPrompt,
             messages: coreMessages,
-            maxTokens: 400,
+            // Was 400 — GPT-OSS (now the primary Groq model) spends part of the
+            // budget on reasoning tokens; too low a cap truncates the reply or
+            // the tool call. `providerOptions` moves reasoning out of `text`.
+            maxTokens: 900,
+            providerOptions: groqProviderOptions,
             tools: activeTools,
             toolChoice,
             onFinish: async ({ text, usage }) => {

@@ -64,9 +64,10 @@ export async function routeIntent(query: string): Promise<QueryIntent> {
     const { text } = await routedGenerateText('fast-chat', {
       system: INTENT_ROUTER_PROMPT,
       prompt: query,
-      maxTokens: 20,
+      // GPT-OSS spends part of the budget on reasoning tokens before the label,
+      // so a tight cap (was 20) truncates the answer to an empty string.
+      maxTokens: 256,
     })
-    const intent = text.trim() as QueryIntent
     const validIntents: QueryIntent[] = [
       'spending_summary',
       'affordability_check',
@@ -80,7 +81,12 @@ export async function routeIntent(query: string): Promise<QueryIntent> {
       'greeting',
       'general_advice',
     ]
-    return validIntents.includes(intent) ? intent : 'general_advice'
+    // Expect a bare label (reasoning is now stripped from `text`); tolerate only
+    // surrounding quotes/punctuation/whitespace. Anything else → safe default.
+    const normalized = text.trim().toLowerCase().replace(/^["'`.\s]+|["'`.\s]+$/g, '')
+    return validIntents.includes(normalized as QueryIntent)
+      ? (normalized as QueryIntent)
+      : 'general_advice'
   } catch {
     return 'general_advice'
   }

@@ -6,7 +6,7 @@ import { reviewAnomalies } from './agents/anomalyReviewer'
 import { adviseSavingsGoals } from './agents/savingsGoalAdvisor'
 import { adviseHabit } from './agents/habitAdvisor'
 import { GraphAnnotation } from './graph'
-import { chatModel } from './llm'
+import { chatModel, groqProviderOptions } from './llm'
 import { langfuseSpanProcessor } from './langfuse'
 import { currentYearMonth } from './date'
 
@@ -234,7 +234,8 @@ Write 4–6 sentences in flowing prose (no bullet points). Lead with a one-line 
     const { text, usage } = await generateText({
       model: chatModel,
       prompt,
-      maxTokens: 400,
+      maxTokens: 700, // headroom for GPT-OSS reasoning tokens + the 4-6 sentence report
+      providerOptions: groqProviderOptions,
     })
 
     gen

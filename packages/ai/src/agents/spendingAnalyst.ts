@@ -28,7 +28,7 @@ export async function analyseSpending(
 
   const { text, usage } = await routedGenerateText(
     'fast-chat',
-    { prompt, maxTokens: 300 },
+    { prompt, maxTokens: 600 }, // headroom for GPT-OSS reasoning tokens + the answer
     { traceId: parentSpan?.traceId }
   )
 

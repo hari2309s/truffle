@@ -270,6 +270,30 @@ All limits and priority orders are constants in `router.ts` — easy to tune.
 
 ---
 
+## Embeddings
+
+Transaction and query embeddings use Gemini `gemini-embedding-2`, truncated to
+768 dims to match the `transactions.embedding` `vector(768)` column
+(`packages/ai/src/embeddings.ts`). Similarity search runs in Postgres via the
+`match_transactions` RPC (cosine distance, HNSW index).
+
+Embedding vectors are model-specific — if you change the model, existing rows
+must be re-embedded or semantic search silently returns irrelevant results:
+
+```bash
+# Backfill every transaction with the current model. Idempotent; resumable.
+ENV_FILE=.env.production.local pnpm --filter @truffle/ai reembed
+
+# Verify connectivity / row count without writing:
+DRY_RUN=1 ENV_FILE=.env.production.local pnpm --filter @truffle/ai reembed
+```
+
+The script paces itself under the Gemini free-tier limit (~100 req/min, 1000/day);
+raise `REEMBED_RPM` if billing is enabled. On interruption it prints a
+`REEMBED_AFTER_ID=…` line to resume from.
+
+---
+
 ## Eval layer
 
 Every LLM call — from agents, the chat route, and the golden eval script — writes a row to `eval_logs`:

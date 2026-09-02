@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { generateText } from 'ai'
-import { chatModel, langfuseClient } from '@truffle/ai'
+import { chatModel, groqProviderOptions, langfuseClient } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
 
 export const runtime = 'nodejs'
@@ -83,10 +83,17 @@ export async function GET(req: NextRequest) {
       const { text } = await generateText({
         model: chatModel,
         prompt: JUDGE_PROMPT(log.task, log.input, log.output),
-        maxTokens: 1,
+        // chatModel is GPT-OSS (a reasoning model): it emits reasoning tokens
+        // before the answer, so `maxTokens: 1` returned an empty string and no
+        // row was ever scored. `providerOptions` keeps reasoning out of `text`.
+        maxTokens: 256,
+        providerOptions: groqProviderOptions,
       })
 
-      const parsed = parseInt(text.trim(), 10)
+      // Expect a bare digit (the prompt asks for one, and reasoning is stripped
+      // from `text`). Anything ambiguous → skip the row rather than guess.
+      const match = text.trim().match(/^([1-5])(?:\s*\/\s*5)?[.\s]*$/)
+      const parsed = match ? Number(match[1]) : NaN
       if (parsed >= 1 && parsed <= 5) {
         // Write score back to eval_logs
         const { error: updateError } = await db

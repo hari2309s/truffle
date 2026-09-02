@@ -1,5 +1,6 @@
 import { streamText } from 'ai'
 import { selectModel } from '../router'
+import { groqProviderOptions } from '../llm'
 import { SYNTHESIZER_PROMPT } from '../prompts/synthesizer.prompt'
 
 export async function synthesizeResponse(analysis: string, question: string) {
@@ -9,6 +10,9 @@ export async function synthesizeResponse(analysis: string, question: string) {
   return streamText({
     model,
     prompt,
-    maxTokens: 200,
+    // Was 200 — GPT-OSS reasoning tokens share this budget and were truncating
+    // the spoken answer. `providerOptions` keeps the reasoning out of `text`.
+    maxTokens: 600,
+    providerOptions: groqProviderOptions,
   })
 }

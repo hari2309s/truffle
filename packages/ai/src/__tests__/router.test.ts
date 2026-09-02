@@ -41,8 +41,7 @@ describe('PRIORITY_ORDER', () => {
   it('every provider listed in PRIORITY_ORDER is a known provider', () => {
     for (const [task, providers] of Object.entries(PRIORITY_ORDER)) {
       for (const provider of providers) {
-        ;(expect(ALL_PROVIDERS).toContain(provider),
-          `${task} references unknown provider ${provider}`)
+        expect(ALL_PROVIDERS, `${task} references unknown provider ${provider}`).toContain(provider)
       }
     }
   })
@@ -54,7 +53,7 @@ describe('PRIORITY_ORDER', () => {
   it('no duplicate providers within a task priority list', () => {
     for (const [task, providers] of Object.entries(PRIORITY_ORDER)) {
       const unique = new Set(providers)
-      ;(expect(unique.size).toBe(providers.length), `${task} has duplicate providers`)
+      expect(unique.size, `${task} has duplicate providers`).toBe(providers.length)
     }
   })
 })
