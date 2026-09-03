@@ -178,10 +178,44 @@ function shiftToToday(rows) {
   return rows.map((r) => ({ ...r, date: toIsoDate(toUtcTs(r.date) + offsetDays * DAY_MS) }))
 }
 
+const currentMonthKey = () => {
+  const now = new Date()
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * The fixture's monthly salary lands near month-end, so after a small day-shift
+ * (when the seed runs early in the month) the current month has no income row
+ * and every "income this month" readout shows €0. Add one dated the 1st, reusing
+ * the shape of the most recent salary, unless the month already has income.
+ */
+function ensureCurrentMonthIncome(rows) {
+  const month = currentMonthKey()
+  if (rows.some((r) => r.date.startsWith(month) && r.amount > 0)) return rows
+  const salary = [...rows]
+    .reverse()
+    .find((r) => r.category === 'income' && r.amount >= 1000) ?? {
+    amount: 3500,
+    description: 'Gehalt',
+    merchant: 'Tech GmbH',
+  }
+  return [
+    ...rows,
+    {
+      amount: salary.amount,
+      currency: DEMO_CURRENCY,
+      description: salary.description,
+      category: 'income',
+      merchant: salary.merchant ?? null,
+      date: `${month}-01`,
+      is_recurring: true,
+    },
+  ]
+}
+
 // Mirrors apps/web/src/lib/server-db.ts recomputeSnapshot() for the current month.
 function buildSnapshot(rows) {
-  const now = new Date()
-  const month = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+  const month = currentMonthKey()
   const monthRows = rows.filter((t) => t.date.startsWith(month))
 
   const totalIncome = monthRows
@@ -230,7 +264,7 @@ async function main() {
   await wipe(userId)
   console.log('→ cleared previous demo data')
 
-  const txs = shiftToToday(parseTransactions())
+  const txs = ensureCurrentMonthIncome(shiftToToday(parseTransactions()))
   const { error: txErr } = await admin
     .from('transactions')
     .insert(txs.map((t) => ({ ...t, user_id: userId })))
