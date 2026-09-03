@@ -26,6 +26,17 @@ describe('routeIntent — keyword classification (no LLM call)', () => {
     expect(await routeIntent('i spent 12 euros on lunch today')).toBe('add_transaction')
   })
 
+  it('classifies present-tense "I just spend 30 euros on groceries" as add_transaction', async () => {
+    // "spend" (not "spent") + the category word "groceries" previously routed to
+    // category_breakdown, so the transaction card never appeared.
+    expect(await routeIntent('I just spend 30 euros on groceries')).toBe('add_transaction')
+  })
+
+  it('does not classify recurring "I spend 200 euros every month on food" as add_transaction', async () => {
+    const result = await routeIntent('I spend 200 euros every month on food')
+    expect(result).not.toBe('add_transaction')
+  })
+
   it('does not misclassify "membership" as greeting due to "hi" substring', async () => {
     // "membership" contains "hi" but should NOT trigger the greeting intent.
     // Without word-boundary matching, 'hi' inside "membership" wins as greeting.

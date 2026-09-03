@@ -33,6 +33,15 @@ function classifyByKeywords(query: string): QueryIntent | null {
 const SHORTHAND_DIRECT = /^[a-zA-Z][\w\s\-'']+\s\d+(?:\.\d{1,2})?$/
 const SHORTHAND_FOR = /^[a-zA-Z][\w\s\-'']+\s(?:for|at)\s\d+(?:\.\d{1,2})?$/
 
+// First-person expense statement with a price in the sentence:
+// "I just spend 30 euros on groceries", "I paid 12 for parking", "spent €4.50 at Costa".
+// Tolerates the common present-tense phrasing ("I just spend …") as well as past tense.
+const SPEND_VERB = /\b(just\s+)?(spent|spend|paid|bought)\b/i
+// A price-like token: currency symbol + number, or a number followed by a currency word.
+const PRICE_TOKEN = /[€£$]\s?\d|\d+(?:\.\d{1,2})?\s?(?:euros?|dollars?|pounds?|eur|gbp|usd|quid|bucks)\b/i
+// Recurring phrasing is a habit, not a one-time purchase — don't hand it a transaction card.
+const RECURRENCE = /\b(every|per|each)\s+(day|week|month|year)\b|\b(daily|weekly|monthly|yearly|annually)\b/i
+
 function looksLikeTransaction(query: string): boolean {
   const trimmed = query.trim()
   // Must be short (likely a quick log, not a question or paragraph)
@@ -44,7 +53,11 @@ function looksLikeTransaction(query: string): boolean {
     )
   )
     return false
-  return SHORTHAND_DIRECT.test(trimmed) || SHORTHAND_FOR.test(trimmed)
+  if (SHORTHAND_DIRECT.test(trimmed) || SHORTHAND_FOR.test(trimmed)) return true
+  // "I just spend 30 euros on groceries" — expense verb + a real price, and not
+  // recurring. Broad category words ("groceries", "food") would otherwise steal
+  // this into category_breakdown before the transaction ever gets a card.
+  return SPEND_VERB.test(trimmed) && PRICE_TOKEN.test(trimmed) && !RECURRENCE.test(trimmed)
 }
 
 export async function routeIntent(query: string): Promise<QueryIntent> {

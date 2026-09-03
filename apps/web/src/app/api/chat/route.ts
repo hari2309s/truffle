@@ -432,7 +432,7 @@ export async function POST(request: NextRequest) {
       // decide (it may give advice instead of proposing a card).
       const isDefiniteTransaction =
         intent === INTENT.ADD_TRANSACTION &&
-        /\b(i\s+(just\s+)?(spent|paid|bought|got paid|received)|add\s+(a\s+)?transaction|log\s+(a\s+)?transaction)\b/i.test(
+        /\b(i\s+(just\s+)?(spent|paid|bought|got paid|received)|i\s+just\s+spend|add\s+(a\s+)?transaction|log\s+(a\s+)?transaction)\b/i.test(
           message
         )
 

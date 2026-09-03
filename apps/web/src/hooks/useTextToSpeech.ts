@@ -20,6 +20,9 @@ interface UseTextToSpeechReturn {
 function preprocessText(raw: string): string {
   return raw
     .replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '') // strip leaked tool-call XML
+    // Strip emoji / pictographs — the synth verbalises them ("waving hand sign").
+    .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '') // regional indicators (flags)
+    .replace(/[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}\u{FE0F}\u{200D}]/gu, '')
     .replace(/\*\*(.*?)\*\*/g, '$1') // bold
     .replace(/\*(.*?)\*/g, '$1') // italic
     .replace(/_(.*?)_/g, '$1') // underscore italic
