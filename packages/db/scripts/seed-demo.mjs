@@ -50,7 +50,7 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !DEMO_EMAIL) {
   process.exit(1)
 }
 
-const DEMO_NAME = 'Alex'
+const DEMO_NAME = 'John'
 const DEMO_CURRENCY = 'EUR'
 
 const VALID_CATEGORIES = new Set([
