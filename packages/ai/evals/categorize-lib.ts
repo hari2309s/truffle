@@ -59,10 +59,14 @@ export async function runCategoryEval(rows: TransactionRow[]): Promise<void> {
   for (const row of rows) {
     const userPrompt = `Description: ${row.description}\nAmount: ${row.amount}\nMerchant: ${row.merchant || 'unknown'}\n\nCategory:`
 
+    // 'tool-calling' routes to GPT-OSS 120B, a reasoning model. Under AI SDK v5,
+    // reasoning tokens count against maxOutputTokens, so a tight budget (e.g. 10)
+    // gets fully consumed by the chain-of-thought and leaves `text` empty. 128
+    // covers the low-effort reasoning plus the one-word category token.
     const { text } = await routedGenerateText('tool-calling', {
       system: systemPrompt,
       prompt: userPrompt,
-      maxOutputTokens: 10,
+      maxOutputTokens: 128,
     })
 
     const predicted = parseCategoryToken(text)
