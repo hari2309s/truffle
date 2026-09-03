@@ -25,3 +25,12 @@ export const visionModel = google('gemini-3.7-flash')
 export const groqProviderOptions = {
   groq: { reasoningFormat: 'parsed' as const, reasoningEffort: 'low' as const },
 }
+
+// The conversational chat endpoint benefits from a little more deliberation than
+// the label/score tasks — `reasoningEffort: 'medium'` yields warmer, less clipped
+// replies. It costs more of the output-token budget, so callers using this must
+// raise `maxOutputTokens` accordingly (the reasoning is parsed out of `text` but
+// still consumes the budget).
+export const groqChatProviderOptions = {
+  groq: { reasoningFormat: 'parsed' as const, reasoningEffort: 'medium' as const },
+}

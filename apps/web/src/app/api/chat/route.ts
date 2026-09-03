@@ -10,7 +10,7 @@ import {
   getToneGuidance,
   buildSystemPrompt,
   selectModelCandidates,
-  groqProviderOptions,
+  groqChatProviderOptions,
   incrementUsage,
   logEval,
 } from '@truffle/ai'
@@ -464,11 +464,13 @@ export async function POST(request: NextRequest) {
             model: chatModel,
             system: systemPrompt,
             messages: modelMessages,
-            // Was 400 — GPT-OSS (now the primary Groq model) spends part of the
-            // budget on reasoning tokens; too low a cap truncates the reply or
-            // the tool call. `providerOptions` keeps reasoning short and out of `text`.
-            maxOutputTokens: 900,
-            providerOptions: groqProviderOptions,
+            // GPT-OSS (the primary Groq model) spends part of the budget on
+            // reasoning tokens before the reply/tool call. With chat running at
+            // `reasoningEffort: 'medium'` (warmer prose) the cap needs headroom
+            // so neither the reasoning nor the answer is truncated. Reasoning is
+            // parsed out of `text` but still counts against this budget.
+            maxOutputTokens: 1400,
+            providerOptions: groqChatProviderOptions,
             tools: activeTools,
             toolChoice,
             onFinish: async ({ text, usage }) => {
