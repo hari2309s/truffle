@@ -23,19 +23,23 @@ import { createClient } from '@supabase/supabase-js'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..', '..', '..')
 
-// Local convenience: pull vars from .env.local when they are not already set.
-// CI injects the real values through the environment and skips this.
+// Local convenience: pull vars from .env.local / .env when they are not already
+// set. CI injects the real values through the environment, so those files are
+// absent and this is a no-op there.
 if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  try {
-    const raw = readFileSync(join(ROOT, '.env.local'), 'utf8')
+  for (const file of ['.env.local', '.env']) {
+    let raw
+    try {
+      raw = readFileSync(join(ROOT, file), 'utf8')
+    } catch {
+      continue // file not present
+    }
     for (const line of raw.split('\n')) {
       const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/)
       if (m && process.env[m[1]] === undefined) {
         process.env[m[1]] = m[2].replace(/^["']|["']$/g, '')
       }
     }
-  } catch {
-    /* no .env.local — rely on the ambient environment */
   }
 }
 
@@ -192,9 +196,7 @@ const currentMonthKey = () => {
 function ensureCurrentMonthIncome(rows) {
   const month = currentMonthKey()
   if (rows.some((r) => r.date.startsWith(month) && r.amount > 0)) return rows
-  const salary = [...rows]
-    .reverse()
-    .find((r) => r.category === 'income' && r.amount >= 1000) ?? {
+  const salary = [...rows].reverse().find((r) => r.category === 'income' && r.amount >= 1000) ?? {
     amount: 3500,
     description: 'Gehalt',
     merchant: 'Tech GmbH',
@@ -218,12 +220,8 @@ function buildSnapshot(rows) {
   const month = currentMonthKey()
   const monthRows = rows.filter((t) => t.date.startsWith(month))
 
-  const totalIncome = monthRows
-    .filter((t) => t.amount > 0)
-    .reduce((s, t) => s + t.amount, 0)
-  const totalExpenses = monthRows
-    .filter((t) => t.amount < 0)
-    .reduce((s, t) => s + t.amount, 0)
+  const totalIncome = monthRows.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0)
+  const totalExpenses = monthRows.filter((t) => t.amount < 0).reduce((s, t) => s + t.amount, 0)
 
   const byCategory = {}
   for (const t of monthRows) {
@@ -247,13 +245,22 @@ function dateInMonths(months) {
   return d.toISOString().slice(0, 10)
 }
 
-function isoWeekLabel(weeksAgo) {
+// Must match apps/web/src/lib/habits.ts getCurrentPeriod('weekly') exactly, or
+// the seeded habit_contributions won't line up with the streak/period logic in
+// the app (wrong streak count, or a past week read as "already logged").
+function isoWeekPeriod(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayOfWeek = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayOfWeek) // nearest Thursday
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  const weekNum = Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7)
+  return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`
+}
+
+function weeksAgoPeriod(weeksAgo) {
   const d = new Date()
   d.setDate(d.getDate() - weeksAgo * 7)
-  const year = d.getUTCFullYear()
-  const jan1 = Date.UTC(year, 0, 1)
-  const week = Math.ceil(((d.getTime() - jan1) / 86_400_000 + 1) / 7)
-  return `${year}-W${String(week).padStart(2, '0')}`
+  return isoWeekPeriod(d)
 }
 
 async function main() {
@@ -322,8 +329,8 @@ async function main() {
   if (habitErr) throw habitErr
 
   const { error: contribErr } = await admin.from('habit_contributions').insert([
-    { habit_id: habit.id, user_id: userId, period: isoWeekLabel(2), amount: 25 },
-    { habit_id: habit.id, user_id: userId, period: isoWeekLabel(1), amount: 25 },
+    { habit_id: habit.id, user_id: userId, period: weeksAgoPeriod(2), amount: 25 },
+    { habit_id: habit.id, user_id: userId, period: weeksAgoPeriod(1), amount: 25 },
   ])
   if (contribErr) throw contribErr
 
