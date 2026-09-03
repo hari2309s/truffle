@@ -83,6 +83,8 @@ export async function POST(request: NextRequest) {
     const { user, errorResponse } = await requireUser(request)
     if (errorResponse) return errorResponse
     const userId = user.id
+    const userName =
+      typeof user.user_metadata?.name === 'string' ? user.user_metadata.name.trim() : ''
 
     const {
       messages: clientMessages,
@@ -275,6 +277,7 @@ export async function POST(request: NextRequest) {
 
       const systemPrompt = buildSystemPrompt({
         intent,
+        userName,
         toneGuidance,
         snapshots,
         currentMonth,

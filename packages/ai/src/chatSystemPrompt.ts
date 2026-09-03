@@ -240,6 +240,7 @@ ${lines.join('\n')}
 
 export function buildSystemPrompt(params: {
   intent: QueryIntent
+  userName?: string
   toneGuidance: string
   snapshots: MonthlySnapshot[]
   currentMonth: string
@@ -257,6 +258,7 @@ export function buildSystemPrompt(params: {
 }): string {
   const {
     intent,
+    userName,
     toneGuidance,
     snapshots,
     currentMonth,
@@ -277,10 +279,16 @@ export function buildSystemPrompt(params: {
   const fmt = (n: number) => `${symbol}${Math.abs(n).toFixed(decimals)}`
 
   const languageInstruction = ''
+  // user_metadata.name is user-writable — sanitize like every other
+  // user-supplied string here to block prompt injection via the name.
+  const trimmedName = sanitize(userName, 40)
+  const nameInstruction = trimmedName
+    ? ` The user's name is ${trimmedName} — use their first name naturally now and then, not in every sentence.`
+    : ''
 
   if (intent === 'greeting') {
     return `You are Truffle — a warm, calm personal finance companion. The user is just saying hello.
-Respond with a single warm, brief greeting in plain spoken words. Do not use emoji. Do not mention their finances, balance, goals, or any financial data unprompted. Just say hi back.${languageInstruction}`
+Respond with a single warm, brief greeting in plain spoken words${trimmedName ? `, addressing them by their first name (${trimmedName})` : ''}. Do not use emoji. Do not mention their finances, balance, goals, or any financial data unprompted. Just say hi back.${languageInstruction}`
   }
 
   const transactionContext = buildTransactionContext(intent, transactions, fmt)
@@ -300,7 +308,7 @@ Respond with a single warm, brief greeting in plain spoken words. Do not use emo
   )
   const categoryContext = buildSpendByCategoryContext(spendByCategory ?? null, fmt)
 
-  return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.${languageInstruction}
+  return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a knowledgeable friend, never a banker or a lecturer.${languageInstruction}${nameInstruction}
 
 Voice: talk the way you would out loud to a friend. Use contractions. Lead with a short, genuine human reaction ("Nice one", "Ah, that's a tricky one", "Good question") before you get to any numbers. Keep it relaxed and unhurried — never clipped or brisk.
 

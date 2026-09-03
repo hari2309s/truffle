@@ -10,7 +10,10 @@ export function createServerClient() {
   })
 }
 
-type AuthSuccess = { user: { id: string }; errorResponse: null }
+type AuthSuccess = {
+  user: { id: string; user_metadata?: { name?: string } & Record<string, unknown> }
+  errorResponse: null
+}
 type AuthFailure = { user: null; errorResponse: NextResponse }
 
 export async function requireUser(request: NextRequest): Promise<AuthSuccess | AuthFailure> {
