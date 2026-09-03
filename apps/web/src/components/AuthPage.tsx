@@ -129,6 +129,21 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
           </form>
         )}
 
+        {!sent && process.env.NEXT_PUBLIC_DEMO_ENABLED === '1' && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-truffle-border" />
+              <span className="text-xs text-truffle-muted">{t.auth.demoHint}</span>
+              <span className="h-px flex-1 bg-truffle-border" />
+            </div>
+            <form action="/api/auth/demo" method="post">
+              <button type="submit" className="btn-ghost w-full py-3 text-sm">
+                {t.auth.demoButton}
+              </button>
+            </form>
+          </div>
+        )}
+
         <p className="text-xs text-truffle-muted text-center">{t.auth.footer}</p>
       </PageEnter>
     </div>

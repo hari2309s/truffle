@@ -9,6 +9,8 @@ export interface Translations {
     footer: string
     checkEmail: string
     magicLinkSent: (email: string) => string
+    demoButton: string
+    demoHint: string
   }
   onboarding: {
     heading: string
@@ -64,6 +66,7 @@ export interface Translations {
   }
   home: {
     authExpiredError: string
+    demoUnavailableError: string
   }
   categories: Record<string, string>
   addTransaction: {
@@ -271,6 +274,8 @@ export const translations: Record<Locale, Translations> = {
       checkEmail: 'Check your email',
       magicLinkSent: (email) =>
         `We sent a magic link to ${email}. Click it to sign in — no password needed.`,
+      demoButton: 'Explore the demo →',
+      demoHint: 'A furnished account with sample data. No sign-up.',
     },
     onboarding: {
       heading: 'Welcome to Truffle',
@@ -342,6 +347,7 @@ export const translations: Record<Locale, Translations> = {
     },
     home: {
       authExpiredError: 'Sign-in link expired or already used. Please request a new one.',
+      demoUnavailableError: 'The demo is temporarily unavailable. Please try again in a moment.',
     },
     categories: {
       food_groceries: 'Groceries',

@@ -64,8 +64,15 @@ export function HomeClient() {
         <LoadingDots />
       </div>
     )
-  if (state === 'unauthenticated')
-    return <AuthPage error={authError === 'auth_failed' ? t.home.authExpiredError : null} />
+  if (state === 'unauthenticated') {
+    const authErrorMessage =
+      authError === 'auth_failed'
+        ? t.home.authExpiredError
+        : authError === 'demo_unavailable'
+          ? t.home.demoUnavailableError
+          : null
+    return <AuthPage error={authErrorMessage} />
+  }
   if (state === 'onboarding' && userId) {
     return (
       <OnboardingPage

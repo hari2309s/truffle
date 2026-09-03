@@ -67,6 +67,38 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 
 ---
 
+## Try it
+
+**Live demo:** _add your Vercel URL here_
+
+On the sign-in screen, tap **Explore the demo →** to drop straight into a
+furnished account — eight months of transactions (slid forward to end today),
+savings goals, budgets, a saving habit, and detected anomalies. No sign-up, no
+email. The account is
+passwordless: the button mints a one-time magic-link token server-side
+([`/api/auth/demo`](apps/web/src/app/api/auth/demo/route.ts)) and exchanges it
+for a session. A nightly GitHub Action
+([`demo-reset.yml`](.github/workflows/demo-reset.yml)) rebuilds it so it looks
+the same for the next visitor.
+
+### Walkthrough
+
+<!--
+  Record a 2–3 min screen capture at mobile width (it's a PWA) with audio on —
+  the voice loop is the point. Then either:
+    A. Drag the .mp4 into a GitHub issue/comment, copy the
+       https://github.com/user-attachments/assets/... URL it produces, and paste
+       it below on its own line (GitHub renders an inline player; 10 MB limit on
+       free accounts — compress with HandBrake).
+    B. Or upload to unlisted YouTube / Loom and replace the block below with a
+       linked thumbnail.
+  Also drop a short (~30–45 s) muted GIF at docs/demo.gif for the hero above.
+-->
+
+https://github.com/USER/REPO/assets/PLACEHOLDER/walkthrough.mp4
+
+---
+
 ## How it works
 
 ```
@@ -187,6 +219,10 @@ MISTRAL_API_KEY=                     # Mistral — mistral-small-latest (free ti
 
 # Required for nightly eval judge cron
 CRON_SECRET=                         # openssl rand -hex 32
+
+# Optional — one-click demo account (see "Try it")
+DEMO_USER_EMAIL=                     # email that owns the seeded sample data
+NEXT_PUBLIC_DEMO_ENABLED=            # set to 1 to show the "Explore the demo" button
 ```
 
 ### Database setup
@@ -216,6 +252,22 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
+
+### Seed the demo account (optional)
+
+With `DEMO_USER_EMAIL` set in `.env.local`:
+
+```bash
+pnpm seed:demo
+```
+
+Creates the demo auth user if needed, wipes any rows it owns, then loads
+`transactions.csv` (dates slid forward so the newest row is today) plus sample
+goals, budgets, and a saving habit. Idempotent — run it again any time to reset. Set `NEXT_PUBLIC_DEMO_ENABLED=1` to surface the
+**Explore the demo →** button, and add `NEXT_PUBLIC_SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, and `DEMO_USER_EMAIL` as repository secrets to let
+the [`Reset demo account`](.github/workflows/demo-reset.yml) Action refresh it
+nightly.
 
 ---
 
