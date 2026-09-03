@@ -99,7 +99,10 @@ export function useFinancialChat(
     if (!trimmed) return
     // Persist in the background — don't block the send on a DB round-trip.
     void saveUserMessage(trimmed)
-    chat.sendMessage({ text: trimmed })
+    // Stamp the user message locally so the bubble shows a time immediately —
+    // otherwise the timestamp only appears after a refresh reloads it from the DB
+    // (the server only attaches `createdAt` to assistant messages).
+    chat.sendMessage({ text: trimmed, metadata: { createdAt: new Date().toISOString() } })
   }
 
   const startVoice = sendText
