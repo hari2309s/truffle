@@ -69,13 +69,12 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 
 ## Try it
 
-**Live demo:** _add your Vercel URL here_
+**Live demo:** [truffle-ivory.vercel.app](https://truffle-ivory.vercel.app)
 
 On the sign-in screen, tap **Explore the demo →** to drop straight into a
 furnished account — eight months of transactions (slid forward to end today),
 savings goals, budgets, a saving habit, and detected anomalies. No sign-up, no
-email. The account is
-passwordless: the button mints a one-time magic-link token server-side
+email. The account is passwordless: the button mints a one-time magic-link token server-side
 ([`/api/auth/demo`](apps/web/src/app/api/auth/demo/route.ts)) and exchanges it
 for a session. A nightly GitHub Action
 ([`demo-reset.yml`](.github/workflows/demo-reset.yml)) rebuilds it so it looks
@@ -95,7 +94,8 @@ the same for the next visitor.
   Also drop a short (~30–45 s) muted GIF at docs/demo.gif for the hero above.
 -->
 
-https://github.com/USER/REPO/assets/PLACEHOLDER/walkthrough.mp4
+> 🎬 _Walkthrough video coming soon — replace this line with the GitHub-hosted
+> `.mp4` URL or a YouTube/Loom link (see comment above)._
 
 ---
 
