@@ -126,7 +126,11 @@ async function run() {
 
   console.log(`\nResult: ${passed}/${GOLDEN_DATASET.length} passed`)
   console.log(`Score:  ${((passed / GOLDEN_DATASET.length) * 100).toFixed(1)}%`)
-  console.log('\nAll calls logged to eval_logs — run the judge cron to score quality.\n')
+  console.log(
+    '\nAll calls logged to eval_logs. Quality judging now runs via a Langfuse observation-level\n' +
+      'evaluator on production traffic (streamText/adviseHabit/adviseSavingsGoals/reviewAnomalies)\n' +
+      '— this smoke test itself is not traced, so its calls are not judged.\n'
+  )
 }
 
 run().catch((e) => {

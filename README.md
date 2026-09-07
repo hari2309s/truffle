@@ -131,7 +131,7 @@ Your recent transactions are passed directly as context to the model on every qu
 | LLM — tool calling | Groq `openai/gpt-oss-120b` → Gemini → Cerebras (in priority order) |
 | LLM — vision | Gemini `gemini-3.7-flash` → Groq `qwen/qwen3.6-27b` (in priority order) |
 | Embeddings | Gemini `gemini-embedding-2` (Google AI Studio, 768-dim) |
-| Eval layer | Supabase `eval_logs` table + nightly LLM-as-judge cron |
+| Eval layer | Supabase `eval_logs` table (usage/latency) + Langfuse LLM-as-judge evaluator (quality scoring) |
 | Database | Supabase (PostgreSQL + Auth + Storage) |
 | Observability | Langfuse (traces, generations, token usage) |
 | Analytics | PostHog (pageviews, event tracking) |
@@ -149,8 +149,6 @@ truffle/
 │   └── web/                        # Next.js PWA
 │       └── src/app/api/
 │           ├── chat/               # main streaming chat route
-│           ├── cron/
-│           │   └── eval-judge/     # nightly LLM quality scoring job
 │           └── voice/              # Whisper transcription
 └── packages/
     ├── types/                      # shared TypeScript types
@@ -216,9 +214,6 @@ NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 CEREBRAS_API_KEY=                    # Cerebras — gpt-oss-120b (free tier)
 OPENROUTER_API_KEY=                  # OpenRouter — llama-3.3-70b-instruct:free (free tier)
 MISTRAL_API_KEY=                     # Mistral — mistral-small-latest (free tier)
-
-# Required for nightly eval judge cron
-CRON_SECRET=                         # openssl rand -hex 32
 
 # Optional — one-click demo account (see "Try it")
 DEMO_USER_EMAIL=                     # email that owns the seeded sample data
@@ -354,25 +349,13 @@ Every LLM call — from agents, the chat route, and the golden eval script — w
 provider · task · input · output · latency_ms · tokens_used · expected_intent · judge_score
 ```
 
-A nightly cron job at `/api/cron/eval-judge` (runs at 03:00 UTC via Vercel Crons) fetches yesterday's unscored rows and asks Groq to rate each response 1–5. The result is written back to `judge_score`.
+`judge_score` is a legacy column from a nightly cron job (removed) that asked Groq to rate each response 1–5. Quality judging now runs inside Langfuse instead, as a server-side LLM-as-judge evaluator:
 
-**Weekly analytics query** (run in Supabase SQL editor):
+- Evaluator `response-quality` (created via the Langfuse API) holds the 1–5 rubric prompt.
+- Evaluation rule `response-quality-observations` triggers it on every ingested `generation` observation named `streamText`, `adviseHabit`, `adviseSavingsGoals`, or `reviewAnomalies` — i.e. the chat route's final reply and the three proactive-nudge agents that are actually wired into production. (`forecastSpending`, `analyseSpending`, and `checkAffordability` aren't currently invoked from any live code path — see `packages/ai/src/graph.ts` — so there's nothing for the rule to score there yet.)
+- Scores land as `response-quality` on the observation itself, visible in the Langfuse UI/API — no polling, no regex-parsed digit, no 24h lag.
 
-```sql
-SELECT
-  provider,
-  task,
-  COUNT(*)                            AS total_calls,
-  ROUND(AVG(latency_ms))              AS avg_latency_ms,
-  ROUND(AVG(judge_score)::NUMERIC, 2) AS avg_quality_score,
-  SUM(tokens_used)                    AS total_tokens,
-  COUNT(*) FILTER (WHERE judge_score >= 4) * 100 / COUNT(*) AS pct_good_responses
-FROM eval_logs
-WHERE created_at > NOW() - INTERVAL '7 days'
-  AND judge_score IS NOT NULL
-GROUP BY provider, task
-ORDER BY task, avg_quality_score DESC;
-```
+**Setup step still required:** the rule is created but disabled (`pausedReason: DEFAULT_EVAL_MODEL_MISSING`) because this Langfuse project has no LLM connection configured yet. In Langfuse → Settings → LLM Connections, add a provider (e.g. Groq, to match the existing judge model) and set it as the default evaluation model, then enable the `response-quality-observations` rule.
 
 **Manual golden dataset benchmark:**
 
@@ -380,7 +363,7 @@ ORDER BY task, avg_quality_score DESC;
 pnpm --filter @truffle/ai eval
 ```
 
-Runs 15 predefined queries through the router, logs all results to `eval_logs`, and prints a pass/fail summary. Run the judge cron afterwards to get quality scores.
+Runs 15 predefined queries through the router and logs all results to `eval_logs`. This script isn't Langfuse-traced, so its calls aren't picked up by the judge evaluator — it's a pass/fail smoke test only.
 
 **Transaction categorization accuracy:**
 
