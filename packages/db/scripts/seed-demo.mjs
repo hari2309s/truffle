@@ -118,8 +118,27 @@ async function ensureDemoUser() {
   return data.user.id
 }
 
+// Supabase's free tier (especially cold, from CI) intermittently answers with
+// 504 Gateway Timeout / connection resets. Retry transient failures with
+// exponential backoff before giving up.
+async function withRetry(label, fn, { attempts = 4, baseMs = 2000 } = {}) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (attempt >= attempts) throw err
+      const wait = baseMs * 2 ** (attempt - 1)
+      console.warn(
+        `⚠ ${label} failed (attempt ${attempt}/${attempts}): ${err.message} — retrying in ${wait}ms`
+      )
+      await new Promise((resolve) => setTimeout(resolve, wait))
+    }
+  }
+}
+
 async function wipe(userId) {
-  // Child rows first so nothing is orphaned mid-run.
+  // Child rows first so nothing is orphaned mid-run. Deletes are idempotent, so
+  // the whole set is safe to replay if a later step forces a retry.
   const tables = [
     'habit_contributions',
     'savings_habits',
@@ -263,11 +282,10 @@ function weeksAgoPeriod(weeksAgo) {
   return isoWeekPeriod(d)
 }
 
-async function main() {
-  console.log(`→ demo account: ${DEMO_EMAIL}`)
-  const userId = await ensureDemoUser()
-  console.log(`→ user id:      ${userId}`)
-
+// Wipe + reload as one replayable unit: every retry starts by clearing the
+// account, so a mid-run failure (or a 504 that actually committed) can't leave
+// duplicates behind.
+async function applyDemoData(userId) {
   await wipe(userId)
   console.log('→ cleared previous demo data')
 
@@ -275,7 +293,7 @@ async function main() {
   const { error: txErr } = await admin
     .from('transactions')
     .insert(txs.map((t) => ({ ...t, user_id: userId })))
-  if (txErr) throw txErr
+  if (txErr) throw new Error(`insert transactions: ${txErr.message}`)
   console.log(`→ inserted ${txs.length} transactions`)
 
   const snapshot = buildSnapshot(txs)
@@ -285,7 +303,7 @@ async function main() {
       { user_id: userId, month: snapshot.month, data: snapshot },
       { onConflict: 'user_id,month' }
     )
-  if (snapErr) throw snapErr
+  if (snapErr) throw new Error(`upsert snapshot: ${snapErr.message}`)
   console.log(`→ snapshot for ${snapshot.month}`)
 
   const { error: goalErr } = await admin.from('savings_goals').insert([
@@ -305,14 +323,14 @@ async function main() {
       emoji: '🛟',
     },
   ])
-  if (goalErr) throw goalErr
+  if (goalErr) throw new Error(`insert goals: ${goalErr.message}`)
 
   const { error: budgetErr } = await admin.from('monthly_budgets').insert([
     { user_id: userId, category: 'food_groceries', amount: 400 },
     { user_id: userId, category: 'food_delivery', amount: 120 },
     { user_id: userId, category: 'entertainment', amount: 100 },
   ])
-  if (budgetErr) throw budgetErr
+  if (budgetErr) throw new Error(`insert budgets: ${budgetErr.message}`)
 
   const { data: habit, error: habitErr } = await admin
     .from('savings_habits')
@@ -326,14 +344,21 @@ async function main() {
     })
     .select('id')
     .single()
-  if (habitErr) throw habitErr
+  if (habitErr) throw new Error(`insert habit: ${habitErr.message}`)
 
   const { error: contribErr } = await admin.from('habit_contributions').insert([
     { habit_id: habit.id, user_id: userId, period: weeksAgoPeriod(2), amount: 25 },
     { habit_id: habit.id, user_id: userId, period: weeksAgoPeriod(1), amount: 25 },
   ])
-  if (contribErr) throw contribErr
+  if (contribErr) throw new Error(`insert contributions: ${contribErr.message}`)
+}
 
+async function main() {
+  console.log(`→ demo account: ${DEMO_EMAIL}`)
+  const userId = await withRetry('ensure demo user', () => ensureDemoUser())
+  console.log(`→ user id:      ${userId}`)
+
+  await withRetry('seed demo data', () => applyDemoData(userId))
   console.log('✓ demo account ready')
 }
 
