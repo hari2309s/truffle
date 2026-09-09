@@ -351,11 +351,11 @@ provider · task · input · output · latency_ms · tokens_used · expected_int
 
 `judge_score` is a legacy column from a nightly cron job (removed) that asked Groq to rate each response 1–5. Quality judging now runs inside Langfuse instead, as a server-side LLM-as-judge evaluator:
 
-- Evaluator `response-quality` (created via the Langfuse API) holds the 1–5 rubric prompt.
-- Evaluation rule `response-quality-observations` triggers it on every ingested `generation` observation named `streamText`, `adviseHabit`, `adviseSavingsGoals`, or `reviewAnomalies` — i.e. the chat route's final reply and the three proactive-nudge agents that are actually wired into production. (`forecastSpending`, `analyseSpending`, and `checkAffordability` aren't currently invoked from any live code path — see `packages/ai/src/graph.ts` — so there's nothing for the rule to score there yet.)
+- Evaluator `response-quality` (created via the Langfuse API) holds the 1–5 rubric prompt, running against a Google AI Studio connection (`gemini-3.7-flash`) configured as its explicit `modelConfig`.
+- Evaluation rule `response-quality-observations` — **enabled**, live on production traffic — triggers it on every ingested `generation` observation named `streamText`, `adviseHabit`, `adviseSavingsGoals`, or `reviewAnomalies` — i.e. the chat route's final reply and the three proactive-nudge agents that are actually wired into production. (`forecastSpending`, `analyseSpending`, and `checkAffordability` aren't currently invoked from any live code path — see `packages/ai/src/graph.ts` — so there's nothing for the rule to score there yet.)
 - Scores land as `response-quality` on the observation itself, visible in the Langfuse UI/API — no polling, no regex-parsed digit, no 24h lag.
 
-**Setup step still required:** the rule is created but disabled (`pausedReason: DEFAULT_EVAL_MODEL_MISSING`) because this Langfuse project has no LLM connection configured yet. In Langfuse → Settings → LLM Connections, add a provider (e.g. Groq, to match the existing judge model) and set it as the default evaluation model, then enable the `response-quality-observations` rule.
+Both the evaluator and rule were provisioned via the Langfuse REST API (`/api/public/v2/evaluators`, `/api/public/v2/evaluation-rules`), not the UI — there's no in-repo script for this, so re-creating them elsewhere means replaying those calls by hand (or via the Langfuse UI, which covers the same config).
 
 **Manual golden dataset benchmark:**
 
