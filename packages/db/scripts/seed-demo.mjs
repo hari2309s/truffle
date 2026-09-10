@@ -56,6 +56,8 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !DEMO_EMAIL) {
 
 const DEMO_NAME = 'Hari'
 const DEMO_CURRENCY = 'EUR'
+// Persona id from apps/web/src/lib/voices.ts — keeps the demo's spoken replies deterministic.
+const DEMO_VOICE = 'sophie'
 
 const VALID_CATEGORIES = new Set([
   'food_groceries',
@@ -103,7 +105,7 @@ async function findDemoUser() {
 }
 
 async function ensureDemoUser() {
-  const metadata = { name: DEMO_NAME, currency: DEMO_CURRENCY, language: 'en' }
+  const metadata = { name: DEMO_NAME, currency: DEMO_CURRENCY, language: 'en', voice: DEMO_VOICE }
   const existing = await findDemoUser()
   if (existing) {
     await admin.auth.admin.updateUserById(existing.id, { user_metadata: metadata })
