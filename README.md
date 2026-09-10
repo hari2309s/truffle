@@ -42,6 +42,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ## Features
 
 - 🎙️ **Voice first** — hold to speak, get a spoken answer back
+- 🗣️ **Choose Truffle's voice** — pick a named persona (Sophie 🇬🇧, Niamh 🇮🇪, Isla 🏴󠁧󠁢󠁳󠁣󠁴󠁿, Oliver 🇬🇧) with in-app preview during onboarding or from Settings; preference persists to your account
 - 🔇 **Voice mute toggle** — mute/unmute AI speech from the chat toolbar; preference persists across sessions
 - 🧠 **Conversational reasoning** — ask anything about your finances in plain language
 - 🔍 **Anomaly detection** — spots unusual charges automatically
@@ -123,7 +124,7 @@ Your recent transactions are passed directly as context to the model on every qu
 | Animations | Framer Motion (spring physics, waveform indicators, pulsing orb loader) |
 | PWA | Web manifest (installable on iOS and Android) |
 | Voice input | MediaRecorder API → Groq Whisper large-v3 |
-| Text → Voice | Web Speech API (browser native) |
+| Text → Voice | Web Speech API (browser native), selectable voice persona per accent |
 | AI orchestration | LangGraph.js |
 | LLM router | Custom multi-provider router (`packages/ai/src/router.ts`) |
 | LLM — fast chat | Groq `openai/gpt-oss-20b` → Cerebras → OpenRouter → Mistral (in priority order) |
