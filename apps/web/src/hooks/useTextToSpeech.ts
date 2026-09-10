@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useVoicePreference } from '@/contexts/VoiceContext'
+import { onVoicesReady, resolveVoice, type ResolvedVoice } from '@/lib/voices'
 
 export type SpeechTone = 'celebratory' | 'reassuring' | 'concerned' | 'neutral'
 
@@ -36,75 +38,26 @@ function preprocessText(raw: string): string {
     .trim()
 }
 
-// Web Speech API pitch-shifting applies DSP that sounds robotic on high-quality
-// voices. Keep pitch fixed at 1.0 and rate constant — tone metadata is preserved
-// for future use with a real TTS API (ElevenLabs, etc.) where it actually helps.
-function getProsody(_tone: SpeechTone): { rate: number; pitch: number } {
-  return { rate: 0.95, pitch: 1.0 }
-}
-
-// Google/Microsoft voices come first — macOS system voices (Samantha etc.) appear
-// in Chrome's getVoices() list but Chrome cannot synthesise with them and fails
-// silently. Safari has no Google voices so it naturally falls through to Samantha.
-const FEMALE_VOICE_NAMES = [
-  'Google UK English Female', // Chrome desktop
-  'Microsoft Zira', // Windows Chrome/Edge
-  'Microsoft Eva', // Windows
-  'Microsoft Jenny', // Windows
-  'Samantha', // macOS Safari / iOS
-  'Karen', // macOS Safari Australian
-  'Moira', // macOS Safari Irish
-  'Fiona', // macOS Safari Scottish
-  'Tessa', // macOS Safari South African
-  'Victoria', // macOS Safari
-  'Ava', // macOS Safari
-  'Allison', // macOS Safari
-  'Susan', // macOS Safari
-  'Zoe', // macOS Safari
-]
-
-function pickFemaleVoice(): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices()
-  if (voices.length === 0) return null
-
-  for (const name of FEMALE_VOICE_NAMES) {
-    const match = voices.find((v) => v.lang.startsWith('en') && v.name.includes(name))
-    if (match) return match
-  }
-
-  // Fallback: any English voice whose name hints at female
-  const femaleKeywords = ['female', 'woman', 'zira', 'eva', 'jenny', 'aria']
-  return (
-    voices.find(
-      (v) => v.lang.startsWith('en') && femaleKeywords.some((k) => v.name.toLowerCase().includes(k))
-    ) ?? null
-  )
-}
-
 export function useTextToSpeech(): UseTextToSpeechReturn {
+  const { voiceId } = useVoicePreference()
   const [isSpeaking, setIsSpeaking] = useState(false)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
-  // Cache the selected voice so speak() can assign it synchronously
-  const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
+  // Cache the resolved voice + prosody so speak() can assign it synchronously
+  // (Chrome requires the speak() call to stay inside the user gesture).
+  const resolvedRef = useRef<ResolvedVoice>({ voice: null, rate: 0.95, pitch: 1.0 })
+  const voiceIdRef = useRef(voiceId)
 
-  // Pre-load voices on mount. Chrome returns [] from getVoices() until
-  // onvoiceschanged fires — doing this here keeps speak() synchronous so
-  // Chrome's user-gesture requirement for speechSynthesis.speak() is met.
+  // Re-resolve whenever the user changes their voice preference, and once more
+  // when the platform's voice list finishes loading (Chrome populates it async).
   useEffect(() => {
+    voiceIdRef.current = voiceId
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-
     const load = () => {
-      voiceRef.current = pickFemaleVoice()
+      resolvedRef.current = resolveVoice(voiceIdRef.current)
     }
-
     load()
-    if (!voiceRef.current) {
-      window.speechSynthesis.onvoiceschanged = () => {
-        load()
-        window.speechSynthesis.onvoiceschanged = null
-      }
-    }
-  }, [])
+    return onVoicesReady(load)
+  }, [voiceId])
 
   const cancel = useCallback(() => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
@@ -113,23 +66,25 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     setIsSpeaking(false)
   }, [])
 
-  const speak = useCallback((text: string, options?: SpeakOptions) => {
+  const speak = useCallback((text: string, _options?: SpeakOptions) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
 
     window.speechSynthesis.cancel()
 
     const clean = preprocessText(text)
-    const { rate, pitch } = getProsody(options?.tone ?? 'neutral')
 
     const utterance = new SpeechSynthesisUtterance(clean)
     utteranceRef.current = utterance
 
-    // Use pre-loaded voice; fall back to a fresh lookup if the ref is still null
-    const voice = voiceRef.current ?? pickFemaleVoice()
-    if (voice) utterance.voice = voice
+    // Use the pre-resolved persona voice; fall back to a fresh lookup if the
+    // ref hasn't populated yet (voice list still loading).
+    const resolved = resolvedRef.current.voice
+      ? resolvedRef.current
+      : resolveVoice(voiceIdRef.current)
+    if (resolved.voice) utterance.voice = resolved.voice
 
-    utterance.rate = rate
-    utterance.pitch = pitch
+    utterance.rate = resolved.rate
+    utterance.pitch = resolved.pitch
     utterance.volume = 1.0
 
     utterance.onstart = () => setIsSpeaking(true)

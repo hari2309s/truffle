@@ -473,6 +473,12 @@ export async function POST(request: NextRequest) {
             // so neither the reasoning nor the answer is truncated. Reasoning is
             // parsed out of `text` but still counts against this budget.
             maxOutputTokens: 1400,
+            // A little sampling warmth so the prose doesn't collapse to the same
+            // flat, analytical phrasing every turn (GPT-OSS runs cold by default).
+            // Only on the text-only intents — the tool paths (add_transaction,
+            // goal_setting, habit_setting) emit structured card arguments
+            // (amount, category, date) that must stay faithful, so keep those cold.
+            temperature: activeTools ? 0.2 : 0.75,
             providerOptions: groqChatProviderOptions,
             tools: activeTools,
             toolChoice,

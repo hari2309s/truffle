@@ -22,6 +22,8 @@ export interface Translations {
     continue: string
     errorSave: string
     languageLabel: string
+    voiceLabel: string
+    voiceHint: string
   }
   tour: {
     steps: Array<{ emoji: string; title: string; body: string }>
@@ -46,6 +48,8 @@ export interface Translations {
     deleteError: string
     language: string
     currency: string
+    voice: string
+    voiceDesc: string
   }
   dashboard: {
     goodMorning: string
@@ -287,6 +291,8 @@ export const translations: Record<Locale, Translations> = {
       continue: 'Continue →',
       errorSave: 'Failed to save your details — please try again.',
       languageLabel: 'Language',
+      voiceLabel: "Truffle's voice",
+      voiceHint: 'Tap play to hear each one. You can change this later in Settings.',
     },
     tour: {
       steps: [
@@ -327,6 +333,8 @@ export const translations: Record<Locale, Translations> = {
       deleteError: 'Failed to delete account. Please try again.',
       language: 'Language',
       currency: 'Currency',
+      voice: 'Voice',
+      voiceDesc: 'The voice Truffle uses when reading replies aloud.',
     },
     dashboard: {
       goodMorning: 'Good morning',

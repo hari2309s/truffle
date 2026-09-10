@@ -1,0 +1,57 @@
+'use client'
+
+import { createContext, useContext, useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import { DEFAULT_VOICE_ID, isVoiceId, type VoiceId } from '@/lib/voices'
+
+const STORAGE_KEY = 'truffle-voice'
+
+interface VoiceContextValue {
+  voiceId: VoiceId
+  setVoiceId: (v: VoiceId) => void
+}
+
+const VoiceContext = createContext<VoiceContextValue>({
+  voiceId: DEFAULT_VOICE_ID,
+  setVoiceId: () => {},
+})
+
+export function VoiceProvider({ children }: { children: React.ReactNode }) {
+  const [voiceId, setVoiceIdState] = useState<VoiceId>(DEFAULT_VOICE_ID)
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (isVoiceId(stored)) setVoiceIdState(stored)
+    } catch {
+      // localStorage unavailable — fall back to the default
+    }
+    // user_metadata.voice wins if the account has a saved preference.
+    supabase.auth.getSession().then(({ data }) => {
+      const v = data.session?.user?.user_metadata?.voice
+      if (isVoiceId(v)) {
+        setVoiceIdState(v)
+        try {
+          localStorage.setItem(STORAGE_KEY, v)
+        } catch {
+          /* ignore */
+        }
+      }
+    })
+  }, [])
+
+  const setVoiceId = (next: VoiceId) => {
+    setVoiceIdState(next)
+    try {
+      localStorage.setItem(STORAGE_KEY, next)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return <VoiceContext.Provider value={{ voiceId, setVoiceId }}>{children}</VoiceContext.Provider>
+}
+
+export function useVoicePreference() {
+  return useContext(VoiceContext)
+}

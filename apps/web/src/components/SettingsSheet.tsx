@@ -5,8 +5,11 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { signOut } from '@/lib/auth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency, type Currency } from '@/contexts/CurrencyContext'
+import { useVoicePreference } from '@/contexts/VoiceContext'
 import { type Locale } from '@/lib/i18n'
+import { type VoiceId } from '@/lib/voices'
 import { LanguagePicker } from './LanguagePicker'
+import { VoicePicker } from './VoicePicker'
 import { supabase } from '@/lib/supabase'
 
 interface SettingsSheetProps {
@@ -17,6 +20,7 @@ interface SettingsSheetProps {
 export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   const { t, setLocale } = useLanguage()
   const { currency, setCurrency } = useCurrency()
+  const { voiceId, setVoiceId } = useVoicePreference()
   const [isExporting, setIsExporting] = useState(false)
   const [deleteInput, setDeleteInput] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
@@ -86,6 +90,11 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
     await supabase.auth.updateUser({ data: { currency: next } })
   }
 
+  const handleVoiceChange = async (next: VoiceId) => {
+    setVoiceId(next)
+    await supabase.auth.updateUser({ data: { voice: next } })
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col justify-end max-w-lg mx-auto"
@@ -143,6 +152,13 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Voice */}
+        <div className="space-y-2">
+          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">{t.settings.voice}</h3>
+          <p className="text-xs text-truffle-muted">{t.settings.voiceDesc}</p>
+          <VoicePicker value={voiceId} onChange={handleVoiceChange} />
         </div>
 
         {/* Your data */}

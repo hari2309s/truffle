@@ -6,7 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { PageEnter } from './PageMotion'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useVoicePreference } from '@/contexts/VoiceContext'
 import { LanguagePicker } from './LanguagePicker'
+import { VoicePicker } from './VoicePicker'
 
 interface OnboardingPageProps {
   onComplete: () => void
@@ -14,6 +16,7 @@ interface OnboardingPageProps {
 
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const { t, locale, setLocale } = useLanguage()
+  const { voiceId, setVoiceId } = useVoicePreference()
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState<'EUR' | 'GBP' | 'USD'>('EUR')
   const [isLoading, setIsLoading] = useState(false)
@@ -30,7 +33,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     setError(null)
     try {
       const { error } = await supabase.auth.updateUser({
-        data: { name: name.trim(), currency, language: locale },
+        data: { name: name.trim(), currency, language: locale, voice: voiceId },
       })
       if (error) throw error
       setTourStep(0)
@@ -152,6 +155,14 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs text-truffle-muted uppercase tracking-wide">
+              {t.onboarding.voiceLabel}
+            </label>
+            <VoicePicker value={voiceId} onChange={setVoiceId} />
+            <p className="text-xs text-truffle-muted pt-1">{t.onboarding.voiceHint}</p>
           </div>
 
           {error && <p className="text-sm text-truffle-red text-center">{error}</p>}
