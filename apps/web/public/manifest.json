@@ -4,8 +4,8 @@
   "description": "Your finances, unearthed.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a0f0a",
-  "theme_color": "#1a0f0a",
+  "background_color": "#0e0d0c",
+  "theme_color": "#0e0d0c",
   "orientation": "portrait",
   "icons": [
     {
