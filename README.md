@@ -42,7 +42,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 ## Features
 
 - 🎙️ **Voice first** — hold to speak, get a spoken answer back
-- 🗣️ **Choose Truffle's voice** — pick a named persona (Sophie 🇬🇧, Niamh 🇮🇪, Isla 🏴󠁧󠁢󠁳󠁣󠁴󠁿, Oliver 🇬🇧) with in-app preview during onboarding or from Settings; preference persists to your account
+- 🗣️ **Choose Truffle's voice** — pick a named persona (Sophie 🇬🇧, Niamh 🇮🇪, Isla 🏴󠁧󠁢󠁳󠁣󠁴󠁿) with in-app preview during onboarding or from Settings; preference persists to your account
 - 🔇 **Voice mute toggle** — mute/unmute AI speech from the chat toolbar; preference persists across sessions
 - 🧠 **Conversational reasoning** — ask anything about your finances in plain language
 - 🔍 **Anomaly detection** — spots unusual charges automatically

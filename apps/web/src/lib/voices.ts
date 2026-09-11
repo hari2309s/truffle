@@ -12,7 +12,7 @@
 // silently. Safari has no Google voices and falls through to the macOS
 // names naturally.
 
-export type VoiceId = 'sophie' | 'niamh' | 'isla' | 'oliver'
+export type VoiceId = 'sophie' | 'niamh' | 'isla'
 
 export type VoiceGender = 'female' | 'male'
 
@@ -57,7 +57,12 @@ export const VOICE_PERSONAS: VoicePersona[] = [
       'Martha',
     ],
     langHints: ['en-GB'],
-    rate: 0.96,
+    // Baseline delivery — every other persona is deliberately pushed well
+    // away from this in rate/pitch so they stay audibly distinct even when
+    // the device only has one real English voice to offer (see `assignVoices`
+    // below — most desktops/phones have far fewer distinct voices than we'd
+    // like, so prosody is the fallback that guarantees a difference).
+    rate: 1.0,
     pitch: 1.0,
   },
   {
@@ -66,14 +71,13 @@ export const VOICE_PERSONAS: VoicePersona[] = [
     accent: 'Irish English',
     flag: '🇮🇪',
     gender: 'female',
-    description: 'Lively and lilting',
-    // Chrome desktop has no en-IE voice — falls back to the British female,
-    // set apart here by a quicker, higher delivery. Real Irish accent renders
-    // on Safari (Moira) and Edge (Microsoft Emily).
+    description: 'Quick and bright, lively and lilting',
+    // Chrome desktop has no en-IE voice — falls back to the British female.
+    // Real Irish accent renders on Safari (Moira) and Edge (Microsoft Emily).
     voiceNames: ['Microsoft Emily', 'Moira', 'Google UK English Female', 'Microsoft Sonia'],
     langHints: ['en-IE', 'en-GB'],
-    rate: 1.0,
-    pitch: 1.04,
+    rate: 1.1,
+    pitch: 1.18,
   },
   {
     id: 'isla',
@@ -81,32 +85,13 @@ export const VOICE_PERSONAS: VoicePersona[] = [
     accent: 'Scottish English',
     flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
     gender: 'female',
-    description: 'Soft and measured, with a Scottish lilt',
+    description: 'Slow and low, soft with a Scottish lilt',
     // Fiona is the only Scottish voice, and only on older macOS. Elsewhere she
-    // resolves to the British female, distinguished by a slower, lower delivery.
+    // resolves to the British female.
     voiceNames: ['Fiona', 'Google UK English Female', 'Microsoft Sonia', 'Microsoft Libby', 'Kate'],
     langHints: ['en-GB'],
-    rate: 0.93,
-    pitch: 0.98,
-  },
-  {
-    id: 'oliver',
-    name: 'Oliver',
-    accent: 'British English',
-    flag: '🇬🇧',
-    gender: 'male',
-    description: 'Low and unhurried, easy to listen to',
-    voiceNames: [
-      'Google UK English Male',
-      'Microsoft Ryan',
-      'Microsoft George',
-      'Daniel',
-      'Arthur',
-      'Oliver',
-    ],
-    langHints: ['en-GB'],
-    rate: 0.92,
-    pitch: 0.97,
+    rate: 0.84,
+    pitch: 0.82,
   },
 ]
 
@@ -118,6 +103,21 @@ export const VOICE_SAMPLE_TEXT =
 
 export function isVoiceId(value: unknown): value is VoiceId {
   return typeof value === 'string' && VOICE_PERSONAS.some((p) => p.id === value)
+}
+
+// Ids that used to be valid personas. A saved preference of 'oliver' (from
+// before the male persona was dropped — it turned out to render as female on
+// most devices anyway) should quietly land on its nearest replacement rather
+// than silently disappearing.
+const LEGACY_VOICE_IDS: Record<string, VoiceId> = {
+  oliver: 'sophie',
+}
+
+/** Resolve a stored voice preference to a current persona id, migrating retired ones. */
+export function normalizeVoiceId(value: unknown): VoiceId | null {
+  if (isVoiceId(value)) return value
+  if (typeof value === 'string' && value in LEGACY_VOICE_IDS) return LEGACY_VOICE_IDS[value]!
+  return null
 }
 
 export function getPersona(id: VoiceId): VoicePersona {
@@ -182,40 +182,55 @@ function guessGender(voice: SpeechSynthesisVoice): VoiceGender | null {
   return null
 }
 
-export function resolveVoice(id: VoiceId): ResolvedVoice {
-  const persona = getPersona(id)
+// Resolves every persona to a platform voice in one pass, so two personas
+// never silently end up sharing the exact same underlying voice when the
+// device actually has more than one to offer. Most desktops/phones expose
+// very few distinct English voices, and looking each persona up in
+// isolation happily hands everybody the same "Google UK English Female" —
+// which is exactly why every voice sounded the same in practice.
+function assignVoices(): Map<VoiceId, ResolvedVoice> {
   const voices = englishVoices()
+  const used = new Set<SpeechSynthesisVoice>()
 
-  let match: SpeechSynthesisVoice | null = null
-  for (const name of persona.voiceNames) {
-    const found = voices.find((v) => v.name.includes(name))
-    if (found) {
-      match = found
-      break
+  const pick = (persona: VoicePersona): SpeechSynthesisVoice | null => {
+    // 1. Exact name match, best first, skipping voices another persona already claimed.
+    for (const name of persona.voiceNames) {
+      const found = voices.find((v) => v.name.includes(name) && !used.has(v))
+      if (found) return found
     }
-  }
-
-  // Fall back to a voice in the persona's accent region, preferring one whose
-  // name hints at the right gender.
-  if (!match) {
+    // 2. An unclaimed voice in the persona's accent region, gender-preferred.
     for (const hint of persona.langHints) {
-      const regional = voices.filter((v) => v.lang.startsWith(hint))
-      match =
-        regional.find((v) => guessGender(v) === persona.gender) ?? regional[0] ?? null
-      if (match) break
+      const regional = voices.filter((v) => v.lang.startsWith(hint) && !used.has(v))
+      const found = regional.find((v) => guessGender(v) === persona.gender) ?? regional[0]
+      if (found) return found
     }
-  }
-
-  // Last resort: any English voice matching the gender, then any English voice.
-  if (!match) {
-    match =
+    // 3. Any unclaimed English voice, gender-preferred.
+    const unclaimed =
+      voices.find((v) => guessGender(v) === persona.gender && !used.has(v)) ??
+      voices.find((v) => !used.has(v))
+    if (unclaimed) return unclaimed
+    // 4. Every voice is already claimed (device has fewer voices than
+    // personas) — reuse one. Rate/pitch still keep the personas apart.
+    return (
       voices.find((v) => guessGender(v) === persona.gender) ??
       voices.find((v) => v.localService) ??
       voices[0] ??
       null
+    )
   }
 
-  return { voice: match, rate: persona.rate, pitch: persona.pitch }
+  const result = new Map<VoiceId, ResolvedVoice>()
+  for (const persona of VOICE_PERSONAS) {
+    const voice = pick(persona)
+    if (voice) used.add(voice)
+    result.set(persona.id, { voice, rate: persona.rate, pitch: persona.pitch })
+  }
+  return result
+}
+
+export function resolveVoice(id: VoiceId): ResolvedVoice {
+  const persona = getPersona(id)
+  return assignVoices().get(id) ?? { voice: null, rate: persona.rate, pitch: persona.pitch }
 }
 
 // Chrome returns [] from getVoices() until `voiceschanged` fires. Run `cb`

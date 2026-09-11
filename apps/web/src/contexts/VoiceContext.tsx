@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { DEFAULT_VOICE_ID, isVoiceId, type VoiceId } from '@/lib/voices'
+import { DEFAULT_VOICE_ID, normalizeVoiceId, type VoiceId } from '@/lib/voices'
 
 const STORAGE_KEY = 'truffle-voice'
 
@@ -21,20 +21,26 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (isVoiceId(stored)) setVoiceIdState(stored)
+      const stored = normalizeVoiceId(localStorage.getItem(STORAGE_KEY))
+      if (stored) setVoiceIdState(stored)
     } catch {
       // localStorage unavailable — fall back to the default
     }
     // user_metadata.voice wins if the account has a saved preference.
     supabase.auth.getSession().then(({ data }) => {
-      const v = data.session?.user?.user_metadata?.voice
-      if (isVoiceId(v)) {
-        setVoiceIdState(v)
+      const raw = data.session?.user?.user_metadata?.voice
+      const normalized = normalizeVoiceId(raw)
+      if (normalized) {
+        setVoiceIdState(normalized)
         try {
-          localStorage.setItem(STORAGE_KEY, v)
+          localStorage.setItem(STORAGE_KEY, normalized)
         } catch {
           /* ignore */
+        }
+        // Self-heal a retired persona id (e.g. a voice that was later
+        // removed) so future sessions don't need to remap it again.
+        if (normalized !== raw) {
+          supabase.auth.updateUser({ data: { voice: normalized } }).catch(() => {})
         }
       }
     })

@@ -76,8 +76,7 @@ export function VoicePicker({ value, onChange }: VoicePickerProps) {
               <p className="text-sm font-medium text-truffle-text">
                 {persona.name}
                 <span className="ml-1.5 text-truffle-muted font-normal">
-                  {persona.flag} {persona.accent} ·{' '}
-                  {persona.gender === 'female' ? 'Female' : 'Male'}
+                  {persona.flag} {persona.accent}
                 </span>
               </p>
               <p className="text-xs text-truffle-muted truncate">{persona.description}</p>
