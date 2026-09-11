@@ -57,11 +57,12 @@ export const VOICE_PERSONAS: VoicePersona[] = [
       'Martha',
     ],
     langHints: ['en-GB'],
-    // Baseline delivery — every other persona is deliberately pushed well
-    // away from this in rate/pitch so they stay audibly distinct even when
-    // the device only has one real English voice to offer (see `assignVoices`
-    // below — most desktops/phones have far fewer distinct voices than we'd
-    // like, so prosody is the fallback that guarantees a difference).
+    // Baseline delivery. The other two personas lean on `rate` (speed) to
+    // stay distinct when the device only has one real English voice to
+    // offer — `pitch` is kept close to 1.0 for all three. The Web Speech
+    // API pitch-shifts by naive resampling rather than anything
+    // formant-aware, so pushing it far from 1.0 is what actually sounds
+    // "robotic" — a mistake made and reverted here (was pitch 0.82–1.18).
     rate: 1.0,
     pitch: 1.0,
   },
@@ -76,8 +77,8 @@ export const VOICE_PERSONAS: VoicePersona[] = [
     // Real Irish accent renders on Safari (Moira) and Edge (Microsoft Emily).
     voiceNames: ['Microsoft Emily', 'Moira', 'Google UK English Female', 'Microsoft Sonia'],
     langHints: ['en-IE', 'en-GB'],
-    rate: 1.1,
-    pitch: 1.18,
+    rate: 1.08,
+    pitch: 1.04,
   },
   {
     id: 'isla',
@@ -90,8 +91,8 @@ export const VOICE_PERSONAS: VoicePersona[] = [
     // resolves to the British female.
     voiceNames: ['Fiona', 'Google UK English Female', 'Microsoft Sonia', 'Microsoft Libby', 'Kate'],
     langHints: ['en-GB'],
-    rate: 0.84,
-    pitch: 0.82,
+    rate: 0.9,
+    pitch: 0.96,
   },
 ]
 
