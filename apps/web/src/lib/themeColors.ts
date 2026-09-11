@@ -1,11 +1,17 @@
-// Single source of truth for the app's dark/light background colors, mirrored
-// from `--t-bg` in globals.css. Drives the `theme-color` meta tag that tints
-// the browser tab / PWA title bar (see layout.tsx + hooks/useTheme.ts).
+// Colors that drive the `theme-color` meta tag — the browser tab / address
+// bar and installed-PWA title bar tint (see layout.tsx + hooks/useTheme.ts).
 //
-// `public/manifest.json`'s `theme_color`/`background_color` mirror the dark
-// value too — a static Web App Manifest can't import this module, so keep it
-// in sync by hand if these ever change.
+// `dark` matches `--t-bg` from globals.css exactly (#0e0d0c is already far
+// from any browser's default chrome, so an exact match reads as clearly
+// "colored"). `light`'s real `--t-bg` (#faf6f0) is only a few RGB units off
+// pure white, so tinting the chrome with it is visually indistinguishable
+// from an untinted tab next to a light OS/browser theme — we use the
+// slightly deeper `--t-card` tone instead so light mode actually shows up.
+//
+// `public/manifest.json`'s `theme_color`/`background_color` mirror `dark`
+// too — a static Web App Manifest can't import this module, so keep it in
+// sync by hand if these ever change.
 export const THEME_COLORS = {
   dark: '#0e0d0c',
-  light: '#faf6f0',
+  light: '#e8dfd3',
 } as const
