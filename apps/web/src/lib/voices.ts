@@ -175,10 +175,17 @@ const FEMALE_NAME_HINTS = [
   'eva',
 ]
 
+// IMPORTANT: check female hints before male ones. "female".includes("male")
+// is true — checking the male list first meant any voice literally named
+// "...Female..." (the single most common voice-naming convention out there,
+// e.g. "Google UK English Female") was misdetected as male, which then
+// happily satisfied a `guessGender(v) === 'male'` check for a male persona,
+// or got treated as "not female" and passed over. This was the actual cause
+// of the demo account resolving to an audibly male voice.
 function guessGender(voice: SpeechSynthesisVoice): VoiceGender | null {
   const n = voice.name.toLowerCase()
-  if (MALE_NAME_HINTS.some((h) => n.includes(h))) return 'male'
   if (FEMALE_NAME_HINTS.some((h) => n.includes(h))) return 'female'
+  if (MALE_NAME_HINTS.some((h) => n.includes(h))) return 'male'
   return null
 }
 
@@ -188,35 +195,53 @@ function guessGender(voice: SpeechSynthesisVoice): VoiceGender | null {
 // very few distinct English voices, and looking each persona up in
 // isolation happily hands everybody the same "Google UK English Female" —
 // which is exactly why every voice sounded the same in practice.
+//
+// Gender correctness is a hard constraint (every persona here is a woman)
+// and is NEVER traded away for variety — `pick` only relaxes the "give each
+// persona its own distinct voice" preference, tier by tier, and only picks a
+// voice confidently identified as the wrong gender as an absolute last
+// resort, when literally nothing else is available on the device.
 function assignVoices(): Map<VoiceId, ResolvedVoice> {
   const voices = englishVoices()
   const used = new Set<SpeechSynthesisVoice>()
 
+  const isRightGender = (persona: VoicePersona, v: SpeechSynthesisVoice) =>
+    guessGender(v) === persona.gender
+  const isUnknownGender = (v: SpeechSynthesisVoice) => guessGender(v) === null
+
   const pick = (persona: VoicePersona): SpeechSynthesisVoice | null => {
-    // 1. Exact name match, best first, skipping voices another persona already claimed.
+    // 1. Exact curated name match, unclaimed — these names were chosen for
+    // this persona's gender specifically, so this tier is inherently safe.
     for (const name of persona.voiceNames) {
       const found = voices.find((v) => v.name.includes(name) && !used.has(v))
       if (found) return found
     }
-    // 2. An unclaimed voice in the persona's accent region, gender-preferred.
+    // 2. Unclaimed voice in the persona's accent region, correct gender.
     for (const hint of persona.langHints) {
-      const regional = voices.filter((v) => v.lang.startsWith(hint) && !used.has(v))
-      const found = regional.find((v) => guessGender(v) === persona.gender) ?? regional[0]
+      const found = voices.find(
+        (v) => v.lang.startsWith(hint) && !used.has(v) && isRightGender(persona, v)
+      )
       if (found) return found
     }
-    // 3. Any unclaimed English voice, gender-preferred.
-    const unclaimed =
-      voices.find((v) => guessGender(v) === persona.gender && !used.has(v)) ??
-      voices.find((v) => !used.has(v))
-    if (unclaimed) return unclaimed
-    // 4. Every voice is already claimed (device has fewer voices than
-    // personas) — reuse one. Rate/pitch still keep the personas apart.
-    return (
-      voices.find((v) => guessGender(v) === persona.gender) ??
-      voices.find((v) => v.localService) ??
-      voices[0] ??
-      null
-    )
+    // 3. Any unclaimed voice, correct gender, any region.
+    let found = voices.find((v) => !used.has(v) && isRightGender(persona, v))
+    if (found) return found
+    // 4. Unclaimed voice of undetermined gender — region-preferred. Better
+    // than a voice we can positively identify as the wrong gender.
+    for (const hint of persona.langHints) {
+      found = voices.find((v) => v.lang.startsWith(hint) && !used.has(v) && isUnknownGender(v))
+      if (found) return found
+    }
+    found = voices.find((v) => !used.has(v) && isUnknownGender(v))
+    if (found) return found
+    // 5. Every voice is already claimed (device has fewer distinct voices
+    // than personas) — reuse one, still preferring correct-or-unknown gender
+    // over one we know is wrong.
+    found = voices.find((v) => isRightGender(persona, v)) ?? voices.find(isUnknownGender)
+    if (found) return found
+    // 6. Absolute last resort: every English voice on this device is
+    // confidently the wrong gender. Nothing better exists to offer.
+    return voices.find((v) => v.localService) ?? voices[0] ?? null
   }
 
   const result = new Map<VoiceId, ResolvedVoice>()
