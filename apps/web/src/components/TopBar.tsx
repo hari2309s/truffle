@@ -29,7 +29,7 @@ export function TopBar({
 
   return (
     <>
-      <header className="flex items-center gap-3 px-4 py-4 border-b border-truffle-border flex-shrink-0">
+      <header className="flex items-center gap-3 px-4 py-4 bg-truffle-surface border-b border-truffle-border flex-shrink-0">
         <div className="flex items-center gap-2">
           <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
           <div>
@@ -40,17 +40,17 @@ export function TopBar({
         <div className="flex flex-1 items-center min-w-0">{children}</div>
         {showControls && (
           <div className="flex items-center gap-1 flex-shrink-0">
-            <ThemeToggle />
+            <ThemeToggle className="hover:bg-truffle-card" />
             {userId && (
               <button
                 onClick={() => setShowSettings(true)}
                 aria-label={t.topBar.settingsLabel}
-                className="p-2 text-truffle-muted hover:text-truffle-text transition-colors rounded-lg hover:bg-truffle-surface"
+                className="p-2 text-truffle-muted hover:text-truffle-text transition-colors rounded-lg hover:bg-truffle-card"
               >
                 <GearIcon />
               </button>
             )}
-            <button onClick={signOut} className="btn-ghost text-xs">
+            <button onClick={signOut} className="btn-ghost text-xs hover:bg-truffle-card">
               {t.topBar.signOut}
             </button>
           </div>

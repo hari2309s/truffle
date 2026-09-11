@@ -51,7 +51,13 @@ function ThemeIcon({ theme }: { theme: Theme }) {
 
 const LABELS: Record<Theme, string> = { dark: 'Dark', light: 'Light', system: 'System' }
 
-export function ThemeToggle() {
+interface ThemeToggleProps {
+  /** Extra classes appended after `btn-ghost` — e.g. to override its hover
+   * background when the toggle sits on a surface that already matches it. */
+  className?: string
+}
+
+export function ThemeToggle({ className }: ThemeToggleProps = {}) {
   const { theme, cycleTheme } = useTheme()
   const [spinning, setSpinning] = useState(false)
 
@@ -65,7 +71,7 @@ export function ThemeToggle() {
     <button
       onClick={handleClick}
       title={`Theme: ${LABELS[theme]} — click to cycle`}
-      className="btn-ghost flex items-center gap-1.5 text-xs px-2 py-2"
+      className={`btn-ghost flex items-center gap-1.5 text-xs px-2 py-2${className ? ` ${className}` : ''}`}
     >
       <span
         className="inline-flex"

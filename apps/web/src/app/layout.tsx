@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
-import { THEME_COLORS } from '@/lib/themeColors'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -37,10 +36,11 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   // A single tag (not a media-query pair) — the in-app theme toggle can
-  // diverge from the OS color scheme, and `useTheme.ts` keeps this tag's
-  // `content` in sync with whichever background is actually on screen.
-  // This starting value matches the anti-flash script's 'dark' default below.
-  themeColor: THEME_COLORS.dark,
+  // diverge from the OS color scheme. This is only the pre-JS fallback
+  // (matches --t-surface's dark value in globals.css, the default theme);
+  // the inline script below and `useTheme.ts` immediately replace it with
+  // whatever --t-surface actually resolves to, so it can never drift.
+  themeColor: '#1e1d1b',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -48,17 +48,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
         {/* Prevent theme flash on load — also seeds the tab/PWA chrome color
-            (meta[name=theme-color]) to match, ahead of useTheme's effect. */}
+            (meta[name=theme-color]) from the live --t-surface CSS variable
+            (same one the TopBar renders), ahead of useTheme's effect. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){
               var t = localStorage.getItem('truffle-theme') || 'dark';
               if (t !== 'system') document.documentElement.classList.add(t);
-              var resolved = t === 'system'
-                ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-                : t;
-              var meta = document.querySelector('meta[name="theme-color"]');
-              if (meta) meta.setAttribute('content', resolved === 'light' ? '${THEME_COLORS.light}' : '${THEME_COLORS.dark}');
+              var color = getComputedStyle(document.documentElement).getPropertyValue('--t-surface').trim();
+              if (color) {
+                var meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute('content', color);
+              }
             })()`,
           }}
         />

@@ -1,28 +1,35 @@
 import { useEffect, useState } from 'react'
-import { THEME_COLORS } from '@/lib/themeColors'
 
 export type Theme = 'dark' | 'light' | 'system'
 
 const THEMES: Theme[] = ['dark', 'light', 'system']
 const STORAGE_KEY = 'truffle-theme'
+// The TopBar renders `bg-truffle-surface` (--t-surface) — read that same CSS
+// custom property for the tab/PWA chrome color instead of a hand-maintained
+// hex table, so the two can never drift apart. Works for 'system' too: with
+// no .dark/.light class set, --t-surface already resolves via the
+// `@media (prefers-color-scheme)` block in globals.css, so getComputedStyle
+// gives the right answer without any JS-side OS-preference logic.
+const COLOR_VAR = '--t-surface'
 
-function resolveTheme(theme: Theme): 'dark' | 'light' {
-  if (theme !== 'system') return theme
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light'
+function syncThemeColorMeta() {
+  if (typeof document === 'undefined') return
+  const color = getComputedStyle(document.documentElement).getPropertyValue(COLOR_VAR).trim()
+  if (!color) return
+  let meta = document.querySelector('meta[name="theme-color"]')
+  if (!meta) {
+    meta = document.createElement('meta')
+    meta.setAttribute('name', 'theme-color')
+    document.head.appendChild(meta)
+  }
+  meta.setAttribute('content', color)
 }
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement
   root.classList.remove('dark', 'light')
   if (theme !== 'system') root.classList.add(theme)
-
-  // The `<meta name="theme-color">` tag drives the browser tab/address-bar
-  // and PWA title-bar color — it doesn't follow our CSS classes on its own,
-  // so it needs updating explicitly whenever the resolved theme changes.
-  const meta = document.querySelector('meta[name="theme-color"]')
-  meta?.setAttribute('content', THEME_COLORS[resolveTheme(theme)])
+  syncThemeColorMeta()
 }
 
 export function useTheme() {
@@ -35,12 +42,12 @@ export function useTheme() {
   }, [])
 
   // When following the OS ("system"), keep the tab color live as the OS
-  // scheme flips while the app is open — CSS handles the page itself via
-  // `prefers-color-scheme`, but the theme-color meta tag needs a nudge.
+  // scheme flips while the app is open — CSS re-resolves --t-surface on its
+  // own, but the theme-color meta tag needs an explicit re-read to catch up.
   useEffect(() => {
     if (theme !== 'system' || typeof window === 'undefined') return
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const onChange = () => applyTheme('system')
+    const onChange = () => syncThemeColorMeta()
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
   }, [theme])
