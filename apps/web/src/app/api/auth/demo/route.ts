@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     const tokenHash = data?.properties?.hashed_token
     if (error || !tokenHash) throw error ?? new Error('no magic-link token returned')
 
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(supabaseUrl, anonKey, {
       cookies: {
         getAll() {
