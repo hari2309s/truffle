@@ -36,6 +36,8 @@ apps/web/.playwright/
 
 # Claude Code config (machine-specific)
 .claude/
+.agents/
+skills-lock.json
 CLAUDE.md
 
 # weco.ai local run state/history
