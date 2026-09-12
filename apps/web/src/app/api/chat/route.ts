@@ -312,7 +312,9 @@ export async function POST(request: NextRequest) {
           .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
           .map((p) => ({
             ...p,
-            text: p.text.replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '').trim(),
+            // Bounded to avoid polynomial backtracking on adversarial input —
+            // real tool-call bodies never approach this length.
+            text: p.text.replace(/<function=[^>]*>[\s\S]{0,5000}?<\/function>/g, '').trim(),
           }))
         return { ...m, parts }
       })

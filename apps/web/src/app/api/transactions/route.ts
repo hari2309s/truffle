@@ -6,6 +6,7 @@ import { recomputeSnapshot } from '@/lib/server-db'
 import { sendAnomalyNudge, sendBudgetNudge } from '@/lib/proactive-nudge'
 import { CATEGORY_EMOJI } from '@/lib/categories'
 import { requireUser } from '@/lib/supabase-server'
+import { sanitizeForLog } from '@/lib/log'
 
 export const runtime = 'nodejs'
 
@@ -64,7 +65,10 @@ export async function POST(request: NextRequest) {
     const embeddings = await Promise.all(
       txsWithIds.map((tx) =>
         embedTransaction(tx).catch((e) => {
-          console.warn('Embedding failed (non-fatal):', e)
+          console.warn(
+            'Embedding failed (non-fatal):',
+            sanitizeForLog(e instanceof Error ? e.message : e)
+          )
           return [] as number[]
         })
       )
@@ -101,7 +105,12 @@ export async function POST(request: NextRequest) {
     // Upsert all to ChromaDB in parallel (non-fatal)
     await Promise.all(
       txsWithIds.map((tx) =>
-        upsertTransaction(tx).catch((e) => console.warn('ChromaDB upsert failed (non-fatal):', e))
+        upsertTransaction(tx).catch((e) =>
+          console.warn(
+            'ChromaDB upsert failed (non-fatal):',
+            sanitizeForLog(e instanceof Error ? e.message : e)
+          )
+        )
       )
     )
 

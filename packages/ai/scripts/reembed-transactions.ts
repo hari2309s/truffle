@@ -115,7 +115,9 @@ function shortErr(e: unknown): string {
   const msg = (e as Error).message ?? String(e)
   const code = msg.match(/"code":\s*(\d+)/)?.[1]
   const reason = msg.match(/"message":\s*"([^"]+)"/)?.[1]
-  return code || reason ? `${code ?? '?'} ${reason ?? ''}`.trim() : msg.slice(0, 200)
+  const result = code || reason ? `${code ?? '?'} ${reason ?? ''}`.trim() : msg.slice(0, 200)
+  // Strip newlines so a value can't forge extra log lines (CRLF log injection).
+  return result.replace(/[\r\n]/g, ' ')
 }
 
 async function embedWithRetry(tx: Transaction): Promise<number[]> {

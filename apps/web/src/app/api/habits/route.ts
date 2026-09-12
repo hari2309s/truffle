@@ -4,6 +4,7 @@ import { getCurrentPeriod, computeStreak } from '@/lib/habits'
 import { sendHabitStreakNudge, sendHabitCheckInNudge } from '@/lib/proactive-nudge'
 import { requireUser } from '@/lib/supabase-server'
 import { recomputeSnapshot } from '@/lib/server-db'
+import { sanitizeForLog } from '@/lib/log'
 
 export const runtime = 'nodejs'
 
@@ -289,11 +290,13 @@ export async function PATCH(request: NextRequest) {
             habitName: habit.name,
             habitEmoji: habit.emoji,
             streak,
-          }).catch((e) => console.error(`Habit streak nudge failed for habit ${habitId}:`, e))
+          }).catch((e) =>
+            console.error(`Habit streak nudge failed for habit ${sanitizeForLog(habitId)}:`, e)
+          )
         }
       }
     } catch (e) {
-      console.error(`Habit streak calculation failed for habit ${habitId}:`, e)
+      console.error(`Habit streak calculation failed for habit ${sanitizeForLog(habitId)}:`, e)
     }
 
     return NextResponse.json({ contribution: data })
