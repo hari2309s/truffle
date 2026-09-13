@@ -15,7 +15,7 @@ test.describe('Auth page', () => {
   test('shows Truffle branding and email form', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByRole('heading', { name: 'Truffle' })).toBeVisible()
-    await expect(page.getByText('Your finances, unearthed.')).toBeVisible()
+    await expect(page.getByText('Your finances, unearthed.', { exact: true })).toBeVisible()
     await expect(page.getByPlaceholder('your@email.com')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Continue with email' })).toBeVisible()
   })
@@ -50,14 +50,19 @@ test.describe('Auth page', () => {
     await expect(page.getByText('Sign in with a magic link · No password needed')).toBeVisible()
   })
 
-  test('submit button is disabled when email field is empty', async ({ page }) => {
+  // The submit button is intentionally not gated on email validity — see
+  // AuthPage.tsx: a previously-silent disabled state (no explanation shown)
+  // was replaced with native required/type=email validation on submit, plus
+  // an inline error message, per an accessibility fix. These tests lock in
+  // that the button itself stays enabled either way.
+  test('submit button is enabled even when email field is empty', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByRole('button', { name: 'Continue with email' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Continue with email' })).toBeEnabled()
   })
 
-  test('submit button is disabled with an invalid email format', async ({ page }) => {
+  test('submit button is enabled with an invalid email format', async ({ page }) => {
     await page.goto('/')
     await page.getByPlaceholder('your@email.com').fill('notanemail')
-    await expect(page.getByRole('button', { name: 'Continue with email' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Continue with email' })).toBeEnabled()
   })
 })
