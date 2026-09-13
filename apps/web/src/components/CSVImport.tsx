@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { TransactionCategory } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { useImportFlow, ImportSuccess } from '@/hooks/useImportFlow'
 
 interface ParsedRow {
   date: string
@@ -45,9 +46,11 @@ const CATEGORY_MAP: Record<string, TransactionCategory> = {
   savings: 'savings',
 }
 
+const CATEGORY_ENTRIES = Object.entries(CATEGORY_MAP)
+
 function guessCategory(description: string, category?: string): TransactionCategory {
   const raw = (category ?? description).toLowerCase()
-  for (const [keyword, cat] of Object.entries(CATEGORY_MAP)) {
+  for (const [keyword, cat] of CATEGORY_ENTRIES) {
     if (raw.includes(keyword)) return cat
   }
   return 'other'
@@ -108,14 +111,12 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
   const [preview, setPreview] = useState<ParsedRow[] | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showAll, setShowAll] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [imported, setImported] = useState(false)
+  const flow = useImportFlow()
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setError(null)
+    flow.reset()
     setPreview(null)
     setShowAll(false)
 
@@ -126,7 +127,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       )
       if (rows.length === 0) {
-        setError(t.csvImport.parseError)
+        flow.setError(t.csvImport.parseError)
         return
       }
       setPreview(rows)
@@ -164,7 +165,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
     if (!preview) return
     const rows = preview.filter((_, i) => selected.has(i))
     if (rows.length === 0) return
-    setIsLoading(true)
+    flow.startLoading()
     try {
       const res = await fetch('/api/transactions', {
         method: 'POST',
@@ -185,23 +186,21 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
 
       await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
       await queryClient.invalidateQueries({ queryKey: ['insights', userId] })
-      setImported(true)
+      flow.markImported()
     } catch {
-      setError(t.csvImport.importFailed)
+      flow.setError(t.csvImport.importFailed)
     } finally {
-      setIsLoading(false)
+      flow.stopLoading()
     }
   }
 
-  if (imported) {
+  if (flow.imported) {
     return (
-      <div className="card text-center space-y-3">
-        <p className="text-2xl">✓</p>
-        <p className="font-semibold text-truffle-text">{t.csvImport.imported(selected.size)}</p>
-        <button onClick={onClose} className="btn-primary w-full">
-          {t.csvImport.done}
-        </button>
-      </div>
+      <ImportSuccess
+        message={t.csvImport.imported(selected.size)}
+        doneLabel={t.csvImport.done}
+        onDone={onClose}
+      />
     )
   }
 
@@ -218,12 +217,15 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       </div>
 
       {!preview ? (
-        <div
-          onClick={() => fileRef.current?.click()}
-          className="border-2 border-dashed border-truffle-border rounded-xl py-8 flex flex-col items-center gap-2 cursor-pointer hover:border-truffle-amber transition-colors"
-        >
-          <span className="text-2xl">📄</span>
-          <p className="text-sm text-truffle-muted">{t.csvImport.tapToSelect}</p>
+        <>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="w-full border-2 border-dashed border-truffle-border rounded-xl py-8 flex flex-col items-center gap-2 cursor-pointer hover:border-truffle-amber transition-colors"
+          >
+            <span className="text-2xl">📄</span>
+            <p className="text-sm text-truffle-muted">{t.csvImport.tapToSelect}</p>
+          </button>
           <input
             ref={fileRef}
             type="file"
@@ -231,7 +233,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
             className="hidden"
             onChange={handleFile}
           />
-        </div>
+        </>
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-truffle-muted">
@@ -247,7 +249,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
                   if (el) el.indeterminate = someSelected
                 }}
                 onChange={toggleAll}
-                disabled={isLoading}
+                disabled={flow.isLoading}
                 className="accent-truffle-amber cursor-pointer"
               />
               <span className="text-xs font-medium text-truffle-text-secondary">
@@ -265,7 +267,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
                     type="checkbox"
                     checked={selected.has(i)}
                     onChange={() => toggleRow(i)}
-                    disabled={isLoading}
+                    disabled={flow.isLoading}
                     className="accent-truffle-amber cursor-pointer flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
@@ -299,23 +301,23 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
           <div className="flex gap-2">
             <button
               onClick={handleReset}
-              disabled={isLoading}
+              disabled={flow.isLoading}
               className="btn-ghost flex-1 text-sm disabled:opacity-50"
             >
               {t.csvImport.cancel}
             </button>
             <button
               onClick={handleImport}
-              disabled={isLoading || selected.size === 0}
+              disabled={flow.isLoading || selected.size === 0}
               className="btn-primary flex-1 text-sm disabled:opacity-50"
             >
-              {isLoading ? t.csvImport.importing : t.csvImport.import(selected.size)}
+              {flow.isLoading ? t.csvImport.importing : t.csvImport.import(selected.size)}
             </button>
           </div>
         </div>
       )}
 
-      {error && <p className="text-sm text-truffle-red">{error}</p>}
+      {flow.error && <p className="text-sm text-truffle-red">{flow.error}</p>}
     </div>
   )
 }

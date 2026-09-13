@@ -8,13 +8,15 @@ import { SkeletonPulse } from './PageMotion'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { toDateLocale } from '@/lib/date'
 
 interface FinancialBriefProps {
   userId: string
 }
 
 function computeAllTimeSummary(
-  transactions: { amount: number | string; currency?: string; date: string }[]
+  transactions: { amount: number | string; currency?: string; date: string }[],
+  locale: string
 ) {
   if (!transactions.length) return null
 
@@ -29,14 +31,17 @@ function computeAllTimeSummary(
   const sorted = [...transactions].sort((a, b) => (a.date > b.date ? -1 : 1))
   const latestMonth = sorted[0]?.date?.slice(0, 7) ?? ''
   const label = latestMonth
-    ? new Date(latestMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })
+    ? new Date(latestMonth + '-01').toLocaleString(toDateLocale(locale), {
+        month: 'long',
+        year: 'numeric',
+      })
     : 'All time'
 
   return { balance, income, expenses: Math.abs(expenses), label }
 }
 
 export function FinancialBrief({ userId }: FinancialBriefProps) {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
   const { formatAmount } = useCurrency()
   const { data, isLoading } = useTransactionsQuery(userId)
 
@@ -46,8 +51,10 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
   )
   const allTime = useMemo(
     () =>
-      !forecast && data?.transactions?.length ? computeAllTimeSummary(data.transactions) : null,
-    [forecast, data?.transactions]
+      !forecast && data?.transactions?.length
+        ? computeAllTimeSummary(data.transactions, locale)
+        : null,
+    [forecast, data?.transactions, locale]
   )
 
   if (isLoading) {

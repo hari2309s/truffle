@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
@@ -136,6 +137,7 @@ function HeroBackground() {
 
 function ChatMockup() {
   const { t } = useLanguage()
+  const reducedMotion = usePrefersReducedMotion()
 
   return (
     <div className="relative max-w-sm mx-auto lg:max-w-none animate-float">
@@ -177,8 +179,10 @@ function ChatMockup() {
             {[0, 1, 2].map((i) => (
               <motion.span
                 key={i}
-                animate={{ y: [-2, 2, -2] }}
-                transition={{ repeat: Infinity, duration: 0.75, delay: i * 0.18 }}
+                animate={reducedMotion ? undefined : { y: [-2, 2, -2] }}
+                transition={
+                  reducedMotion ? undefined : { repeat: Infinity, duration: 0.75, delay: i * 0.18 }
+                }
                 className="block w-1.5 h-1.5 rounded-full bg-[#706a5e]"
               />
             ))}
@@ -200,13 +204,17 @@ function ChatMockup() {
         {/* Voice input bar */}
         <div className="flex items-center gap-3 px-4 py-3.5 border-t border-[#28261f]">
           <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+            animate={reducedMotion ? undefined : { scale: [1, 1.1, 1] }}
+            transition={
+              reducedMotion ? undefined : { repeat: Infinity, duration: 2.4, ease: 'easeInOut' }
+            }
             className="relative flex-shrink-0 w-10 h-10 rounded-full bg-[#e8a84e] flex items-center justify-center"
           >
             <motion.div
-              animate={{ scale: [1, 1.7], opacity: [0.5, 0] }}
-              transition={{ repeat: Infinity, duration: 2.4, ease: 'easeOut' }}
+              animate={reducedMotion ? undefined : { scale: [1, 1.7], opacity: [0.5, 0] }}
+              transition={
+                reducedMotion ? undefined : { repeat: Infinity, duration: 2.4, ease: 'easeOut' }
+              }
               className="absolute inset-0 rounded-full bg-[#e8a84e]"
             />
             <MicIcon />

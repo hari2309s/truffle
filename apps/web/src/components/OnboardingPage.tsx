@@ -7,8 +7,10 @@ import { PageEnter } from './PageMotion'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useVoicePreference } from '@/contexts/VoiceContext'
+import type { Currency } from '@/contexts/CurrencyContext'
 import { LanguagePicker } from './LanguagePicker'
 import { VoicePicker } from './VoicePicker'
+import { CurrencyPicker } from './CurrencyPicker'
 
 interface OnboardingPageProps {
   onComplete: () => void
@@ -18,7 +20,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const { t, locale, setLocale } = useLanguage()
   const { voiceId, setVoiceId } = useVoicePreference()
   const [name, setName] = useState('')
-  const [currency, setCurrency] = useState<'EUR' | 'GBP' | 'USD'>('EUR')
+  const [currency, setCurrency] = useState<Currency>('EUR')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tourStep, setTourStep] = useState<number | null>(null)
@@ -129,7 +131,6 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
               placeholder={t.onboarding.namePlaceholder}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              autoFocus
               required
               className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
             />
@@ -139,22 +140,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             <label className="text-xs text-truffle-muted uppercase tracking-wide">
               {t.onboarding.currencyLabel}
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['EUR', 'GBP', 'USD'] as const).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setCurrency(c)}
-                  className={`py-3 rounded-xl text-sm font-medium transition-all ${
-                    currency === c
-                      ? 'bg-truffle-amber text-truffle-bg'
-                      : 'bg-truffle-surface text-truffle-muted border border-truffle-border'
-                  }`}
-                >
-                  {c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : '$ USD'}
-                </button>
-              ))}
-            </div>
+            <CurrencyPicker value={currency} onChange={setCurrency} />
           </div>
 
           <div className="space-y-1">

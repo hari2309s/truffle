@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import { embedTransaction, upsertTransaction } from '@truffle/ai'
 import type { Transaction, Anomaly } from '@truffle/types'
@@ -114,68 +114,77 @@ export async function POST(request: NextRequest) {
       )
     )
 
-    // Recompute monthly snapshot
+    // Recompute monthly snapshot — kept before the response since callers
+    // that re-fetch the snapshot immediately after this POST expect it to
+    // already reflect the newly inserted transactions.
     await recomputeSnapshot(userId, db)
 
-    // Run anomaly detection then fire proactive nudges (both non-fatal)
-    try {
-      const anomalies = await detectAnomalies(userId, results, db)
-      if (anomalies.length) {
-        const typedTxs = results.map((r) => ({ ...r }) as unknown as Transaction)
-        for (const anomaly of anomalies) {
-          try {
-            await sendAnomalyNudge({ userId, anomaly, transactions: typedTxs, snapshot: null })
-          } catch (e) {
-            console.error(`Anomaly nudge failed for tx ${anomaly.transactionId}:`, e)
-          }
-        }
-      }
-    } catch (e) {
-      console.error('Anomaly detection failed:', e)
-    }
-
-    // Check budget thresholds and fire nudges when a category hits 80% or 100% (non-fatal)
-    try {
-      const currentMonth = new Date().toISOString().slice(0, 7)
-      const { data: budgets } = await db
-        .from('monthly_budgets')
-        .select('category, amount')
-        .eq('user_id', userId)
-      if (budgets?.length) {
-        const { data: monthTxs } = await db
-          .from('transactions')
-          .select('category, amount')
-          .eq('user_id', userId)
-          .like('date', `${currentMonth}%`)
-          .lt('amount', '0')
-        const spendByCategory: Record<string, number> = {}
-        for (const tx of (monthTxs ?? []) as { category: string; amount: number }[]) {
-          spendByCategory[tx.category] =
-            (spendByCategory[tx.category] ?? 0) + Math.abs(Number(tx.amount))
-        }
-        for (const b of budgets as { category: string; amount: number }[]) {
-          const spent = spendByCategory[b.category] ?? 0
-          const pct = (spent / b.amount) * 100
-          if (pct >= 80) {
+    // Anomaly detection/nudges and the budget-threshold check/nudge below are
+    // not needed to answer this request — each nudge involves an LLM call,
+    // and the budget check adds extra DB round trips — so they're deferred to
+    // run after the response has been sent via Next's `after()` instead of
+    // making the client wait on them.
+    after(async () => {
+      // Run anomaly detection then fire proactive nudges (both non-fatal)
+      try {
+        const anomalies = await detectAnomalies(userId, results, db)
+        if (anomalies.length) {
+          const typedTxs = results.map((r) => ({ ...r }) as unknown as Transaction)
+          for (const anomaly of anomalies) {
             try {
-              await sendBudgetNudge({
-                userId,
-                category: b.category,
-                categoryEmoji: CATEGORY_EMOJI[b.category as keyof typeof CATEGORY_EMOJI] ?? '📦',
-                spentAmount: spent,
-                budgetAmount: b.amount,
-                percentUsed: pct,
-                month: currentMonth,
-              })
+              await sendAnomalyNudge({ userId, anomaly, transactions: typedTxs, snapshot: null })
             } catch (e) {
-              console.error(`Budget nudge failed for ${b.category}:`, e)
+              console.error(`Anomaly nudge failed for tx ${anomaly.transactionId}:`, e)
             }
           }
         }
+      } catch (e) {
+        console.error('Anomaly detection failed:', e)
       }
-    } catch (e) {
-      console.error('Budget nudge check failed:', e)
-    }
+
+      // Check budget thresholds and fire nudges when a category hits 80% or 100% (non-fatal)
+      try {
+        const currentMonth = new Date().toISOString().slice(0, 7)
+        const { data: budgets } = await db
+          .from('monthly_budgets')
+          .select('category, amount')
+          .eq('user_id', userId)
+        if (budgets?.length) {
+          const { data: monthTxs } = await db
+            .from('transactions')
+            .select('category, amount')
+            .eq('user_id', userId)
+            .like('date', `${currentMonth}%`)
+            .lt('amount', '0')
+          const spendByCategory: Record<string, number> = {}
+          for (const tx of (monthTxs ?? []) as { category: string; amount: number }[]) {
+            spendByCategory[tx.category] =
+              (spendByCategory[tx.category] ?? 0) + Math.abs(Number(tx.amount))
+          }
+          for (const b of budgets as { category: string; amount: number }[]) {
+            const spent = spendByCategory[b.category] ?? 0
+            const pct = (spent / b.amount) * 100
+            if (pct >= 80) {
+              try {
+                await sendBudgetNudge({
+                  userId,
+                  category: b.category,
+                  categoryEmoji: CATEGORY_EMOJI[b.category as keyof typeof CATEGORY_EMOJI] ?? '📦',
+                  spentAmount: spent,
+                  budgetAmount: b.amount,
+                  percentUsed: pct,
+                  month: currentMonth,
+                })
+              } catch (e) {
+                console.error(`Budget nudge failed for ${b.category}:`, e)
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Budget nudge check failed:', e)
+      }
+    })
 
     return NextResponse.json({ transactions: results })
   } catch (error) {

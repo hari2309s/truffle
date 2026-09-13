@@ -13,10 +13,10 @@ import { TransactionProposalCard } from './TransactionProposalCard'
 import { CATEGORY_EMOJI } from '@/lib/categories'
 import { HabitProposalCard } from './HabitProposalCard'
 import type { TransactionCategory } from '@truffle/types'
-import { VoiceButton } from './VoiceButton'
+import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
-import { PageEnter, TypingDots } from './PageMotion'
+import { PageEnter, TypingDots, usePrefersReducedMotion } from './PageMotion'
 import { ErrorBoundary } from './ErrorBoundary'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
@@ -25,6 +25,78 @@ interface ChatPageProps {
   userId: string
   name: string
   initialMessages: TruffleUIMessage[]
+}
+
+interface ProposalRenderCtx {
+  t: ReturnType<typeof useLanguage>['t']
+  formatAmount: (amount: number) => string
+}
+
+interface ProposalToolEntry<Args> {
+  PendingCard: React.ComponentType<{
+    proposal: Args
+    userId: string
+    onResult: (confirmed: boolean) => void
+  }>
+  renderConfirmed: (args: Args, toolCallId: string, ctx: ProposalRenderCtx) => React.ReactNode
+}
+
+/** One entry per `propose*` tool the model can call — keeps adding a new tool
+ * to a data-driven lookup instead of another copy-pasted branch below. */
+const PROPOSAL_TOOLS: Record<string, ProposalToolEntry<any>> = {
+  proposeGoal: {
+    PendingCard: GoalProposalCard,
+    renderConfirmed: (args, toolCallId, { t }) => (
+      <div key={toolCallId} className="flex justify-start mb-3">
+        <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
+          <p className="text-sm text-truffle-text">
+            {t.proposals.goal.addedToGoals(args.emoji, args.name)}
+          </p>
+        </div>
+      </div>
+    ),
+  },
+  proposeTransaction: {
+    PendingCard: TransactionProposalCard,
+    renderConfirmed: (args, toolCallId, { formatAmount }) => {
+      const isExpense = args.amount < 0
+      const formattedAmount = `${isExpense ? '-' : '+'}${formatAmount(args.amount)}`
+      return (
+        <div key={toolCallId} className="flex justify-start mb-3">
+          <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
+            <p className="text-sm text-truffle-text">
+              {CATEGORY_EMOJI[args.category as TransactionCategory] ?? '📝'}{' '}
+              <span className="font-medium">{args.description}</span> logged —{' '}
+              <span className={isExpense ? 'text-red-400' : 'text-green-400'}>
+                {formattedAmount}
+              </span>
+            </p>
+          </div>
+        </div>
+      )
+    },
+  },
+  proposeHabit: {
+    PendingCard: HabitProposalCard,
+    renderConfirmed: (args, toolCallId, { t, formatAmount }) => {
+      const periodLabel =
+        args.frequency === 'weekly' ? t.savingsHabits.periodWeek : t.savingsHabits.periodMonth
+      return (
+        <div key={toolCallId} className="flex justify-start mb-3">
+          <div className="max-w-[85%] bg-truffle-card border border-truffle-green/40 rounded-2xl rounded-bl-sm px-4 py-3">
+            <p className="text-sm text-truffle-text">
+              {args.emoji} <span className="font-medium">{args.name}</span>{' '}
+              <span className="text-truffle-green">
+                {t.proposals.habit.startSaving.toLowerCase()}
+              </span>{' '}
+              — {formatAmount(Number(args.amount))}/{periodLabel}.{' '}
+              {t.proposals.habit.logEachPeriod(periodLabel)}
+            </p>
+          </div>
+        </div>
+      )
+    },
+  },
 }
 
 export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
@@ -36,6 +108,20 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
   const processedTranscriptRef = useRef<string | null>(null)
   const reactedRef = useRef<Set<string>>(new Set())
   const [reactions, setReactions] = useState<Record<string, 1 | -1>>({})
+  // Kept local (not in useFinancialChat's return) so typing doesn't re-render
+  // anything that depends on the hook's messages/status.
+  const [input, setInput] = useState('')
+  const sendText = chat.sendText
+
+  const reducedMotion = usePrefersReducedMotion()
+
+  const voiceButtonStatus: VoiceButtonStatus = voice.isRecording
+    ? 'recording'
+    : voice.isTranscribing
+      ? 'transcribing'
+      : chat.isSpeaking
+        ? 'speaking'
+        : 'idle'
 
   const handleReact = useCallback(async (traceId: string, score: 1 | -1, messageId: string) => {
     if (reactedRef.current.has(messageId)) return
@@ -53,13 +139,15 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chat.messages])
 
-  // Submit voice transcript once — guard against re-firing when chat object reference changes
+  // Submit voice transcript once — depends only on the transcript text and the
+  // stable sendText callback, not the whole chat object (which is a new
+  // reference every render), so this doesn't re-run on unrelated re-renders.
   useEffect(() => {
     if (voice.transcript && voice.transcript !== processedTranscriptRef.current) {
       processedTranscriptRef.current = voice.transcript
-      chat.startVoice(voice.transcript)
+      sendText(voice.transcript)
     }
-  }, [voice.transcript, chat])
+  }, [voice.transcript, sendText])
 
   return (
     <PageEnter className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden min-h-0">
@@ -156,114 +244,29 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
                 {/* Proposal cards from tool parts */}
                 {toolParts.map((part) => {
                   const toolName = getToolName(part) as string
+                  const renderer = PROPOSAL_TOOLS[toolName]
+                  if (!renderer) return null
+
                   const confirmed =
                     part.state === 'output-available' &&
                     (part.output as { confirmed?: boolean } | undefined)?.confirmed
 
-                  if (toolName === 'proposeGoal') {
-                    const args = part.input as {
-                      name: string
-                      targetAmount: number
-                      deadline?: string
-                      emoji: string
-                      pitch: string
-                    }
-                    if (isPending(part.state)) {
-                      return (
-                        <GoalProposalCard
-                          key={part.toolCallId}
-                          proposal={args}
-                          userId={userId}
-                          onResult={(c) => resolveTool(part.toolCallId, { confirmed: c })}
-                        />
-                      )
-                    }
-                    if (confirmed) {
-                      return (
-                        <div key={part.toolCallId} className="flex justify-start mb-3">
-                          <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
-                            <p className="text-sm text-truffle-text">
-                              {t.proposals.goal.addedToGoals(args.emoji, args.name)}
-                            </p>
-                          </div>
-                        </div>
-                      )
-                    }
+                  if (isPending(part.state)) {
+                    const PendingCard = renderer.PendingCard
+                    return (
+                      <PendingCard
+                        key={part.toolCallId}
+                        proposal={part.input}
+                        userId={userId}
+                        onResult={(c) => resolveTool(part.toolCallId, { confirmed: c })}
+                      />
+                    )
                   }
-                  if (toolName === 'proposeTransaction') {
-                    const args = part.input as {
-                      description: string
-                      amount: number
-                      category: TransactionCategory
-                      merchant?: string
-                      date: string
-                    }
-                    if (isPending(part.state)) {
-                      return (
-                        <TransactionProposalCard
-                          key={part.toolCallId}
-                          proposal={args}
-                          userId={userId}
-                          onResult={(c) => resolveTool(part.toolCallId, { confirmed: c })}
-                        />
-                      )
-                    }
-                    if (confirmed) {
-                      const isExpense = args.amount < 0
-                      const formattedAmount = `${isExpense ? '-' : '+'}${formatAmount(args.amount)}`
-                      return (
-                        <div key={part.toolCallId} className="flex justify-start mb-3">
-                          <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
-                            <p className="text-sm text-truffle-text">
-                              {CATEGORY_EMOJI[args.category] ?? '📝'}{' '}
-                              <span className="font-medium">{args.description}</span> logged —{' '}
-                              <span className={isExpense ? 'text-red-400' : 'text-green-400'}>
-                                {formattedAmount}
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-                      )
-                    }
-                  }
-                  if (toolName === 'proposeHabit') {
-                    const args = part.input as {
-                      name: string
-                      amount: number
-                      frequency: 'weekly' | 'monthly'
-                      emoji: string
-                      pitch: string
-                    }
-                    if (isPending(part.state)) {
-                      return (
-                        <HabitProposalCard
-                          key={part.toolCallId}
-                          proposal={args}
-                          userId={userId}
-                          onResult={(c) => resolveTool(part.toolCallId, { confirmed: c })}
-                        />
-                      )
-                    }
-                    if (confirmed) {
-                      const periodLabel =
-                        args.frequency === 'weekly'
-                          ? t.savingsHabits.periodWeek
-                          : t.savingsHabits.periodMonth
-                      return (
-                        <div key={part.toolCallId} className="flex justify-start mb-3">
-                          <div className="max-w-[85%] bg-truffle-card border border-truffle-green/40 rounded-2xl rounded-bl-sm px-4 py-3">
-                            <p className="text-sm text-truffle-text">
-                              {args.emoji} <span className="font-medium">{args.name}</span>{' '}
-                              <span className="text-truffle-green">
-                                {t.proposals.habit.startSaving.toLowerCase()}
-                              </span>{' '}
-                              — {formatAmount(Number(args.amount))}/{periodLabel}.{' '}
-                              {t.proposals.habit.logEachPeriod(periodLabel)}
-                            </p>
-                          </div>
-                        </div>
-                      )
-                    }
+                  if (confirmed) {
+                    return renderer.renderConfirmed(part.input, part.toolCallId, {
+                      t,
+                      formatAmount,
+                    })
                   }
                   return null
                 })}
@@ -319,21 +322,33 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
               >
                 <motion.div
                   className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0"
-                  animate={{ opacity: [0.55, 1, 0.55] }}
-                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                  animate={reducedMotion ? { opacity: 1 } : { opacity: [0.55, 1, 0.55] }}
+                  transition={
+                    reducedMotion
+                      ? undefined
+                      : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
+                  }
                 >
                   <Image src="/icons/truffle.png" alt="Truffle" width={24} height={24} />
                 </motion.div>
                 <motion.div
                   className="bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3"
-                  animate={{
-                    boxShadow: [
-                      '0 0 0 0 rgba(232,168,78,0)',
-                      '0 0 14px 3px rgba(232,168,78,0.18)',
-                      '0 0 0 0 rgba(232,168,78,0)',
-                    ],
-                  }}
-                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                  animate={
+                    reducedMotion
+                      ? undefined
+                      : {
+                          boxShadow: [
+                            '0 0 0 0 rgba(232,168,78,0)',
+                            '0 0 14px 3px rgba(232,168,78,0.18)',
+                            '0 0 0 0 rgba(232,168,78,0)',
+                          ],
+                        }
+                  }
+                  transition={
+                    reducedMotion
+                      ? undefined
+                      : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }
+                  }
                 >
                   <TypingDots />
                 </motion.div>
@@ -364,23 +379,32 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
       <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-lg bg-truffle-bg/95 backdrop-blur-sm border-t border-truffle-border px-4 py-4">
         <div className="flex flex-col items-center gap-4">
           <VoiceButton
-            isRecording={voice.isRecording}
-            isTranscribing={voice.isTranscribing}
-            isSpeaking={chat.isSpeaking}
+            status={voiceButtonStatus}
             onStart={voice.startRecording}
             onStop={voice.stopRecording}
           />
 
-          <form id="chat-form" onSubmit={chat.submit} className="w-full flex gap-2">
+          <form
+            id="chat-form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const text = input.trim()
+              if (!text) return
+              setInput('')
+              sendText(text)
+            }}
+            className="w-full flex gap-2"
+          >
             <input
-              value={chat.input}
-              onChange={(e) => chat.setInput(e.target.value)}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               placeholder={t.chat.typePlaceholder}
               className="flex-1 bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
             />
             <button
               type="submit"
-              disabled={chat.isLoading || !chat.input.trim()}
+              disabled={chat.isLoading || !input.trim()}
+              aria-label={t.chat.send}
               className="btn-primary px-4 disabled:opacity-40"
             >
               <SendIcon />

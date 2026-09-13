@@ -4,6 +4,7 @@
 
 /* ── Dark theme (default) ── */
 :root {
+  color-scheme: dark;
   --t-bg: #0e0d0c;
   --t-surface: #1e1d1b;
   --t-card: #2c2b28;
@@ -19,6 +20,7 @@
 
 /* ── Light theme ── */
 :root.light {
+  color-scheme: light;
   --t-bg: #faf6f0;
   --t-surface: #f0e9df;
   --t-card: #e8dfd3;
@@ -35,6 +37,7 @@
 /* ── System theme (no class set) — respects OS preference ── */
 @media (prefers-color-scheme: light) {
   :root:not(.dark):not(.light) {
+    color-scheme: light;
     --t-bg: #faf6f0;
     --t-surface: #f0e9df;
     --t-card: #e8dfd3;
@@ -70,6 +73,21 @@
   * {
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* Native <select> follows the app's own theme instead of falling back to
+     the OS default (unreadable in Windows dark mode without this). */
+  select {
+    background-color: var(--t-surface);
+    color: var(--t-text);
+  }
+}
+
+/* Shifts a `bottom-0` fixed element up to clear the home-indicator/gesture
+   area on notched devices. Margin (not padding) so it never fights with an
+   element's own padding utilities in the cascade — it just adds clearance
+   outside the box, and is 0 with no visual effect on non-notched devices. */
+.safe-bottom {
+  margin-bottom: env(safe-area-inset-bottom);
 }
 
 /* Spending heatmap — 5 intensity levels, auto-adapt to dark/light via CSS vars */

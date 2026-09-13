@@ -24,6 +24,46 @@ interface GoalProposalCardProps {
   onResult: (confirmed: boolean) => void
 }
 
+export type ProposalCardStatus = 'pending' | 'saving' | 'done' | 'declined'
+
+interface UseProposalCardParams {
+  onResult: (confirmed: boolean) => void
+  /** Performs the payload-specific fetch + capture + insert. Throw to signal failure. */
+  onConfirm: () => Promise<void>
+  errorMessage: string
+}
+
+/**
+ * Shared accept/decline state machine for the propose* cards (goal, habit,
+ * transaction). Each card supplies its own fetch/PostHog-capture/Supabase-insert
+ * logic via `onConfirm` — this hook only owns the pending/saving/done/declined
+ * transitions and the error string.
+ */
+export function useProposalCard({ onResult, onConfirm, errorMessage }: UseProposalCardParams) {
+  const [status, setStatus] = useState<ProposalCardStatus>('pending')
+  const [error, setError] = useState<string | null>(null)
+
+  const handleYes = async () => {
+    setStatus('saving')
+    setError(null)
+    try {
+      await onConfirm()
+      setStatus('done')
+      onResult(true)
+    } catch {
+      setError(errorMessage)
+      setStatus('pending')
+    }
+  }
+
+  const handleNo = () => {
+    setStatus('declined')
+    onResult(false)
+  }
+
+  return { status, error, handleYes, handleNo }
+}
+
 export const GoalProposalCard = memo(function GoalProposalCard({
   proposal,
   userId,
@@ -33,13 +73,11 @@ export const GoalProposalCard = memo(function GoalProposalCard({
   const { formatAmount } = useCurrency()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
-  const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
-  const [error, setError] = useState<string | null>(null)
 
-  const handleYes = async () => {
-    setStatus('saving')
-    setError(null)
-    try {
+  const { status, error, handleYes, handleNo } = useProposalCard({
+    onResult,
+    errorMessage: t.proposals.goal.error,
+    onConfirm: async () => {
       const res = await fetch('/api/goals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -66,18 +104,8 @@ export const GoalProposalCard = memo(function GoalProposalCard({
         role: 'assistant',
         content: `${proposal.emoji} ${proposal.name} added to your goals — find it in Insights.`,
       })
-      setStatus('done')
-      onResult(true)
-    } catch {
-      setError(t.proposals.goal.error)
-      setStatus('pending')
-    }
-  }
-
-  const handleNo = () => {
-    setStatus('declined')
-    onResult(false)
-  }
+    },
+  })
 
   if (status === 'done') {
     return (

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { CategoryBudget, Transaction, TransactionCategory } from '@truffle/types'
 import { TRANSACTION_CATEGORIES } from '@truffle/types'
@@ -8,12 +9,11 @@ import { CATEGORY_EMOJI } from '@/lib/categories'
 import { SkeletonPulse } from './PageMotion'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { useSectionAddForm } from '@/contexts/SectionAddFormContext'
 
 interface MonthlyBudgetsProps {
   userId: string
   transactions: Transaction[]
-  addBudgetOpen?: boolean
-  onAddBudgetOpenChange?: (open: boolean) => void
 }
 
 function mapBudget(row: Record<string, unknown>): CategoryBudget {
@@ -30,22 +30,28 @@ function currentYearMonth() {
   return new Date().toISOString().slice(0, 7)
 }
 
-function spentThisMonth(transactions: Transaction[], category: TransactionCategory): number {
-  const prefix = currentYearMonth()
-  return transactions
-    .filter((tx) => tx.amount < 0 && tx.category === category && tx.date.startsWith(prefix))
-    .reduce((s, tx) => s + Math.abs(tx.amount), 0)
+/** Single pass over transactions building a category -> spend map, instead of
+ * filtering+reducing the full array once per budget on every render. */
+function useSpendByCategory(transactions: Transaction[]): Partial<Record<TransactionCategory, number>> {
+  return useMemo(() => {
+    const prefix = currentYearMonth()
+    const map: Partial<Record<TransactionCategory, number>> = {}
+    for (const tx of transactions) {
+      if (tx.amount < 0 && tx.date.startsWith(prefix)) {
+        map[tx.category] = (map[tx.category] ?? 0) + Math.abs(tx.amount)
+      }
+    }
+    return map
+  }, [transactions])
 }
 
-export function MonthlyBudgets({
-  userId,
-  transactions,
-  addBudgetOpen,
-  onAddBudgetOpenChange,
-}: MonthlyBudgetsProps) {
+export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
   const { t } = useLanguage()
   const queryClient = useQueryClient()
+  const { open: showAdd, setOpen: setShowAdd } = useSectionAddForm()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const spendByCategory = useSpendByCategory(transactions)
 
   const { data: budgets = [], isLoading } = useQuery({
     queryKey: ['budgets', userId],
@@ -64,10 +70,9 @@ export function MonthlyBudgets({
       await queryClient.invalidateQueries({ queryKey: ['budgets', userId] })
     } finally {
       setDeletingId(null)
+      setConfirmDeleteId(null)
     }
   }
-
-  const showAdd = Boolean(addBudgetOpen)
 
   return (
     <>
@@ -76,7 +81,7 @@ export function MonthlyBudgets({
           userId={userId}
           existingCategories={budgets.map((b) => b.category)}
           onDone={() => {
-            onAddBudgetOpenChange?.(false)
+            setShowAdd(false)
             queryClient.invalidateQueries({ queryKey: ['budgets', userId] })
           }}
         />
@@ -94,18 +99,18 @@ export function MonthlyBudgets({
         </div>
       ) : (
         <div className="space-y-2">
-          {budgets.map((budget) => {
-            const spent = spentThisMonth(transactions, budget.category)
-            return (
-              <BudgetCard
-                key={budget.id}
-                budget={budget}
-                spent={spent}
-                onDelete={() => handleDelete(budget.id)}
-                isDeleting={deletingId === budget.id}
-              />
-            )
-          })}
+          {budgets.map((budget) => (
+            <BudgetCard
+              key={budget.id}
+              budget={budget}
+              spent={spendByCategory[budget.category] ?? 0}
+              onDelete={() => handleDelete(budget.id)}
+              isDeleting={deletingId === budget.id}
+              isConfirmingDelete={confirmDeleteId === budget.id}
+              onRequestDelete={() => setConfirmDeleteId(budget.id)}
+              onCancelDelete={() => setConfirmDeleteId(null)}
+            />
+          ))}
         </div>
       )}
     </>
@@ -117,11 +122,17 @@ function BudgetCard({
   spent,
   onDelete,
   isDeleting,
+  isConfirmingDelete,
+  onRequestDelete,
+  onCancelDelete,
 }: {
   budget: CategoryBudget
   spent: number
   onDelete: () => void
   isDeleting: boolean
+  isConfirmingDelete: boolean
+  onRequestDelete: () => void
+  onCancelDelete: () => void
 }) {
   const { t } = useLanguage()
   const { formatAmount } = useCurrency()
@@ -160,8 +171,8 @@ function BudgetCard({
             {formatAmount(spent)}
           </span>
           <button
-            onClick={onDelete}
-            className="text-truffle-muted hover:text-truffle-red transition-colors text-xs"
+            onClick={() => (isConfirmingDelete ? onCancelDelete() : onRequestDelete())}
+            className={`text-xs transition-colors ${isConfirmingDelete ? 'text-truffle-red' : 'text-truffle-muted hover:text-truffle-red'}`}
             aria-label={t.monthlyBudgets.removeBudget}
           >
             ✕
@@ -175,6 +186,36 @@ function BudgetCard({
           style={{ width: `${pct}%` }}
         />
       </div>
+
+      <AnimatePresence>
+        {isConfirmingDelete && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="flex items-center justify-between px-4 py-2 bg-truffle-surface rounded-xl border border-truffle-border">
+              <p className="text-xs text-truffle-muted">{t.monthlyBudgets.deleteConfirm}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={onCancelDelete}
+                  className="text-xs text-truffle-muted hover:text-truffle-text transition-colors px-2 py-1"
+                >
+                  {t.savingsGoals.cancel}
+                </button>
+                <button
+                  onClick={onDelete}
+                  className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors px-2 py-1"
+                >
+                  {t.transactions.delete}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -1,12 +1,23 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { CURRENCY_SYMBOLS, CURRENCY_DECIMALS } from '@/lib/currency'
-import { supabase } from '@/lib/supabase'
+import { createContext, useContext, useCallback, useMemo } from 'react'
+import { CURRENCY_SYMBOLS } from '@/lib/currency'
+import { usePersistedPreference } from '@/hooks/usePersistedPreference'
 
 export type Currency = 'EUR' | 'GBP' | 'USD'
 
 const STORAGE_KEY = 'truffle-currency'
+
+function isCurrency(value: unknown): value is Currency {
+  return typeof value === 'string' && value in CURRENCY_SYMBOLS
+}
+
+function formatWithCurrency(amount: number, currency: Currency): string {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+  }).format(Math.abs(amount))
+}
 
 interface CurrencyContextValue {
   currency: Currency
@@ -19,40 +30,27 @@ const CurrencyContext = createContext<CurrencyContextValue>({
   currency: 'EUR',
   symbol: '€',
   setCurrency: () => {},
-  formatAmount: (n) => `€${Math.abs(n).toFixed(2)}`,
+  formatAmount: (n) => formatWithCurrency(n, 'EUR'),
 })
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
-  const [currency, setCurrencyState] = useState<Currency>('EUR')
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Currency | null
-    if (stored && stored in CURRENCY_SYMBOLS) {
-      setCurrencyState(stored)
-    }
-    supabase.auth.getSession().then(({ data }) => {
-      const c = data.session?.user?.user_metadata?.currency as Currency | undefined
-      if (c && c in CURRENCY_SYMBOLS) {
-        setCurrencyState(c)
-        localStorage.setItem(STORAGE_KEY, c)
-      }
-    })
-  }, [])
-
-  const setCurrency = (next: Currency) => {
-    setCurrencyState(next)
-    localStorage.setItem(STORAGE_KEY, next)
-  }
+  const [currency, setCurrency] = usePersistedPreference<Currency>({
+    storageKey: STORAGE_KEY,
+    defaultValue: 'EUR',
+    metadataField: 'currency',
+    normalize: (raw) => (isCurrency(raw) ? raw : null),
+  })
 
   const symbol = CURRENCY_SYMBOLS[currency] ?? '€'
-  const decimals = CURRENCY_DECIMALS[currency] ?? 2
-  const formatAmount = (amount: number) => `${symbol}${Math.abs(amount).toFixed(decimals)}`
 
-  return (
-    <CurrencyContext.Provider value={{ currency, symbol, setCurrency, formatAmount }}>
-      {children}
-    </CurrencyContext.Provider>
+  const formatAmount = useCallback((amount: number) => formatWithCurrency(amount, currency), [currency])
+
+  const value = useMemo(
+    () => ({ currency, symbol, setCurrency, formatAmount }),
+    [currency, symbol, setCurrency, formatAmount]
   )
+
+  return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>
 }
 
 export function useCurrency() {

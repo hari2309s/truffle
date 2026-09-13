@@ -4,6 +4,7 @@
 
 /* ── Dark theme (default) ── */
 :root {
+  color-scheme: dark;
   --t-bg: #0e0d0c;
   --t-surface: #1e1d1b;
   --t-card: #2c2b28;
@@ -19,6 +20,7 @@
 
 /* ── Light theme ── */
 :root.light {
+  color-scheme: light;
   --t-bg: #faf6f0;
   --t-surface: #f0e9df;
   --t-card: #e8dfd3;
@@ -34,6 +36,7 @@
 
 @media (prefers-color-scheme: light) {
   :root:not(.dark):not(.light) {
+    color-scheme: light;
     --t-bg: #faf6f0;
     --t-surface: #f0e9df;
     --t-card: #e8dfd3;
@@ -81,5 +84,23 @@
 
   .section-label {
     @apply text-truffle-amber text-sm font-semibold uppercase tracking-widest;
+  }
+}
+
+/* Shifts a `bottom-0` fixed element up to clear the home-indicator/gesture
+   area on notched devices. Margin (not padding) so it never fights with an
+   element's own padding utilities in the cascade. */
+.safe-bottom {
+  margin-bottom: env(safe-area-inset-bottom);
+}
+
+/* Respect the user's motion preference: neutralize the looping Tailwind
+   keyframe animations (see tailwind.config.ts) used for ambient/decorative
+   effects across the landing page. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-slow,
+  .animate-float,
+  .animate-glow-pulse {
+    animation: none !important;
   }
 }

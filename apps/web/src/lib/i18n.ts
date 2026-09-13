@@ -4,6 +4,7 @@ export interface Translations {
   auth: {
     tagline: string
     emailPlaceholder: string
+    invalidEmail: string
     continueWithEmail: string
     sending: string
     footer: string
@@ -78,6 +79,9 @@ export interface Translations {
     expense: string
     income: string
     descriptionPlaceholder: string
+    amountLabel: string
+    dateLabel: string
+    categoryLabel: string
     saving: string
     add: string
   }
@@ -94,6 +98,7 @@ export interface Translations {
     deleteConfirm: string
     cancel: string
     delete: string
+    edit: string
     descriptionPlaceholder: string
     merchantPlaceholder: string
     save: string
@@ -142,6 +147,7 @@ export interface Translations {
     spent: (amount: string) => string
     earned: (amount: string) => string
     topCategory: (label: string) => string
+    dismiss: string
   }
   financialBrief: {
     addTransactions: string
@@ -195,6 +201,9 @@ export interface Translations {
     targetAmount: string
     creating: string
     createGoal: string
+    remaining: (amount: string) => string
+    deleteGoal: string
+    deleteConfirm: string
   }
   savingsHabits: {
     noHabits: string
@@ -216,6 +225,7 @@ export interface Translations {
     saving: string
     setBudget: string
     removeBudget: string
+    deleteConfirm: string
   }
   cookieBanner: {
     message: string
@@ -232,6 +242,7 @@ export interface Translations {
     holdButton: string
     suggestions: string[]
     typePlaceholder: string
+    send: string
     stop: string
     mute: string
     unmute: string
@@ -272,6 +283,7 @@ export const translations: Record<Locale, Translations> = {
     auth: {
       tagline: 'Your finances, unearthed.',
       emailPlaceholder: 'your@email.com',
+      invalidEmail: 'Enter a valid email address.',
       continueWithEmail: 'Continue with email',
       sending: 'Sending...',
       footer: 'Sign in with a magic link · No password needed',
@@ -376,6 +388,9 @@ export const translations: Record<Locale, Translations> = {
       expense: 'Expense',
       income: 'Income',
       descriptionPlaceholder: 'Description (e.g. Coffee at Rewe)',
+      amountLabel: 'Amount',
+      dateLabel: 'Date',
+      categoryLabel: 'Category',
       saving: 'Saving...',
       add: 'Add Transaction',
     },
@@ -392,6 +407,7 @@ export const translations: Record<Locale, Translations> = {
       deleteConfirm: 'Delete this transaction?',
       cancel: 'Cancel',
       delete: 'Delete',
+      edit: 'Edit',
       descriptionPlaceholder: 'Description',
       merchantPlaceholder: 'Merchant (optional)',
       save: 'Save',
@@ -443,6 +459,7 @@ export const translations: Record<Locale, Translations> = {
       spent: (amount) => `This week you spent ${amount}`,
       earned: (amount) => ` and earned ${amount}`,
       topCategory: (label) => `. Most went on ${label}.`,
+      dismiss: 'Dismiss',
     },
     financialBrief: {
       addTransactions: 'Add some transactions to see your financial brief',
@@ -502,6 +519,9 @@ export const translations: Record<Locale, Translations> = {
       targetAmount: 'Target amount',
       creating: 'Creating…',
       createGoal: 'Create goal',
+      remaining: (amount) => `${amount} remaining`,
+      deleteGoal: 'Delete goal',
+      deleteConfirm: 'Delete this goal?',
     },
     savingsHabits: {
       noHabits: 'No saving habits yet — ask Truffle to set one up',
@@ -523,6 +543,7 @@ export const translations: Record<Locale, Translations> = {
       saving: 'Saving…',
       setBudget: 'Set budget',
       removeBudget: 'Remove budget',
+      deleteConfirm: 'Delete this budget?',
     },
     cookieBanner: {
       message:
@@ -544,6 +565,7 @@ export const translations: Record<Locale, Translations> = {
         'Can I afford a weekend trip?',
       ],
       typePlaceholder: 'Or type your question...',
+      send: 'Send message',
       stop: 'Stop',
       mute: 'Mute voice',
       unmute: 'Unmute voice',

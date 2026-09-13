@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 
@@ -13,7 +14,7 @@ interface ChatBubbleProps {
   onReact?: (traceId: string, score: 1 | -1) => void
 }
 
-export function ChatBubble({
+export const ChatBubble = memo(function ChatBubble({
   role,
   content,
   name,
@@ -84,7 +85,7 @@ export function ChatBubble({
       </div>
     </motion.div>
   )
-}
+})
 
 function ThumbUpIcon() {
   return (

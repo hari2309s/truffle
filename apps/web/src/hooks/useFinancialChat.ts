@@ -33,8 +33,6 @@ export function useFinancialChat(
   const { speak, isSpeaking, cancel } = useTextToSpeech()
   const lastAssistantMessageRef = useRef<string>('')
 
-  const [input, setInput] = useState('')
-
   const isMutedRef = useRef(false)
   const [isMuted, setIsMuted] = useState(false)
 
@@ -85,44 +83,42 @@ export function useFinancialChat(
       }
     },
   })
+  const { sendMessage } = chat
 
-  const saveUserMessage = async (content: string) => {
-    try {
-      await supabase.from('chat_messages').insert({ user_id: userId, role: 'user', content })
-    } catch (e) {
-      console.warn('Failed to save user message:', e)
-    }
-  }
+  const saveUserMessage = useCallback(
+    async (content: string) => {
+      try {
+        await supabase.from('chat_messages').insert({ user_id: userId, role: 'user', content })
+      } catch (e) {
+        console.warn('Failed to save user message:', e)
+      }
+    },
+    [userId]
+  )
 
-  const sendText = (text: string) => {
-    const trimmed = text.trim()
-    if (!trimmed) return
-    // Persist in the background — don't block the send on a DB round-trip.
-    void saveUserMessage(trimmed)
-    // Stamp the user message locally so the bubble shows a time immediately —
-    // otherwise the timestamp only appears after a refresh reloads it from the DB
-    // (the server only attaches `createdAt` to assistant messages).
-    chat.sendMessage({ text: trimmed, metadata: { createdAt: new Date().toISOString() } })
-  }
+  // Stable identity (userId/chat.sendMessage rarely change) so consumers can
+  // safely depend on it without re-running effects on every render.
+  const sendText = useCallback(
+    (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed) return
+      // Persist in the background — don't block the send on a DB round-trip.
+      void saveUserMessage(trimmed)
+      // Stamp the user message locally so the bubble shows a time immediately —
+      // otherwise the timestamp only appears after a refresh reloads it from the DB
+      // (the server only attaches `createdAt` to assistant messages).
+      sendMessage({ text: trimmed, metadata: { createdAt: new Date().toISOString() } })
+    },
+    [saveUserMessage, sendMessage]
+  )
 
   const startVoice = sendText
-
-  const submit = (e?: { preventDefault?: () => void }) => {
-    e?.preventDefault?.()
-    const text = input.trim()
-    if (!text) return
-    setInput('')
-    sendText(text)
-  }
 
   const isLoading = chat.status === 'submitted' || chat.status === 'streaming'
 
   return {
     ...chat,
     messageText,
-    input,
-    setInput,
-    submit,
     sendText,
     isLoading,
     isSpeaking,

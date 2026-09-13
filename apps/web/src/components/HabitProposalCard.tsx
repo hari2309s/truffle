@@ -1,12 +1,13 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { memo, useState } from 'react'
+import { memo } from 'react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { useProposalCard } from './GoalProposalCard'
 
 export interface HabitProposal {
   name: string
@@ -30,18 +31,16 @@ export const HabitProposalCard = memo(function HabitProposalCard({
   const { t } = useLanguage()
   const { formatAmount } = useCurrency()
   const queryClient = useQueryClient()
-  const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
-  const [error, setError] = useState<string | null>(null)
 
   const periodLabel =
     proposal.frequency === 'weekly' ? t.savingsHabits.periodWeek : t.savingsHabits.periodMonth
   const frequencyLabel =
     proposal.frequency === 'weekly' ? t.proposals.habit.weeklyLabel : t.proposals.habit.monthlyLabel
 
-  const handleYes = async () => {
-    setStatus('saving')
-    setError(null)
-    try {
+  const { status, error, handleYes, handleNo } = useProposalCard({
+    onResult,
+    errorMessage: t.proposals.habit.error,
+    onConfirm: async () => {
       const res = await fetch('/api/habits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,18 +59,8 @@ export const HabitProposalCard = memo(function HabitProposalCard({
         role: 'assistant',
         content: `${proposal.emoji} ${proposal.name} — ${formatAmount(proposal.amount)}/${periodLabel}. ${t.proposals.habit.logEachPeriod(periodLabel)}`,
       })
-      setStatus('done')
-      onResult(true)
-    } catch {
-      setError(t.proposals.habit.error)
-      setStatus('pending')
-    }
-  }
-
-  const handleNo = () => {
-    setStatus('declined')
-    onResult(false)
-  }
+    },
+  })
 
   if (status === 'done' || status === 'declined') return null
 

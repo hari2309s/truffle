@@ -1,5 +1,6 @@
 'use client'
 
+import { useId } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { TransactionCategory } from '@truffle/types'
 import { CATEGORY_EMOJI } from '@/lib/categories'
@@ -46,6 +47,7 @@ export function TransactionFilterPanel({
   activeFilterCount,
 }: Props) {
   const { t } = useLanguage()
+  const panelId = useId()
 
   return (
     <div className="space-y-3">
@@ -65,6 +67,8 @@ export function TransactionFilterPanel({
 
         <button
           onClick={() => setFiltersOpen((o) => !o)}
+          aria-expanded={filtersOpen}
+          aria-controls={panelId}
           className={`relative flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
             filtersOpen || activeFilterCount > 0
               ? 'bg-truffle-amber border-truffle-amber text-truffle-bg'
@@ -87,6 +91,7 @@ export function TransactionFilterPanel({
         </button>
       </div>
 
+      <div id={panelId}>
       <AnimatePresence initial={false}>
         {filtersOpen && (
           <motion.div
@@ -155,6 +160,7 @@ export function TransactionFilterPanel({
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   )
 }

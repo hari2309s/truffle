@@ -3,11 +3,13 @@
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
 export default function FinalCTA() {
   const { t } = useLanguage()
+  const reducedMotion = usePrefersReducedMotion()
 
   return (
     <section className="py-28 px-6">
@@ -29,8 +31,10 @@ export default function FinalCTA() {
           <div className="relative z-10">
             <div className="flex justify-center mb-6">
               <motion.div
-                animate={{ y: [0, -10, 0], scale: [1, 1.06, 1] }}
-                transition={{ repeat: Infinity, duration: 3.5, ease: 'easeInOut' }}
+                animate={reducedMotion ? undefined : { y: [0, -10, 0], scale: [1, 1.06, 1] }}
+                transition={
+                  reducedMotion ? undefined : { repeat: Infinity, duration: 3.5, ease: 'easeInOut' }
+                }
               >
                 <Image src="/icons/truffle.png" alt="Truffle" width={56} height={56} />
               </motion.div>

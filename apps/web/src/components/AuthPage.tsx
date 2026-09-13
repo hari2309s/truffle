@@ -24,6 +24,10 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError(t.auth.invalidEmail)
+      return
+    }
     if (!captchaToken) return
     setIsLoading(true)
     setError(null)
@@ -101,7 +105,12 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
                 type="email"
                 placeholder={t.auth.emailPlaceholder}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  if (error) setError(null)
+                }}
+                autoComplete="email"
+                spellCheck={false}
                 className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-4 text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber text-center"
                 required
               />
@@ -121,7 +130,7 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
 
             <button
               type="submit"
-              disabled={isLoading || !captchaToken || !/\S+@\S+\.\S+/.test(email)}
+              disabled={isLoading || !captchaToken}
               className="btn-primary w-full py-4 disabled:opacity-50"
             >
               {isLoading ? t.auth.sending : t.auth.continueWithEmail}

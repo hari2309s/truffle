@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import { signOut } from '@/lib/auth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency, type Currency } from '@/contexts/CurrencyContext'
@@ -10,6 +10,7 @@ import { type Locale } from '@/lib/i18n'
 import { type VoiceId } from '@/lib/voices'
 import { LanguagePicker } from './LanguagePicker'
 import { VoicePicker } from './VoicePicker'
+import { CurrencyPicker } from './CurrencyPicker'
 import { supabase } from '@/lib/supabase'
 
 interface SettingsSheetProps {
@@ -25,6 +26,37 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   const [deleteInput, setDeleteInput] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const sheetRef = useRef<HTMLDivElement>(null)
+
+  // Move focus into the sheet on open, and let Escape close it.
+  useEffect(() => {
+    closeButtonRef.current?.focus()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab' || !sheetRef.current) return
+      const focusable = sheetRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]!
+      const last = focusable[focusable.length - 1]!
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   const handleExport = async () => {
     setIsExporting(true)
@@ -107,7 +139,12 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
         exit={{ opacity: 0 }}
       />
       <motion.div
+        ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-sheet-title"
         className="relative bg-truffle-bg rounded-t-2xl border-t border-truffle-border px-4 pt-4 pb-10 space-y-6 overflow-y-auto max-h-[85dvh]"
+        style={{ overscrollBehavior: 'contain' }}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -115,9 +152,13 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-truffle-text">{t.settings.title}</h2>
+          <h2 id="settings-sheet-title" className="font-semibold text-truffle-text">
+            {t.settings.title}
+          </h2>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
+            aria-label="Close settings"
             className="p-2 text-truffle-muted hover:text-truffle-text transition-colors"
           >
             <XIcon />
@@ -137,21 +178,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
           <h3 className="text-xs text-truffle-muted uppercase tracking-wide">
             {t.settings.currency}
           </h3>
-          <div className="grid grid-cols-2 gap-2">
-            {(['EUR', 'GBP', 'USD'] as const).map((c) => (
-              <button
-                key={c}
-                onClick={() => handleCurrencyChange(c)}
-                className={`py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  currency === c
-                    ? 'bg-truffle-amber text-truffle-bg'
-                    : 'bg-truffle-surface text-truffle-muted border border-truffle-border'
-                }`}
-              >
-                {c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : '$ USD'}
-              </button>
-            ))}
-          </div>
+          <CurrencyPicker value={currency} onChange={handleCurrencyChange} />
         </div>
 
         {/* Voice */}

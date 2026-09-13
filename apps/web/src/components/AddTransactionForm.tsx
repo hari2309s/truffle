@@ -136,7 +136,11 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
         </button>
       </div>
 
+      <label htmlFor="tx-description" className="sr-only">
+        {t.addTransaction.descriptionPlaceholder}
+      </label>
       <input
+        id="tx-description"
         type="text"
         placeholder={t.addTransaction.descriptionPlaceholder}
         value={form.description}
@@ -150,7 +154,11 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-muted text-sm">
             {symbol}
           </span>
+          <label htmlFor="tx-amount" className="sr-only">
+            {t.addTransaction.amountLabel}
+          </label>
           <input
+            id="tx-amount"
             type="number"
             placeholder="0.00"
             value={form.amount}
@@ -161,7 +169,11 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
             required
           />
         </div>
+        <label htmlFor="tx-date" className="sr-only">
+          {t.addTransaction.dateLabel}
+        </label>
         <input
+          id="tx-date"
           type="date"
           value={form.date}
           onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
@@ -169,7 +181,11 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
         />
       </div>
 
+      <label htmlFor="tx-category" className="sr-only">
+        {t.addTransaction.categoryLabel}
+      </label>
       <select
+        id="tx-category"
         value={form.category}
         onChange={(e) => {
           const category = e.target.value as TransactionCategory

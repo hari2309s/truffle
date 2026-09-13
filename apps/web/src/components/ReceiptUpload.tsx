@@ -5,6 +5,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { usePostHog } from 'posthog-js/react'
 import type { TransactionCategory } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useImportFlow, ImportSuccess } from '@/hooks/useImportFlow'
+import { CURRENCY_SYMBOLS } from '@/lib/currency'
 
 interface ParsedTransaction {
   date: string
@@ -19,7 +21,6 @@ interface ReceiptUploadProps {
   onClose?: () => void
 }
 
-import { CURRENCY_SYMBOLS } from '@/lib/currency'
 const MAX_SIZE_MB = 10
 
 export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
@@ -29,27 +30,23 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<{ file: File; objectUrl: string } | null>(null)
   const [parsed, setParsed] = useState<ParsedTransaction[] | null>(null)
-  const [isParsing, setIsParsing] = useState(false)
-  const [isImporting, setIsImporting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [imported, setImported] = useState(false)
+  const flow = useImportFlow()
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setError(null)
+    flow.reset()
     setParsed(null)
-    setImported(false)
 
     const isPDF = file.type === 'application/pdf'
     const isImage = file.type.startsWith('image/')
     if (!isPDF && !isImage) {
-      setError(t.receiptUpload.invalidFile)
+      flow.setError(t.receiptUpload.invalidFile)
       return
     }
 
     if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      setError(t.receiptUpload.fileTooLarge(MAX_SIZE_MB))
+      flow.setError(t.receiptUpload.fileTooLarge(MAX_SIZE_MB))
       return
     }
 
@@ -60,8 +57,7 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
 
   const handleParse = async () => {
     if (!preview) return
-    setIsParsing(true)
-    setError(null)
+    flow.startLoading()
 
     try {
       const fd = new FormData()
@@ -71,12 +67,12 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
       const json = await res.json()
 
       if (!res.ok) {
-        setError(json.error ?? t.receiptUpload.parseError)
+        flow.setError(json.error ?? t.receiptUpload.parseError)
         return
       }
 
       if (!json.transactions?.length) {
-        setError(t.receiptUpload.noTransactions)
+        flow.setError(t.receiptUpload.noTransactions)
         return
       }
 
@@ -87,15 +83,15 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
 
       setParsed(json.transactions as ParsedTransaction[])
     } catch {
-      setError(t.receiptUpload.somethingWrong)
+      flow.setError(t.receiptUpload.somethingWrong)
     } finally {
-      setIsParsing(false)
+      flow.stopLoading()
     }
   }
 
   const handleImport = async () => {
     if (!parsed) return
-    setIsImporting(true)
+    flow.startLoading()
     try {
       const res = await fetch('/api/transactions', {
         method: 'POST',
@@ -114,11 +110,11 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
 
       posthog.capture('receipt_imported', { transaction_count: parsed.length })
 
-      setImported(true)
+      flow.markImported()
     } catch {
-      setError(t.receiptUpload.importFailed)
+      flow.setError(t.receiptUpload.importFailed)
     } finally {
-      setIsImporting(false)
+      flow.stopLoading()
     }
   }
 
@@ -126,22 +122,17 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
     if (preview?.objectUrl) URL.revokeObjectURL(preview.objectUrl)
     setPreview(null)
     setParsed(null)
-    setError(null)
-    setImported(false)
+    flow.reset()
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  if (imported) {
+  if (flow.imported) {
     return (
-      <div className="card text-center space-y-3">
-        <p className="text-2xl">✓</p>
-        <p className="font-semibold text-truffle-text">
-          {t.receiptUpload.imported(parsed?.length ?? 0)}
-        </p>
-        <button onClick={onClose} className="btn-primary w-full">
-          {t.receiptUpload.done}
-        </button>
-      </div>
+      <ImportSuccess
+        message={t.receiptUpload.imported(parsed?.length ?? 0)}
+        doneLabel={t.receiptUpload.done}
+        onDone={onClose}
+      />
     )
   }
 
@@ -153,9 +144,10 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
       </div>
 
       {!preview && (
-        <div
+        <button
+          type="button"
           onClick={() => fileRef.current?.click()}
-          className="border-2 border-dashed border-truffle-border rounded-xl py-8 flex flex-col items-center gap-2 cursor-pointer hover:border-truffle-amber transition-colors"
+          className="w-full border-2 border-dashed border-truffle-border rounded-xl py-8 flex flex-col items-center gap-2 cursor-pointer hover:border-truffle-amber transition-colors"
         >
           <span className="text-2xl">🧾</span>
           <p className="text-sm text-truffle-muted">{t.receiptUpload.tapToSelect}</p>
@@ -167,7 +159,7 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
             className="hidden"
             onChange={handleFile}
           />
-        </div>
+        </button>
       )}
 
       {preview && !parsed && (
@@ -177,6 +169,8 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
             <img
               src={preview.objectUrl}
               alt="Receipt preview"
+              width={400}
+              height={192}
               className="w-full max-h-48 object-contain rounded-lg border border-truffle-border"
             />
           ) : (
@@ -192,10 +186,10 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
             </button>
             <button
               onClick={handleParse}
-              disabled={isParsing}
+              disabled={flow.isLoading}
               className="btn-primary flex-1 text-sm disabled:opacity-50"
             >
-              {isParsing ? t.receiptUpload.analysing : t.receiptUpload.extractTransactions}
+              {flow.isLoading ? t.receiptUpload.analysing : t.receiptUpload.extractTransactions}
             </button>
           </div>
         </div>
@@ -238,16 +232,16 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
             </button>
             <button
               onClick={handleImport}
-              disabled={isImporting}
+              disabled={flow.isLoading}
               className="btn-primary flex-1 text-sm disabled:opacity-50"
             >
-              {isImporting ? t.receiptUpload.importing : t.receiptUpload.import(parsed.length)}
+              {flow.isLoading ? t.receiptUpload.importing : t.receiptUpload.import(parsed.length)}
             </button>
           </div>
         </div>
       )}
 
-      {error && <p className="text-sm text-truffle-red">{error}</p>}
+      {flow.error && <p className="text-sm text-truffle-red">{flow.error}</p>}
     </div>
   )
 }

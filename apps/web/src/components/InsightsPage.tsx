@@ -1,9 +1,9 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useCallback, useRef, useState } from 'react'
+import { useRef, type RefObject } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import type { Anomaly } from '@truffle/types'
+import type { Anomaly, Transaction } from '@truffle/types'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { detectSubscriptions } from '@/lib/subscriptions'
 import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
@@ -11,7 +11,7 @@ import { computeForecast } from '@/lib/forecast'
 import type { Forecast } from '@/lib/forecast'
 import { InsightsAccordionSection } from './InsightsAccordionSection'
 import { PageEnter, SkeletonPulse } from './PageMotion'
-import { SavingsGoals } from './SavingsGoals'
+import { SavingsGoalsEmbedded } from './SavingsGoals'
 import { SavingsHabits } from './SavingsHabits'
 import { SpendingHeatmap } from './SpendingHeatmap'
 import { MonthlyBudgets } from './MonthlyBudgets'
@@ -20,6 +20,7 @@ import { BottomNav } from './BottomNav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { SectionAddFormProvider, useSectionAddForm } from '@/contexts/SectionAddFormContext'
 import { toDateLocale } from '@/lib/date'
 
 interface InsightsPageProps {
@@ -29,12 +30,6 @@ interface InsightsPageProps {
 export function InsightsPage({ userId }: InsightsPageProps) {
   const { t, locale } = useLanguage()
   const mainRef = useRef<HTMLElement>(null)
-  const [addGoalOpen, setAddGoalOpen] = useState(false)
-  const [addBudgetOpen, setAddBudgetOpen] = useState(false)
-
-  const handleSavingsGoalsLeaveViewport = useCallback(() => {
-    setAddGoalOpen(false)
-  }, [])
 
   const { data: txData, isLoading: txLoading } = useTransactionsQuery(userId)
 
@@ -89,52 +84,18 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               )}
             </InsightsAccordionSection>
 
-            <InsightsAccordionSection
-              title={t.insights.monthlyBudgets}
-              scrollRootRef={mainRef}
-              headerRight={
-                <button
-                  type="button"
-                  onClick={() => setAddBudgetOpen((v) => !v)}
-                  className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-                >
-                  {addBudgetOpen ? t.savingsGoals.cancel : t.insights.newBudget}
-                </button>
-              }
-            >
-              {isLoading ? (
-                <SkeletonPulse className="card h-24" />
-              ) : (
-                <MonthlyBudgets
-                  userId={userId}
-                  transactions={txData?.transactions ?? []}
-                  addBudgetOpen={addBudgetOpen}
-                  onAddBudgetOpenChange={setAddBudgetOpen}
-                />
-              )}
-            </InsightsAccordionSection>
-
-            <InsightsAccordionSection
-              title={t.insights.savingsGoals}
-              scrollRootRef={mainRef}
-              onLeaveViewport={handleSavingsGoalsLeaveViewport}
-              headerRight={
-                <button
-                  type="button"
-                  onClick={() => setAddGoalOpen((v) => !v)}
-                  className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-                >
-                  {addGoalOpen ? t.savingsGoals.cancel : t.insights.newGoal}
-                </button>
-              }
-            >
-              <SavingsGoals
+            <SectionAddFormProvider>
+              <BudgetsSection
                 userId={userId}
-                embedded
-                addGoalOpen={addGoalOpen}
-                onAddGoalOpenChange={setAddGoalOpen}
+                transactions={txData?.transactions ?? []}
+                isLoading={isLoading}
+                mainRef={mainRef}
               />
-            </InsightsAccordionSection>
+            </SectionAddFormProvider>
+
+            <SectionAddFormProvider>
+              <GoalsSection userId={userId} mainRef={mainRef} />
+            </SectionAddFormProvider>
 
             <InsightsAccordionSection title={t.insights.savingHabits} scrollRootRef={mainRef}>
               <SavingsHabits userId={userId} />
@@ -207,6 +168,77 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
       <BottomNav active="insights" />
     </div>
+  )
+}
+
+/** Reads its own SectionAddFormProvider so the header's "add" toggle and the
+ * embedded MonthlyBudgets both share open/close state without InsightsPage
+ * threading it as controlled props. */
+function BudgetsSection({
+  userId,
+  transactions,
+  isLoading,
+  mainRef,
+}: {
+  userId: string
+  transactions: Transaction[]
+  isLoading: boolean
+  mainRef: RefObject<HTMLElement | null>
+}) {
+  const { t } = useLanguage()
+  const { open, setOpen } = useSectionAddForm()
+
+  return (
+    <InsightsAccordionSection
+      title={t.insights.monthlyBudgets}
+      scrollRootRef={mainRef}
+      headerRight={
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+        >
+          {open ? t.savingsGoals.cancel : t.insights.newBudget}
+        </button>
+      }
+    >
+      {isLoading ? (
+        <SkeletonPulse className="card h-24" />
+      ) : (
+        <MonthlyBudgets userId={userId} transactions={transactions} />
+      )}
+    </InsightsAccordionSection>
+  )
+}
+
+/** Same pattern as BudgetsSection, for the embedded savings-goals accordion section. */
+function GoalsSection({
+  userId,
+  mainRef,
+}: {
+  userId: string
+  mainRef: RefObject<HTMLElement | null>
+}) {
+  const { t } = useLanguage()
+  const { open, setOpen } = useSectionAddForm()
+
+  return (
+    <InsightsAccordionSection
+      title={t.insights.savingsGoals}
+      scrollRootRef={mainRef}
+      onLeaveViewport={() => setOpen(false)}
+      headerRight={
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+        >
+          {open ? t.savingsGoals.cancel : t.insights.newGoal}
+        </button>
+      }
+    >
+      <SavingsGoalsEmbedded userId={userId} />
+    </InsightsAccordionSection>
   )
 }
 

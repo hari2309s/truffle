@@ -11,6 +11,11 @@ import { useLanguage } from '@/contexts/LanguageContext'
 interface TopBarProps {
   subtitle?: string
   title?: string
+  /**
+   * @deprecated Compose `<TopBar.ThemeToggle />`, `<TopBar.Settings userId={...} />`
+   * and `<TopBar.SignOut />` as children instead, so callers can opt into just the
+   * controls they need. Kept for existing call sites — renders all three, unchanged.
+   */
   showControls?: boolean
   userId?: string
   children?: React.ReactNode
@@ -24,45 +29,59 @@ export function TopBar({
   children,
 }: TopBarProps) {
   const { t } = useLanguage()
-  const [showSettings, setShowSettings] = useState(false)
   const resolvedSubtitle = subtitle !== undefined ? subtitle : t.topBar.subtitle
 
   return (
-    <>
-      <header className="flex items-center gap-3 px-4 py-4 bg-truffle-surface border-b border-truffle-border flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
-          <div>
-            <p className="font-semibold text-truffle-text text-sm">{title}</p>
-            {resolvedSubtitle && <p className="text-xs text-truffle-muted">{resolvedSubtitle}</p>}
-          </div>
+    <header className="flex items-center gap-3 px-4 py-4 bg-truffle-surface border-b border-truffle-border flex-shrink-0">
+      <div className="flex items-center gap-2">
+        <Image src="/icons/truffle.png" alt="Truffle" width={28} height={28} priority />
+        <div>
+          <p className="font-semibold text-truffle-text text-sm">{title}</p>
+          {resolvedSubtitle && <p className="text-xs text-truffle-muted">{resolvedSubtitle}</p>}
         </div>
-        <div className="flex flex-1 items-center min-w-0">{children}</div>
-        {showControls && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <ThemeToggle className="hover:bg-truffle-card" />
-            {userId && (
-              <button
-                onClick={() => setShowSettings(true)}
-                aria-label={t.topBar.settingsLabel}
-                className="p-2 text-truffle-muted hover:text-truffle-text transition-colors rounded-lg hover:bg-truffle-card"
-              >
-                <GearIcon />
-              </button>
-            )}
-            <button onClick={signOut} className="btn-ghost text-xs hover:bg-truffle-card">
-              {t.topBar.signOut}
-            </button>
-          </div>
-        )}
-      </header>
+      </div>
+      <div className="flex flex-1 items-center justify-end gap-1 min-w-0">{children}</div>
+      {showControls && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <TopBar.ThemeToggle />
+          {userId && <TopBar.Settings userId={userId} />}
+          <TopBar.SignOut />
+        </div>
+      )}
+    </header>
+  )
+}
 
+TopBar.ThemeToggle = function TopBarThemeToggle() {
+  return <ThemeToggle className="hover:bg-truffle-card" />
+}
+
+TopBar.Settings = function TopBarSettings({ userId }: { userId: string }) {
+  const { t } = useLanguage()
+  const [showSettings, setShowSettings] = useState(false)
+
+  return (
+    <>
+      <button
+        onClick={() => setShowSettings(true)}
+        aria-label={t.topBar.settingsLabel}
+        className="p-2 text-truffle-muted hover:text-truffle-text transition-colors rounded-lg hover:bg-truffle-card"
+      >
+        <GearIcon />
+      </button>
       <AnimatePresence>
-        {showSettings && userId && (
-          <SettingsSheet userId={userId} onClose={() => setShowSettings(false)} />
-        )}
+        {showSettings && <SettingsSheet userId={userId} onClose={() => setShowSettings(false)} />}
       </AnimatePresence>
     </>
+  )
+}
+
+TopBar.SignOut = function TopBarSignOut() {
+  const { t } = useLanguage()
+  return (
+    <button onClick={signOut} className="btn-ghost text-xs hover:bg-truffle-card">
+      {t.topBar.signOut}
+    </button>
   )
 }
 

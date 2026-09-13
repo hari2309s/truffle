@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { memo, useState } from 'react'
+import { memo } from 'react'
 import { usePostHog } from 'posthog-js/react'
 import { truffleEase } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
@@ -11,6 +11,7 @@ import { CATEGORY_EMOJI } from '@/lib/categories'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
+import { useProposalCard } from './GoalProposalCard'
 
 export interface TransactionProposal {
   description: string
@@ -35,8 +36,6 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
   const { formatAmount, currency } = useCurrency()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
-  const [status, setStatus] = useState<'pending' | 'saving' | 'done' | 'declined'>('pending')
-  const [error, setError] = useState<string | null>(null)
 
   const isExpense = proposal.amount < 0
   const formattedAmount = `${isExpense ? '-' : '+'}${formatAmount(proposal.amount)}`
@@ -49,10 +48,10 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
     year: 'numeric',
   })
 
-  const handleYes = async () => {
-    setStatus('saving')
-    setError(null)
-    try {
+  const { status, error, handleYes, handleNo } = useProposalCard({
+    onResult,
+    errorMessage: t.proposals.transaction.error,
+    onConfirm: async () => {
       const res = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,18 +86,8 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
         role: 'assistant',
         content: `${emoji} ${proposal.description} logged — ${formattedAmount}`,
       })
-      setStatus('done')
-      onResult(true)
-    } catch {
-      setError(t.proposals.transaction.error)
-      setStatus('pending')
-    }
-  }
-
-  const handleNo = () => {
-    setStatus('declined')
-    onResult(false)
-  }
+    },
+  })
 
   // Return null on done/declined — ChatPage's inv.state === 'result' branch
   // renders the persistent confirmation, avoiding a double bubble.

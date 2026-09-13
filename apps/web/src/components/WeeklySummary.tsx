@@ -103,6 +103,7 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
         </div>
         <button
           onClick={() => setVisible(false)}
+          aria-label={t.weeklySummary.dismiss}
           className="text-truffle-muted hover:text-truffle-text transition-colors flex-shrink-0 text-xs mt-0.5"
         >
           ✕

@@ -4,7 +4,9 @@ import { useState, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Transaction } from '@truffle/types'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { CATEGORY_EMOJI } from '@/lib/categories'
+import { toDateLocale } from '@/lib/date'
 
 interface Props {
   transactions: Transaction[]
@@ -33,6 +35,7 @@ const HEAT_CLASS: Record<0 | 1 | 2 | 3 | 4, string> = {
 
 export function SpendingHeatmap({ transactions }: Props) {
   const { formatAmount } = useCurrency()
+  const { locale } = useLanguage()
   const today = new Date()
   const todayStr = today.toISOString().slice(0, 10)
 
@@ -94,7 +97,7 @@ export function SpendingHeatmap({ transactions }: Props) {
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ]
 
-  const monthLabel = new Date(viewYear, viewMonth - 1).toLocaleString('default', {
+  const monthLabel = new Date(viewYear, viewMonth - 1).toLocaleString(toDateLocale(locale), {
     month: 'long',
     year: 'numeric',
   })
@@ -220,7 +223,7 @@ export function SpendingHeatmap({ transactions }: Props) {
               >
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-medium text-truffle-text">
-                    {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-GB', {
+                    {new Date(selectedDate + 'T12:00:00').toLocaleDateString(toDateLocale(locale), {
                       day: 'numeric',
                       month: 'long',
                     })}

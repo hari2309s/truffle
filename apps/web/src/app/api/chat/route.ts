@@ -110,6 +110,17 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Kick off model candidate selection immediately — it only depends on the
+    // constant task name ('tool-calling'), not on anything computed below, so
+    // it can run in parallel with the DB reads, intent routing, RAG retrieval,
+    // and prompt building instead of starting only after all of those finish.
+    // The result is awaited later, right where it's used. A no-op `.catch` is
+    // attached so a rejection here doesn't surface as an unhandled promise
+    // rejection if an earlier DB read fails first and we return before this
+    // is ever awaited — the real error still surfaces at the await below.
+    const candidatesPromise = selectModelCandidates('tool-calling')
+    candidatesPromise.catch(() => {})
+
     const db = createDbClient()
 
     const currentMonth = currentYearMonth()
@@ -235,16 +246,18 @@ export async function POST(request: NextRequest) {
         metadata: { month: currentMonth },
       })
 
-      // Route intent
+      // Route intent and run RAG retrieval concurrently — retrieval's query is
+      // derived only from the raw `message`, not from the routed intent, so
+      // there's no data dependency between the two and they don't need to be
+      // sequential.
       const intentSpan = trace.startObservation('routeIntent', { input: message })
-      let intent = await routeIntent(message)
-      intentSpan.update({ output: intent }).end()
-
-      // RAG retrieval — falls back to latest 25 if ChromaDB is unavailable
       const embeddingQuery = message.slice(0, 500)
-      const relevantTransactions = await queryTransactions(userId, embeddingQuery, 100).catch(
-        () => transactions
-      )
+      const [routedIntent, relevantTransactions] = await Promise.all([
+        routeIntent(message),
+        queryTransactions(userId, embeddingQuery, 100).catch(() => transactions),
+      ])
+      let intent = routedIntent
+      intentSpan.update({ output: intent }).end()
       const filteredRelevant = dateRange.explicit
         ? relevantTransactions.filter(
             (tx) => tx.date.slice(0, 7) >= dateRange.from && tx.date.slice(0, 7) <= dateRange.to
@@ -410,7 +423,7 @@ export async function POST(request: NextRequest) {
         }),
       }
 
-      const candidates = await selectModelCandidates('tool-calling')
+      const candidates = await candidatesPromise
 
       // Drop assistant messages that had only tool calls (empty content after stripping
       // toolInvocations). These are meaningless in history and some providers reject

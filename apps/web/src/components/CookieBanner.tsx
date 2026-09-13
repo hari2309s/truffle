@@ -29,7 +29,7 @@ export function CookieBanner() {
   }
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 p-4 flex justify-center pointer-events-none">
+    <div className="safe-bottom fixed bottom-0 inset-x-0 z-50 p-4 flex justify-center pointer-events-none">
       <div className="w-full max-w-lg bg-truffle-surface border border-truffle-border rounded-2xl shadow-lg px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3 pointer-events-auto">
         <p className="flex-1 text-xs text-truffle-muted leading-relaxed">
           {t.cookieBanner.message}{' '}

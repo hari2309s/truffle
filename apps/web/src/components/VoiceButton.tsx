@@ -2,62 +2,71 @@
 
 import { useCallback } from 'react'
 
+export type VoiceButtonStatus = 'idle' | 'recording' | 'transcribing' | 'speaking'
+
 interface VoiceButtonProps {
-  isRecording: boolean
-  isTranscribing: boolean
-  isSpeaking: boolean
+  status: VoiceButtonStatus
   onStart: () => void
   onStop: () => void
 }
 
-export function VoiceButton({
-  isRecording,
-  isTranscribing,
-  isSpeaking,
-  onStart,
-  onStop,
-}: VoiceButtonProps) {
-  const handlePointerDown = useCallback(() => {
+export function VoiceButton({ status, onStart, onStop }: VoiceButtonProps) {
+  const isRecording = status === 'recording'
+  const isTranscribing = status === 'transcribing'
+
+  const start = useCallback(() => {
     if (!isRecording && !isTranscribing) {
       onStart()
     }
   }, [isRecording, isTranscribing, onStart])
 
-  const handlePointerUp = useCallback(() => {
+  const stop = useCallback(() => {
     if (isRecording) {
       onStop()
     }
   }, [isRecording, onStop])
 
-  const getState = () => {
-    if (isRecording) return 'recording'
-    if (isTranscribing) return 'transcribing'
-    if (isSpeaking) return 'speaking'
-    return 'idle'
-  }
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (e.key !== ' ' && e.key !== 'Enter') return
+      e.preventDefault()
+      if (e.repeat) return
+      start()
+    },
+    [start]
+  )
 
-  const state = getState()
+  const handleKeyUp = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (e.key !== ' ' && e.key !== 'Enter') return
+      e.preventDefault()
+      stop()
+    },
+    [stop]
+  )
 
   const buttonClasses = {
     idle: 'bg-truffle-amber hover:bg-truffle-amber-light shadow-lg shadow-truffle-amber/20',
     recording: 'bg-red-500 shadow-lg shadow-red-500/40 scale-110 animate-pulse',
     transcribing: 'bg-truffle-muted shadow-none cursor-wait',
     speaking: 'bg-truffle-green shadow-lg shadow-truffle-green/30 animate-pulse-slow',
-  }[state]
+  }[status]
 
   const label = {
     idle: 'Hold to speak',
-    recording: 'Listening...',
-    transcribing: 'Thinking...',
-    speaking: 'Speaking...',
-  }[state]
+    recording: 'Listening…',
+    transcribing: 'Thinking…',
+    speaking: 'Speaking…',
+  }[status]
 
   return (
     <div className="flex flex-col items-center gap-3 select-none">
       <button
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerDown={start}
+        onPointerUp={stop}
+        onPointerLeave={stop}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
         className={`w-14 h-14 rounded-full transition-all duration-200 flex items-center justify-center touch-none ${buttonClasses}`}
         aria-label={label}
         disabled={isTranscribing}

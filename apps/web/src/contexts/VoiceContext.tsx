@@ -1,7 +1,8 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
+import { usePersistedPreference } from '@/hooks/usePersistedPreference'
 import { DEFAULT_VOICE_ID, normalizeVoiceId, type VoiceId } from '@/lib/voices'
 
 const STORAGE_KEY = 'truffle-voice'
@@ -17,45 +18,21 @@ const VoiceContext = createContext<VoiceContextValue>({
 })
 
 export function VoiceProvider({ children }: { children: React.ReactNode }) {
-  const [voiceId, setVoiceIdState] = useState<VoiceId>(DEFAULT_VOICE_ID)
+  const [voiceId, setVoiceId] = usePersistedPreference<VoiceId>({
+    storageKey: STORAGE_KEY,
+    defaultValue: DEFAULT_VOICE_ID,
+    metadataField: 'voice',
+    normalize: (raw) => normalizeVoiceId(raw),
+    // Self-heal a retired persona id (e.g. a voice that was later removed)
+    // so future sessions don't need to remap it again.
+    onRemoteNormalize: (normalized) => {
+      supabase.auth.updateUser({ data: { voice: normalized } }).catch(() => {})
+    },
+  })
 
-  useEffect(() => {
-    try {
-      const stored = normalizeVoiceId(localStorage.getItem(STORAGE_KEY))
-      if (stored) setVoiceIdState(stored)
-    } catch {
-      // localStorage unavailable — fall back to the default
-    }
-    // user_metadata.voice wins if the account has a saved preference.
-    supabase.auth.getSession().then(({ data }) => {
-      const raw = data.session?.user?.user_metadata?.voice
-      const normalized = normalizeVoiceId(raw)
-      if (normalized) {
-        setVoiceIdState(normalized)
-        try {
-          localStorage.setItem(STORAGE_KEY, normalized)
-        } catch {
-          /* ignore */
-        }
-        // Self-heal a retired persona id (e.g. a voice that was later
-        // removed) so future sessions don't need to remap it again.
-        if (normalized !== raw) {
-          supabase.auth.updateUser({ data: { voice: normalized } }).catch(() => {})
-        }
-      }
-    })
-  }, [])
+  const value = useMemo(() => ({ voiceId, setVoiceId }), [voiceId, setVoiceId])
 
-  const setVoiceId = (next: VoiceId) => {
-    setVoiceIdState(next)
-    try {
-      localStorage.setItem(STORAGE_KEY, next)
-    } catch {
-      /* ignore */
-    }
-  }
-
-  return <VoiceContext.Provider value={{ voiceId, setVoiceId }}>{children}</VoiceContext.Provider>
+  return <VoiceContext.Provider value={value}>{children}</VoiceContext.Provider>
 }
 
 export function useVoicePreference() {

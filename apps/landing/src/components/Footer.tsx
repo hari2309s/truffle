@@ -99,6 +99,9 @@ export default function Footer() {
               to   { stroke-dashoffset: 0; }
             }
             .footer-glow-text { animation: truffle-dash 12s linear infinite; }
+            @media (prefers-reduced-motion: reduce) {
+              .footer-glow-text { animation: none; }
+            }
 
             .footer-ghost { stroke: rgba(232,168,78,0.35); }
             .footer-glow-text { stroke: rgba(232,168,78,1); }

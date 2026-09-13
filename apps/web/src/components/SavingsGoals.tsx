@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { SkeletonPulse } from './PageMotion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePostHog } from 'posthog-js/react'
 import type { SavingsGoal } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { useSectionAddForm } from '@/contexts/SectionAddFormContext'
 
 const GOAL_EMOJIS = ['🎯', '✈️', '🏠', '🚗', '💻', '🎓', '💍', '🏖️', '🎸', '📱', '🏋️', '🌍']
 
@@ -23,31 +25,20 @@ function mapGoal(row: Record<string, unknown>): SavingsGoal {
   }
 }
 
-interface SavingsGoalsProps {
+interface SavingsGoalsBodyProps {
   userId: string
-  embedded?: boolean
-  addGoalOpen?: boolean
-  onAddGoalOpenChange?: (open: boolean) => void
+  showAdd: boolean
+  onShowAddChange: (open: boolean) => void
 }
 
-export function SavingsGoals({
-  userId,
-  embedded = false,
-  addGoalOpen,
-  onAddGoalOpenChange,
-}: SavingsGoalsProps) {
+/** Shared content — fetches goals, renders the add form and goal list. No section wrapper or header. */
+function SavingsGoalsBody({ userId, showAdd, onShowAddChange }: SavingsGoalsBodyProps) {
   const { t } = useLanguage()
   const { currency } = useCurrency()
   const queryClient = useQueryClient()
-  const [internalShowAdd, setInternalShowAdd] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [fundsError, setFundsError] = useState<string | null>(null)
-
-  const showAdd = embedded ? Boolean(addGoalOpen) : internalShowAdd
-  const setShowAdd = (open: boolean) => {
-    if (embedded) onAddGoalOpenChange?.(open)
-    else setInternalShowAdd(open)
-  }
 
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals', userId],
@@ -95,31 +86,17 @@ export function SavingsGoals({
       await queryClient.invalidateQueries({ queryKey: ['goals', userId] })
     } finally {
       setDeletingId(null)
+      setConfirmDeleteId(null)
     }
   }
 
-  const body = (
+  return (
     <>
-      {!embedded && (
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide">
-            {t.savingsGoals.title}
-          </h2>
-          <button
-            type="button"
-            onClick={() => setShowAdd(!showAdd)}
-            className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-          >
-            {showAdd ? t.savingsGoals.cancel : t.savingsGoals.newGoal}
-          </button>
-        </div>
-      )}
-
       {showAdd && (
         <AddGoalForm
           userId={userId}
           onDone={() => {
-            setShowAdd(false)
+            onShowAddChange(false)
             queryClient.invalidateQueries({ queryKey: ['goals', userId] })
           }}
         />
@@ -146,14 +123,54 @@ export function SavingsGoals({
               onAddFunds={(amount) => handleAddFunds(goal.id, goal.savedAmount, amount)}
               onDelete={() => handleDelete(goal.id)}
               isDeleting={deletingId === goal.id}
+              isConfirmingDelete={confirmDeleteId === goal.id}
+              onRequestDelete={() => setConfirmDeleteId(goal.id)}
+              onCancelDelete={() => setConfirmDeleteId(null)}
             />
           ))}
         </div>
       )}
     </>
   )
+}
 
-  return embedded ? body : <section>{body}</section>
+interface SavingsGoalsProps {
+  userId: string
+}
+
+/** Standalone savings goals section: owns its own open/close state and renders its own header + wrapper. */
+export function SavingsGoals({ userId }: SavingsGoalsProps) {
+  const { t } = useLanguage()
+  const [showAdd, setShowAdd] = useState(false)
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide">
+          {t.savingsGoals.title}
+        </h2>
+        <button
+          type="button"
+          onClick={() => setShowAdd(!showAdd)}
+          className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+        >
+          {showAdd ? t.savingsGoals.cancel : t.savingsGoals.newGoal}
+        </button>
+      </div>
+
+      <SavingsGoalsBody userId={userId} showAdd={showAdd} onShowAddChange={setShowAdd} />
+    </section>
+  )
+}
+
+/**
+ * Variant for embedding inline inside an `InsightsAccordionSection`: no wrapper, no header —
+ * the section owns the header/toggle button itself. Open/close state comes from the
+ * `SectionAddFormProvider` the accordion section is wrapped in, rather than controlled props.
+ */
+export function SavingsGoalsEmbedded({ userId }: SavingsGoalsProps) {
+  const { open, setOpen } = useSectionAddForm()
+  return <SavingsGoalsBody userId={userId} showAdd={open} onShowAddChange={setOpen} />
 }
 
 function GoalCard({
@@ -161,11 +178,17 @@ function GoalCard({
   onAddFunds,
   onDelete,
   isDeleting,
+  isConfirmingDelete,
+  onRequestDelete,
+  onCancelDelete,
 }: {
   goal: SavingsGoal
   onAddFunds: (amount: number) => void
   onDelete: () => void
   isDeleting: boolean
+  isConfirmingDelete: boolean
+  onRequestDelete: () => void
+  onCancelDelete: () => void
 }) {
   const { t } = useLanguage()
   const { formatAmount, symbol } = useCurrency()
@@ -200,8 +223,9 @@ function GoalCard({
           <span className="text-xs text-truffle-green font-medium">{t.savingsGoals.complete}</span>
         ) : (
           <button
-            onClick={onDelete}
-            className="text-truffle-muted hover:text-truffle-red transition-colors text-xs"
+            onClick={() => (isConfirmingDelete ? onCancelDelete() : onRequestDelete())}
+            aria-label={t.savingsGoals.deleteGoal}
+            className={`text-xs transition-colors ${isConfirmingDelete ? 'text-truffle-red' : 'text-truffle-muted hover:text-truffle-red'}`}
           >
             ✕
           </button>
@@ -215,13 +239,43 @@ function GoalCard({
         />
       </div>
 
+      <AnimatePresence>
+        {isConfirmingDelete && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="flex items-center justify-between px-4 py-2 bg-truffle-surface rounded-xl border border-truffle-border">
+              <p className="text-xs text-truffle-muted">{t.savingsGoals.deleteConfirm}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={onCancelDelete}
+                  className="text-xs text-truffle-muted hover:text-truffle-text transition-colors px-2 py-1"
+                >
+                  {t.savingsGoals.cancel}
+                </button>
+                <button
+                  onClick={onDelete}
+                  className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors px-2 py-1"
+                >
+                  {t.transactions.delete}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {!done && (
         <>
           {showDeposit ? (
             <div className="flex gap-2">
               <input
                 type="number"
-                placeholder={`${symbol}0 — ${formatAmount(remaining)} ${t.savingsGoals.deadlinePassed}`}
+                placeholder={`${symbol}0 — ${t.savingsGoals.remaining(formatAmount(remaining))}`}
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 min="0"

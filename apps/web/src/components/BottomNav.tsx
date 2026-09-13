@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -11,29 +11,39 @@ interface BottomNavProps {
   active: Tab
 }
 
+async function fetchUnreadCount(): Promise<number> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  if (!session) return 0
+
+  const { count } = await supabase
+    .from('chat_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', session.user.id)
+    .eq('is_proactive', true)
+    .is('read_at', null)
+
+  return count ?? 0
+}
+
 export function BottomNav({ active }: BottomNavProps) {
   const { t } = useLanguage()
-  const [unreadCount, setUnreadCount] = useState(0)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return
-      supabase
-        .from('chat_messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', session.user.id)
-        .eq('is_proactive', true)
-        .is('read_at', null)
-        .then(({ count }) => setUnreadCount(count ?? 0))
-    })
-  }, [])
+  // Shared TanStack Query cache: BottomNav is mounted independently by
+  // Dashboard, ChatPage and InsightsPage, so without a shared cache each
+  // mount would refire both the session lookup and the count query on
+  // every navigation.
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['chat-unread-count'],
+    queryFn: fetchUnreadCount,
+  })
 
   const base = 'flex-1 flex flex-col items-center py-3 gap-1 transition-colors'
   const activeClass = 'text-truffle-amber'
   const inactiveClass = 'text-truffle-muted hover:text-truffle-text'
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg border-t border-truffle-border bg-truffle-bg/95 backdrop-blur-sm">
+    <nav className="safe-bottom fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg border-t border-truffle-border bg-truffle-bg/95 backdrop-blur-sm">
       <div className="flex">
         <Link href="/" className={`${base} ${active === 'home' ? activeClass : inactiveClass}`}>
           <HomeIcon />

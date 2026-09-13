@@ -33,8 +33,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-zoom is left at the browser default (no maximumScale/userScalable
+  // lock) — locking it out blocks low-vision users from zooming the page.
   // A single tag (not a media-query pair) — the in-app theme toggle can
   // diverge from the OS color scheme. This is only the pre-JS fallback
   // (matches --t-surface's dark value in globals.css, the default theme);

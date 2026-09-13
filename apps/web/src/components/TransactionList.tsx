@@ -367,14 +367,14 @@ export function TransactionList({ userId }: TransactionListProps) {
                           setEditingId(tx.id)
                           setConfirmDeleteId(null)
                         }}
-                        aria-label="Edit"
+                        aria-label={t.transactions.edit}
                         className="p-1.5 rounded-lg text-truffle-muted hover:text-truffle-text hover:bg-truffle-surface transition-colors"
                       >
                         <PencilIcon />
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(isConfirmingDelete ? null : tx.id)}
-                        aria-label="Delete"
+                        aria-label={t.transactions.delete}
                         className={`p-1.5 rounded-lg transition-colors ${isConfirmingDelete ? 'text-red-400 bg-truffle-surface' : 'text-truffle-muted hover:text-red-400 hover:bg-truffle-surface'}`}
                       >
                         <TrashIcon />
