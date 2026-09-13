@@ -10,7 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
 export default function Nav() {
-  const { t, locale, setLocale } = useLanguage()
+  const { t } = useLanguage()
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function Nav() {
         {/* Actions */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <LanguageDropdown locale={locale} setLocale={setLocale} />
+          <LanguageDropdown />
           <a
             href={APP_URL}
             className="hidden sm:block text-sm font-medium text-truffle-text-secondary hover:text-truffle-text transition-colors px-3 py-2"

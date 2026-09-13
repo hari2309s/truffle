@@ -46,6 +46,9 @@ importers:
 
   apps/landing:
     dependencies:
+      '@truffle/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -110,6 +113,9 @@ importers:
       '@truffle/types':
         specifier: workspace:*
         version: link:../../packages/types
+      '@truffle/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       ai:
         specifier: ^5.0.0
         version: 5.0.251(zod@3.25.76)
@@ -239,6 +245,19 @@ importers:
 
   packages/types:
     devDependencies:
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+
+  packages/ui:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.3.0
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.3.0
       typescript:
         specifier: ^5.4.0
         version: 5.9.3

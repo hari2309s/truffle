@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@truffle/ui": "workspace:*",
     "framer-motion": "^12.38.0",
     "next": "^15.5.0",
     "react": "^19.0.0",

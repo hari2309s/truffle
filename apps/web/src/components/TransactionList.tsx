@@ -266,7 +266,7 @@ export function TransactionList({ userId }: TransactionListProps) {
 
   return (
     <div className="space-y-3">
-      <TransactionFilterPanel {...filters} />
+      <TransactionFilterPanel filters={filters} />
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-truffle-muted">

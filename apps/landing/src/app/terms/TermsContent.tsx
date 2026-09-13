@@ -1,13 +1,13 @@
-'use client'
-
 import LegalNav from '@/components/LegalNav'
-import { useLanguage } from '@/contexts/LanguageContext'
+import { translations } from '@/lib/i18n'
 
 const LAST_UPDATED = 'May 2025'
 const CONTACT_EMAIL = 'hello@truffle.finance'
 
+// Server Component — see PrivacyContent.tsx for why this is safe.
+const t = translations.en
+
 export default function TermsContent() {
-  const { t } = useLanguage()
   const s = t.legal.terms.sections
 
   return (

@@ -2,13 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { LOCALE_LABELS, type Locale } from '@/lib/i18n'
+import { useLanguage } from '@/contexts/LanguageContext'
 
-interface LanguageDropdownProps {
-  locale: Locale
-  setLocale: (locale: Locale) => void
-}
-
-export default function LanguageDropdown({ locale, setLocale }: LanguageDropdownProps) {
+/**
+ * Self-contained (reads locale/setLocale from context itself) so it can be
+ * dropped into a Server Component parent — Server Components can't pass
+ * closures like `setLocale` down as props to a child.
+ */
+export default function LanguageDropdown() {
+  const { locale, setLocale } = useLanguage()
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
 

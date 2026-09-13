@@ -1,13 +1,17 @@
-'use client'
-
 import LegalNav from '@/components/LegalNav'
-import { useLanguage } from '@/contexts/LanguageContext'
+import { translations } from '@/lib/i18n'
 
 const LAST_UPDATED = 'May 2025'
 const CONTACT_EMAIL = 'hello@truffle.finance'
 
+// Server Component — LegalNav is now purely static markup around two
+// self-contained client islands (ThemeToggle, LanguageDropdown), and the
+// rest of this page is static legal text, so nothing here forces a client
+// boundary. Reads the translation table directly since there's only one
+// supported locale today.
+const t = translations.en
+
 export default function PrivacyContent() {
-  const { t } = useLanguage()
   const s = t.legal.privacy.sections
 
   return (

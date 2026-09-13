@@ -71,6 +71,7 @@ export function ThemeToggle({ className }: ThemeToggleProps = {}) {
     <button
       onClick={handleClick}
       title={`Theme: ${LABELS[theme]} — click to cycle`}
+      aria-label={`Theme: ${LABELS[theme]} — click to cycle`}
       className={`btn-ghost flex items-center gap-1.5 text-xs px-2 py-2${className ? ` ${className}` : ''}`}
     >
       <span

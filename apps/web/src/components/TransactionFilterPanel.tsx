@@ -16,7 +16,7 @@ const pillIdle = 'bg-truffle-surface text-truffle-muted hover:text-truffle-text'
 
 const DATE_PRESET_KEYS: DatePreset[] = ['all', 'week', 'month', 'last_month', '3months']
 
-type Props = Pick<
+type PanelFilters = Pick<
   TransactionFilters,
   | 'search'
   | 'setSearch'
@@ -32,20 +32,25 @@ type Props = Pick<
   | 'activeFilterCount'
 >
 
-export function TransactionFilterPanel({
-  search,
-  setSearch,
-  typeFilter,
-  setTypeFilter,
-  datePreset,
-  setDatePreset,
-  activeCategories,
-  toggleCategory,
-  availableCategories,
-  filtersOpen,
-  setFiltersOpen,
-  activeFilterCount,
-}: Props) {
+interface Props {
+  filters: PanelFilters
+}
+
+export function TransactionFilterPanel({ filters }: Props) {
+  const {
+    search,
+    setSearch,
+    typeFilter,
+    setTypeFilter,
+    datePreset,
+    setDatePreset,
+    activeCategories,
+    toggleCategory,
+    availableCategories,
+    filtersOpen,
+    setFiltersOpen,
+    activeFilterCount,
+  } = filters
   const { t } = useLanguage()
   const panelId = useId()
 
