@@ -30,6 +30,10 @@ function applyTheme(theme: Theme) {
   root.classList.remove('dark', 'light')
   if (theme !== 'system') root.classList.add(theme)
   syncThemeColorMeta()
+  // Mirror to a cookie (readable server-side, unlike localStorage) so
+  // manifest.json's route handler can color the installed PWA's status bar
+  // to match instead of always shipping the dark-theme default.
+  document.cookie = `${STORAGE_KEY}=${theme}; path=/; max-age=31536000; samesite=lax`
 }
 
 export function useTheme() {

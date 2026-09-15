@@ -74,7 +74,10 @@ export function InsightsPage({ userId }: InsightsPageProps) {
           )}
         </div>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto px-4 py-6 pb-20 space-y-6 min-h-0">
+        <main
+          ref={mainRef}
+          className="flex-1 overflow-y-auto px-4 py-6 pb-[calc(5rem_+_env(safe-area-inset-bottom))] space-y-6 min-h-0"
+        >
           <ErrorBoundary>
             <InsightsAccordionSection title={t.insights.spendingCalendar} scrollRootRef={mainRef}>
               {isLoading ? (

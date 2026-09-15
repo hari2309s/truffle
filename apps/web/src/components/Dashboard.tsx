@@ -73,7 +73,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
 
           {/* Transactions — scroll naturally, last item clears the nav bar */}
           <ErrorBoundary>
-            <div className="px-4 pb-24">
+            <div className="px-4 pb-[calc(6rem_+_env(safe-area-inset-bottom))]">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-truffle-text">{t.dashboard.recent}</h2>
                 <div className="flex items-center gap-3">

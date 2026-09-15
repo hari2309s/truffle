@@ -173,7 +173,7 @@ export function ChatPage({ userId, name, initialMessages }: ChatPageProps) {
 
       {/* Messages */}
       <ErrorBoundary>
-        <main className="flex-1 overflow-y-auto px-4 py-4 pb-72">
+        <main className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(18rem_+_env(safe-area-inset-bottom))]">
           {chat.messages.length === 0 && (
             <div className="text-center py-12 space-y-3">
               <motion.p
