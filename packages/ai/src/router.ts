@@ -123,7 +123,7 @@ export interface RouterGenerateOptions {
 export async function routedGenerateText(
   task: TaskType,
   options: RouterGenerateOptions,
-  meta?: { expectedIntent?: string; traceId?: string }
+  meta?: { traceId?: string }
 ): Promise<{ text: string; usage: { promptTokens: number; completionTokens: number } }> {
   let usage: Record<string, number> = {}
   try {
@@ -163,7 +163,6 @@ export async function routedGenerateText(
           latencyMs,
           tokensUsed: promptTokens + completionTokens,
           traceId: meta?.traceId,
-          expectedIntent: meta?.expectedIntent,
         }),
       ]).catch((e) => console.error('[LLMRouter] eval log error:', e))
 

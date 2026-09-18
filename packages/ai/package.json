@@ -7,6 +7,7 @@
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
     "eval": "tsx evals/run-golden.ts",
+    "eval:sync-dataset": "tsx evals/sync-dataset.ts",
     "eval:categorize": "tsx evals/categorize-eval.ts",
     "reembed": "tsx scripts/reembed-transactions.ts"
   },

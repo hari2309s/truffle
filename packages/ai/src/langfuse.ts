@@ -4,7 +4,9 @@ import { LangfuseClient } from '@langfuse/client'
 
 export const langfuseSpanProcessor = new LangfuseSpanProcessor()
 
-const otelSdk = new NodeSDK({
+// Exported (not just started) so short-lived processes — eval/experiment
+// scripts — can call otelSdk.shutdown() to flush pending spans before exit.
+export const otelSdk = new NodeSDK({
   spanProcessors: [langfuseSpanProcessor],
 })
 otelSdk.start()

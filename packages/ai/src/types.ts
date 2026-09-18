@@ -10,6 +10,4 @@ export interface EvalLogEntry {
   latencyMs: number
   tokensUsed: number
   traceId?: string
-  expectedIntent?: string
-  actualIntent?: string
 }

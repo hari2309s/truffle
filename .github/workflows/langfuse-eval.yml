@@ -1,0 +1,36 @@
+name: Langfuse eval gate
+
+# This repo pushes directly to main (no PR flow), so the gate runs on every
+# push and fails the job (red X) on regression rather than blocking a merge
+# that's already happened. See packages/ai/evals/gate.ts for the thresholds.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - uses: langfuse/experiment-action@b945f9bf921b24a4074306078f621cba729d173e # v1.0.10
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        with:
+          langfuse_public_key: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          langfuse_secret_key: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          experiment_path: packages/ai/evals/gate.ts
+          dataset_name: agent-golden
+          should_comment_on_pr: false
+          github_token: ${{ github.token }}

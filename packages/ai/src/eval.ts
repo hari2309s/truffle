@@ -18,8 +18,6 @@ export async function logEval(entry: EvalLogEntry): Promise<void> {
     latency_ms: entry.latencyMs,
     tokens_used: entry.tokensUsed,
     trace_id: entry.traceId ?? null,
-    expected_intent: entry.expectedIntent ?? null,
-    actual_intent: entry.actualIntent ?? null,
   })
 }
 

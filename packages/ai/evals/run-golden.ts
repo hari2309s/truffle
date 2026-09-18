@@ -1,139 +1,56 @@
 /**
- * Golden dataset eval script.
- * Run with: pnpm --filter @truffle/ai eval
+ * Runs the "agent-golden" Langfuse dataset as an experiment against the real
+ * router and agent functions, and prints per-item + aggregate scores.
  *
- * Requires env vars: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
- * GROQ_API_KEY (and any other provider keys you want tested).
+ * Requires the dataset to exist — run `pnpm eval:sync-dataset` first (or
+ * after editing evals/dataset-items.ts).
+ *
+ * Run with: pnpm --filter @truffle/ai eval
  */
 
-// Load .env.local from repo root before importing anything
 import { config } from 'dotenv'
 import { resolve } from 'path'
 config({ path: resolve(__dirname, '../../../.env.local') })
 
-import { routedGenerateText } from '../src/router'
-import type { TaskType } from '../src/types'
+import { runAgentItem } from './task'
+import {
+  intentExactMatch,
+  numericFaithfulness,
+  responseQualityJudge,
+  avgIntentAccuracy,
+  avgResponseQuality,
+  avgNumericFaithfulness,
+} from './evaluators'
 
-interface TestCase {
-  input: string
-  task: TaskType
-  expectedIntent: string
-}
-
-const GOLDEN_DATASET: TestCase[] = [
-  {
-    input: 'How much did I spend on food last month?',
-    task: 'fast-chat',
-    expectedIntent: 'spending_summary',
-  },
-  {
-    input: 'Can I afford a €200 jacket this month?',
-    task: 'reasoning',
-    expectedIntent: 'affordability_check',
-  },
-  {
-    input: "What's my biggest expense category?",
-    task: 'fast-chat',
-    expectedIntent: 'spending_summary',
-  },
-  {
-    input: 'Am I on track to hit my savings goal?',
-    task: 'reasoning',
-    expectedIntent: 'savings_goal_check',
-  },
-  {
-    input: 'Did I spend more on dining out than last month?',
-    task: 'reasoning',
-    expectedIntent: 'anomaly_review',
-  },
-  {
-    input: 'What will my balance be at end of month?',
-    task: 'reasoning',
-    expectedIntent: 'forecast_request',
-  },
-  {
-    input: 'Show me my transport spending',
-    task: 'fast-chat',
-    expectedIntent: 'category_breakdown',
-  },
-  {
-    input: 'Set up a €200 monthly saving habit',
-    task: 'fast-chat',
-    expectedIntent: 'habit_setting',
-  },
-  { input: 'Log a €45 grocery shop at Lidl', task: 'fast-chat', expectedIntent: 'add_transaction' },
-  {
-    input: 'Create a savings goal for a new laptop for €1200',
-    task: 'reasoning',
-    expectedIntent: 'goal_setting',
-  },
-  {
-    input: 'How are my finances looking overall?',
-    task: 'fast-chat',
-    expectedIntent: 'spending_summary',
-  },
-  {
-    input: 'Any unusual spending this month?',
-    task: 'reasoning',
-    expectedIntent: 'anomaly_review',
-  },
-  {
-    input: 'When will I reach my emergency fund goal?',
-    task: 'reasoning',
-    expectedIntent: 'savings_goal_check',
-  },
-  {
-    input: 'How much have I spent on subscriptions?',
-    task: 'fast-chat',
-    expectedIntent: 'category_breakdown',
-  },
-  {
-    input: 'Can I afford a weekend trip to Berlin for €300?',
-    task: 'reasoning',
-    expectedIntent: 'affordability_check',
-  },
-]
+const DATASET_NAME = 'agent-golden'
 
 async function run() {
-  console.log(`\nRunning golden dataset eval (${GOLDEN_DATASET.length} cases)...\n`)
+  // Dynamic import: langfuse.ts constructs LangfuseClient/LangfuseSpanProcessor
+  // at module-load time, which read env vars eagerly — a static top-of-file
+  // import gets hoisted ahead of the dotenv config() call above and reads
+  // undefined keys. Deferring the import until after config() has run avoids
+  // that ordering trap.
+  const { langfuseClient, otelSdk } = await import('../src/langfuse')
 
-  let passed = 0
-  const results: Array<{ input: string; provider: string; ok: boolean }> = []
+  try {
+    const dataset = await langfuseClient.dataset.get(DATASET_NAME)
 
-  for (const tc of GOLDEN_DATASET) {
-    try {
-      const { text } = await routedGenerateText(
-        tc.task,
-        { prompt: tc.input, maxOutputTokens: 150 },
-        { expectedIntent: tc.expectedIntent }
-      )
+    const result = await dataset.runExperiment({
+      name: 'Local golden run',
+      description: 'Manual run via pnpm eval',
+      task: runAgentItem,
+      evaluators: [intentExactMatch, numericFaithfulness, responseQualityJudge],
+      runEvaluators: [avgIntentAccuracy, avgResponseQuality, avgNumericFaithfulness],
+      maxConcurrency: 2, // free-tier Gemini quota is 5 req/min; keep bursts well under that
+    })
 
-      // We don't parse intent from the response — the judge scores quality instead.
-      // Mark as "passed" if the model returned a non-empty, non-error response.
-      const ok = text.trim().length > 10
-      if (ok) passed++
-
-      console.log(`${ok ? '✓' : '✗'} [${tc.task}] ${tc.input.slice(0, 60)}`)
-      if (!ok) console.log(`   ↳ Response was empty or too short: "${text.slice(0, 80)}"`)
-
-      results.push({ input: tc.input, provider: 'routed', ok })
-    } catch (e) {
-      console.log(`✗ [${tc.task}] ${tc.input.slice(0, 60)}`)
-      console.log(`   ↳ Error: ${e instanceof Error ? e.message : String(e)}`)
-      results.push({ input: tc.input, provider: 'routed', ok: false })
-    }
+    console.log(await result.format())
+  } finally {
+    await otelSdk.shutdown()
   }
-
-  console.log(`\nResult: ${passed}/${GOLDEN_DATASET.length} passed`)
-  console.log(`Score:  ${((passed / GOLDEN_DATASET.length) * 100).toFixed(1)}%`)
-  console.log(
-    '\nAll calls logged to eval_logs. Quality judging now runs via a Langfuse observation-level\n' +
-      'evaluator on production traffic (streamText/adviseHabit/adviseSavingsGoals/reviewAnomalies)\n' +
-      '— this smoke test itself is not traced, so its calls are not judged.\n'
-  )
 }
 
 run().catch((e) => {
   console.error('Fatal:', e)
-  process.exit(1)
+  process.exitCode = 1
 })

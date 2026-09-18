@@ -1,6 +1,7 @@
 import type { LangfuseSpan } from '@langfuse/tracing'
 import { routedGenerateText } from '../router'
 import { FORECASTER_PROMPT } from '../prompts/forecaster.prompt'
+import { computeMonthProjection } from './projection'
 import type { Transaction, MonthlySnapshot } from '@truffle/types'
 
 export async function forecastSpending(
@@ -9,17 +10,8 @@ export async function forecastSpending(
   snapshot: MonthlySnapshot,
   parentSpan?: LangfuseSpan
 ): Promise<string> {
-  const today = new Date()
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-  const daysElapsed = today.getDate()
-  const daysRemaining = daysInMonth - daysElapsed
-
-  const dailySpendRate =
-    daysElapsed > 0 && snapshot.totalExpenses < 0
-      ? Math.abs(snapshot.totalExpenses) / daysElapsed
-      : 0
-
-  const projectedBalance = snapshot.balance - dailySpendRate * daysRemaining
+  const { daysElapsed, daysRemaining, dailySpendRate, projectedBalance } =
+    computeMonthProjection(snapshot)
 
   const context = transactions
     .slice(0, 20)
