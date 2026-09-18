@@ -5,8 +5,9 @@
  * threshold.
  *
  * Thresholds below have margin under a real local baseline run (2026-09-18,
- * https://cloud.langfuse.com/project/cmnany0j100quad077rpanm7t/datasets/cmu6tsf0m00qiad0co2n1dvu9/runs/f803cc85-5b0f-4671-ba15-2a31020cecf4):
- *   avg_intent_accuracy: 0.733 (11/15 router cases)
+ * post numeric-regex + fixture-arithmetic fixes,
+ * https://cloud.langfuse.com/project/cmnany0j100quad077rpanm7t/datasets/cmu6tsf0m00qiad0co2n1dvu9/runs/a3f5d93c-61e3-4688-96fa-83b912ac1874):
+ *   avg_intent_accuracy: 0.667 (10/15 router cases)
  *   avg_response_quality: 3.333 (12 agent-response items, 1-5 LLM judge)
  *   avg_numeric_faithfulness: 0.875 (7/8 items with a numericCheck)
  * routeIntent()'s LLM-fallback path and the judge itself are both
@@ -28,7 +29,7 @@ import {
 import type { EvalItemInput, EvalItemMetadata } from './dataset-items'
 
 const THRESHOLDS = {
-  avg_intent_accuracy: 0.6, // baseline 0.733 (11/15) — allows ~2 more router misses
+  avg_intent_accuracy: 0.6, // baseline 0.667 (10/15) — allows ~1 more router miss
   avg_response_quality: 3.0, // baseline 3.333 — margin for judge variance
   avg_numeric_faithfulness: 0.75, // baseline 0.875 (7/8) — allows 1 flip before failing
 }

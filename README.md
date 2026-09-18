@@ -108,7 +108,7 @@ You speak → Groq Whisper transcribes → LangGraph routes your intent
 → Provider reasons over your actual transaction history
 → Response streams back (or a goal / transaction / habit proposal card appears via AI tool calling)
 → Web Speech API reads the answer aloud
-→ Every call is logged to eval_logs; nightly judge scores response quality
+→ Every call is traced to Langfuse; a live LLM-as-judge evaluator scores response quality on ingestion
 ```
 
 Your recent transactions are passed directly as context to the model on every query — including follow-up clarifications — grounding every answer in your real data, not generic advice.
@@ -132,7 +132,7 @@ Your recent transactions are passed directly as context to the model on every qu
 | LLM — tool calling | Groq `openai/gpt-oss-120b` → Gemini → Cerebras (in priority order) |
 | LLM — vision | Gemini `gemini-3.7-flash` → Groq `qwen/qwen3.6-27b` (in priority order) |
 | Embeddings | Gemini `gemini-embedding-2` (Google AI Studio, 768-dim) |
-| Eval layer | Supabase `eval_logs` table (usage/latency) + Langfuse LLM-as-judge evaluator (quality scoring) |
+| Eval layer | Langfuse Dataset + Experiments (CI-gated) + LLM-as-judge evaluator (quality scoring) — Supabase `eval_logs` for usage/latency only |
 | Database | Supabase (PostgreSQL + Auth + Storage) |
 | Observability | Langfuse (traces, generations, token usage) |
 | Analytics | PostHog (pageviews, event tracking) |
@@ -161,7 +161,11 @@ truffle/
     │       ├── eval.ts             # logEval() + incrementUsage()
     │       └── types.ts            # Provider · TaskType · EvalLogEntry
     │   └── evals/
-    │       └── run-golden.ts       # manual benchmark script
+    │       ├── dataset-items.ts    # source of truth for the "agent-golden" Langfuse dataset
+    │       ├── sync-dataset.ts     # upserts dataset-items.ts into Langfuse
+    │       ├── run-golden.ts       # local experiment run (pnpm eval)
+    │       ├── gate.ts             # CI entry point (langfuse/experiment-action)
+    │       └── evaluators.ts       # intent exact-match · numeric faithfulness · quality judge
     └── db/                         # Supabase client + schema
 ```
 
@@ -237,8 +241,10 @@ packages/db/src/migrations/007_monthly_budgets.sql     # monthly_budgets table +
 
 # LLM router + eval layer
 supabase/migrations/20260530000001_daily_llm_usage.sql # global per-provider daily request counters
-supabase/migrations/20260530000002_eval_logs.sql       # every LLM call logged with latency + quality score
+supabase/migrations/20260530000002_eval_logs.sql       # every LLM call logged with latency + tokens
 supabase/migrations/20260530000003_increment_llm_usage_rpc.sql  # atomic Postgres RPC (race-safe increment)
+supabase/migrations/20260530000004_eval_logs_trace_id.sql       # links eval_logs rows to their Langfuse trace
+supabase/migrations/20260918000001_eval_logs_drop_dead_columns.sql  # drops expected_intent/actual_intent/judge_score/flagged — never populated; Langfuse is the source of truth for scores now
 ```
 
 ### Run
@@ -344,27 +350,36 @@ raise `REEMBED_RPM` if billing is enabled. On interruption it prints a
 
 ## Eval layer
 
-Every LLM call — from agents, the chat route, and the golden eval script — writes a row to `eval_logs`:
+Every LLM call — from agents, the chat route, and the eval scripts — writes an operational row to `eval_logs` (provider, task, input/output, latency, tokens, Langfuse trace id). It's a usage/latency log only; scoring lives entirely in Langfuse.
 
-```
-provider · task · input · output · latency_ms · tokens_used · expected_intent · judge_score
-```
-
-`judge_score` is a legacy column from a nightly cron job (removed) that asked Groq to rate each response 1–5. Quality judging now runs inside Langfuse instead, as a server-side LLM-as-judge evaluator:
+**Production quality scoring** — a server-side LLM-as-judge evaluator, live on real traffic:
 
 - Evaluator `response-quality` (created via the Langfuse API) holds the 1–5 rubric prompt, running against a Google AI Studio connection (`gemini-3.7-flash`) configured as its explicit `modelConfig`.
-- Evaluation rule `response-quality-observations` — **enabled**, live on production traffic — triggers it on every ingested `generation` observation named `streamText`, `adviseHabit`, `adviseSavingsGoals`, or `reviewAnomalies` — i.e. the chat route's final reply and the three proactive-nudge agents that are actually wired into production. (`forecastSpending`, `analyseSpending`, and `checkAffordability` aren't currently invoked from any live code path — see `packages/ai/src/graph.ts` — so there's nothing for the rule to score there yet.)
-- Scores land as `response-quality` on the observation itself, visible in the Langfuse UI/API — no polling, no regex-parsed digit, no 24h lag.
+- Evaluation rule `response-quality-observations` — **enabled** — triggers it on every ingested `generation` observation named `streamText`, `adviseHabit`, `adviseSavingsGoals`, or `reviewAnomalies` — i.e. the chat route's final reply and the three proactive-nudge agents that are actually wired into production. (`forecastSpending`, `analyseSpending`, and `checkAffordability` are called only from `packages/ai/src/graph.ts`'s LangGraph pipeline, which nothing currently invokes — see `buildTruffleGraph()` — so there's nothing live for the rule to score there yet. The CI eval below still exercises them directly, independent of that dead code path.)
+- Scores land as `response-quality` on the observation itself, visible in the Langfuse UI/API — no polling, no regex-parsed digit, no lag.
 
 Both the evaluator and rule were provisioned via the Langfuse REST API (`/api/public/v2/evaluators`, `/api/public/v2/evaluation-rules`), not the UI — there's no in-repo script for this, so re-creating them elsewhere means replaying those calls by hand (or via the Langfuse UI, which covers the same config).
 
-**Manual golden dataset benchmark:**
+**Agent + router eval (Langfuse Dataset, CI-gated):**
+
+`packages/ai/evals/dataset-items.ts` is the git-diffable source of truth for a Langfuse Dataset, `agent-golden` — 15 router intent-classification cases plus 2 cases each for the 6 agents that call an LLM directly. Sync it after an edit:
+
+```bash
+pnpm --filter @truffle/ai eval:sync-dataset
+```
+
+Run it locally against the real agent functions:
 
 ```bash
 pnpm --filter @truffle/ai eval
 ```
 
-Runs 15 predefined queries through the router and logs all results to `eval_logs`. This script isn't Langfuse-traced, so its calls aren't picked up by the judge evaluator — it's a pass/fail smoke test only.
+Three evaluators score each item (`packages/ai/evals/evaluators.ts`):
+- **Intent exact-match** (deterministic) — router items only: does `routeIntent()` return the expected `QueryIntent`?
+- **Numeric faithfulness** (deterministic) — does the response cite the figure actually computed from the fixture (via `packages/ai/src/agents/projection.ts`, the same helper `forecaster.ts`/`affordabilityChecker.ts` use), catching a model doing its own wrong mental math instead of restating a number already in its prompt?
+- **Response-quality judge** (LLM-as-judge) — mirrors the production `response-quality` rubric above, so CI gets an immediate score instead of waiting on that evaluator's async pipeline.
+
+`.github/workflows/langfuse-eval.yml` runs this on every push to `main` (this repo has no PR flow) via [`langfuse/experiment-action`](https://github.com/langfuse/experiment-action) and fails the job if any aggregate drops below the threshold in `packages/ai/evals/gate.ts` — see `packages/ai/evals/README.md` for the current baseline numbers and how to re-baseline after a real prompt or model change.
 
 **Transaction categorization accuracy:**
 

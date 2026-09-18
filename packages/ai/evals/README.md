@@ -7,7 +7,13 @@ Two independent eval suites live here.
 - **Source of truth**: `dataset-items.ts` (git-diffable, reviewable) — 15 router
   intent-classification cases plus 2 cases each for the 6 agents that call an
   LLM directly (`affordabilityChecker`, `forecaster`, `spendingAnalyst`,
-  `savingsGoalAdvisor`, `habitAdvisor`, `anomalyReviewer`).
+  `savingsGoalAdvisor`, `habitAdvisor`, `anomalyReviewer`). Of these,
+  `savingsGoalAdvisor`, `habitAdvisor`, and `anomalyReviewer` are live in
+  production (via `proactive.ts`); `affordabilityChecker`, `forecaster`, and
+  `spendingAnalyst` are currently only reachable through `graph.ts`'s
+  `buildTruffleGraph()`, which nothing invokes — see the root README's Eval
+  layer section. This suite exercises them directly regardless, so their
+  coverage doesn't depend on that graph ever being wired up.
 - **Fixtures**: `fixtures.ts` — one synthetic "Hari" user (transactions,
   snapshot, goals, anomalies), reused across items so the dataset doesn't
   duplicate the same data 12 times.
