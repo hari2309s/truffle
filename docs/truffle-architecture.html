@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Truffle — Architecture</title>
+<style>
+  @page { size: A4 landscape; margin: 9mm 11mm 11mm 11mm; }
+
+  :root{
+    --ink:#1f2421;
+    --muted:#5b6660;
+    --line:#c8d2cc;
+    --bg:#ffffff;
+    --truffle:#6b4423;
+    --truffle-soft:#f3ebe3;
+    --client:#2f6f4f;
+    --client-soft:#e7f2ec;
+    --api:#1f6f8b;
+    --api-soft:#e3f0f4;
+    --ai:#7c3aed;
+    --ai-soft:#efe8fb;
+    --data:#b45309;
+    --data-soft:#fbefdd;
+    --ops:#475569;
+    --ops-soft:#eef1f5;
+    --llm:#c2410c;
+    --llm-soft:#fce9df;
+    --eval:#0f766e;
+    --eval-soft:#e1f3f0;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:"Inter","Helvetica Neue",Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    font-size:10px;
+    line-height:1.4;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  .page{
+    page-break-after:always;
+    position:relative;
+    padding-bottom:6mm;
+  }
+  .page:last-child{ page-break-after:auto; }
+
+  header.doc{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:2px solid var(--truffle);
+    padding-bottom:5px;
+    margin-bottom:9px;
+  }
+  header.doc h1{
+    font-size:19px;
+    margin:0;
+    letter-spacing:-0.01em;
+    color:var(--truffle);
+  }
+  header.doc .tag{ color:var(--muted); font-size:9.5px; }
+  header.doc .sub{ font-size:11px; color:var(--ink); font-weight:600; }
+
+  h2.section{
+    font-size:12px;
+    margin:11px 0 6px;
+    padding-left:8px;
+    border-left:4px solid var(--truffle);
+    color:var(--truffle);
+  }
+  h2.section:first-of-type{ margin-top:0; }
+
+  p.lead{ color:var(--muted); margin:0 0 8px; max-width:none; }
+
+  /* ---- layer cake ---- */
+  .layer{
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:7px 10px 8px;
+    margin-bottom:4px;
+    position:relative;
+  }
+  .layer > .label{
+    position:absolute;
+    top:-8px; left:12px;
+    background:var(--bg);
+    padding:0 6px;
+    font-size:8.5px;
+    font-weight:700;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+  }
+  .layer.client{ border-color:var(--client); background:var(--client-soft); }
+  .layer.client > .label{ color:var(--client); }
+  .layer.api{ border-color:var(--api); background:var(--api-soft); }
+  .layer.api > .label{ color:var(--api); }
+  .layer.ai{ border-color:var(--ai); background:var(--ai-soft); }
+  .layer.ai > .label{ color:var(--ai); }
+  .layer.data{ border-color:var(--data); background:var(--data-soft); }
+  .layer.data > .label{ color:var(--data); }
+  .layer.llm{ border-color:var(--llm); background:var(--llm-soft); }
+  .layer.llm > .label{ color:var(--llm); }
+  .layer.ops{ border-color:var(--ops); background:var(--ops-soft); }
+  .layer.ops > .label{ color:var(--ops); }
+  .layer.eval{ border-color:var(--eval); background:var(--eval-soft); }
+  .layer.eval > .label{ color:var(--eval); }
+
+  .row{ display:flex; gap:6px; flex-wrap:wrap; margin-top:2px; }
+  .row + .row{ margin-top:4px; }
+
+  .box{
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:5px 8px;
+    flex:1 1 0;
+    min-width:0;
+  }
+  .box .t{ font-weight:700; font-size:9.5px; display:block; }
+  .box .d{ color:var(--muted); font-size:8.5px; display:block; margin-top:1px; }
+  .box.mono .t{ font-family:"SF Mono",ui-monospace,Menlo,monospace; font-size:9px; }
+
+  .chips{ display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
+  .chip{
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:2px 8px;
+    font-size:8.5px;
+    white-space:nowrap;
+  }
+  .chip b{ font-weight:700; }
+
+  .flow-arrow{
+    text-align:center;
+    color:var(--truffle);
+    font-size:10px;
+    line-height:1;
+    margin:0;
+  }
+
+  .cols2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .cols3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+  table.grid{
+    width:100%;
+    border-collapse:collapse;
+    font-size:9px;
+    margin-top:4px;
+  }
+  table.grid th, table.grid td{
+    border:1px solid var(--line);
+    padding:3px 7px;
+    text-align:left;
+    vertical-align:top;
+  }
+  table.grid th{
+    background:var(--truffle-soft);
+    color:var(--truffle);
+    font-size:8.5px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  table.grid td.mono, table.grid code{
+    font-family:"SF Mono",ui-monospace,Menlo,monospace;
+    font-size:8.5px;
+  }
+
+  .legend{ display:flex; gap:12px; flex-wrap:wrap; font-size:8.5px; color:var(--muted); margin-top:6px; }
+  .legend .k{ display:inline-flex; align-items:center; gap:4px; }
+  .legend .sw{ width:10px; height:10px; border-radius:3px; display:inline-block; border:1px solid rgba(0,0,0,.15); }
+
+  footer.doc{
+    position:absolute;
+    bottom:0; left:0; right:0;
+    display:flex; justify-content:space-between;
+    font-size:8px; color:var(--muted);
+    border-top:1px solid var(--line);
+    padding-top:4px;
+  }
+
+  svg{ display:block; width:100%; height:auto; }
+  .card-note{ font-size:8.5px; color:var(--muted); margin-top:6px; }
+  ul.tight{ margin:4px 0 0; padding-left:16px; }
+  ul.tight li{ margin:1px 0; }
+
+  .pipeline{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; margin-top:3px; }
+  .pipeline .step{
+    background:var(--bg); border:1px solid var(--eval); color:var(--eval);
+    border-radius:5px; padding:3px 7px; font-size:8.3px; font-weight:600;
+    font-family:"SF Mono",ui-monospace,Menlo,monospace;
+  }
+  .pipeline .arrow{ color:var(--eval); font-size:10px; }
+</style>
+</head>
+<body>
+
+<!-- ================= PAGE 1 ================= -->
+<section class="page">
+  <header class="doc">
+    <div>
+      <h1>Truffle</h1>
+      <div class="tag">Your finances, unearthed — a voice-first personal finance assistant</div>
+    </div>
+    <div style="text-align:right">
+      <div class="sub">System Architecture</div>
+      <div class="tag">pnpm + Turborepo monorepo · Next.js 14 · deployed on Vercel</div>
+    </div>
+  </header>
+
+  <h2 class="section">System overview</h2>
+  <p class="lead">
+    A user speaks or types; Whisper transcribes; a LangGraph agent graph classifies intent and reasons over the
+    user's real transaction history; a task-aware multi-provider LLM router picks the best available free-tier model;
+    the answer streams back and is read aloud. Every LLM call is traced to Langfuse and metered in Postgres, and every
+    push to <code>main</code> re-runs the agent suite through a Langfuse-backed CI quality gate.
+  </p>
+
+  <div class="layer client">
+    <span class="label">Client — installable PWA (browser)</span>
+    <div class="row">
+      <div class="box"><span class="t">Home&nbsp;·&nbsp;/</span><span class="d">Dashboard, onboarding tour, CSV / receipt import, auth</span></div>
+      <div class="box"><span class="t">Chat&nbsp;·&nbsp;/chat</span><span class="d">Voice loop, streaming replies, proposal cards, proactive nudges</span></div>
+      <div class="box"><span class="t">Insights&nbsp;·&nbsp;/insights</span><span class="d">Goals, budgets, habits, heatmap, weekly &amp; monthly reports</span></div>
+    </div>
+    <div class="chips">
+      <span class="chip"><b>Next.js 14</b> App Router + RSC</span>
+      <span class="chip">Tailwind CSS</span>
+      <span class="chip">Framer Motion</span>
+      <span class="chip"><b>TanStack Query</b> server state</span>
+      <span class="chip">MediaRecorder → audio blob</span>
+      <span class="chip"><b>Web Speech API</b> — TTS playback</span>
+      <span class="chip">Supabase JS — auth session</span>
+      <span class="chip">next-pwa manifest / SW</span>
+      <span class="chip">PostHog browser SDK</span>
+    </div>
+    <div class="card-note">Hooks: <code>useFinancialChat</code>, <code>useVoiceRecorder</code>, <code>useTextToSpeech</code>, <code>useTransactionsQuery</code>, <code>useTheme</code></div>
+  </div>
+
+  <div class="flow-arrow">▼&nbsp;&nbsp;HTTPS · bearer session token&nbsp;&nbsp;▼</div>
+
+  <div class="layer api">
+    <span class="label">API — Next.js Route Handlers (Vercel serverless, node runtime)</span>
+    <div class="row">
+      <div class="box mono"><span class="t">/api/voice</span><span class="d">multipart audio → Groq Whisper large-v3 → transcript</span></div>
+      <div class="box mono"><span class="t">/api/chat</span><span class="d">streamed chat + AI tool-calling, RAG context, Langfuse trace</span></div>
+      <div class="box mono"><span class="t">/api/parse-receipt</span><span class="d">image / PDF → Gemini vision → extracted transactions</span></div>
+    </div>
+    <div class="row">
+      <div class="box mono"><span class="t">/api/transactions</span><span class="d">CRUD · anomaly detection · budget nudges</span></div>
+      <div class="box mono"><span class="t">/api/goals · /api/habits · /api/budgets</span><span class="d">CRUD · milestone / at-risk / streak nudges</span></div>
+      <div class="box mono"><span class="t">/api/insights</span><span class="d">snapshots · monthly AI report nudge</span></div>
+      <div class="box mono"><span class="t">/api/auth/demo</span><span class="d">mint one-time magic-link for demo account</span></div>
+      <div class="box mono"><span class="t">/api/chat/feedback · /api/account/delete</span><span class="d">score a reply · cascade data wipe</span></div>
+    </div>
+    <div class="card-note">Every handler calls <code>requireUser()</code> — validates the Supabase JWT before any work. Proactive nudges fire inline (fire-and-forget) after writes; no cron.</div>
+  </div>
+
+  <div class="flow-arrow">▼&nbsp;&nbsp;in-process import — <code>@truffle/ai</code>&nbsp;&nbsp;▼</div>
+
+  <div class="layer ai">
+    <span class="label">AI orchestration — packages/ai</span>
+    <div class="row">
+      <div class="box"><span class="t">LangGraph agent graph</span><span class="d"><code>graph.ts</code> — ragRetrieval → intentRouter → specialist agent → END</span></div>
+      <div class="box"><span class="t">Proactive graph</span><span class="d"><code>proactive.ts</code> — anomaly / habit / goal nudge branches</span></div>
+      <div class="box"><span class="t">LLM Router</span><span class="d"><code>router.ts</code> — task-aware provider selection, usage-gated fallback</span></div>
+    </div>
+    <div class="row">
+      <div class="box"><span class="t">Agents</span><span class="d">intentRouter · spendingAnalyst · forecaster · affordabilityChecker · anomalyReviewer · savingsGoalAdvisor · habitAdvisor · synthesizer</span></div>
+      <div class="box"><span class="t">Embeddings + vector store</span><span class="d"><code>embeddings.ts</code> Gemini <code>gemini-embedding-2</code> (768d) · <code>vectorStore.ts</code> → <code>match_transactions</code> RPC</span></div>
+    </div>
+    <div class="row">
+      <div class="box"><span class="t">Operational metering</span><span class="d"><code>eval.ts</code> — <code>logEval()</code>, <code>incrementUsage()</code>, <code>getGlobalUsage()</code> → <code>eval_logs</code> / <code>daily_llm_usage</code></span></div>
+      <div class="box"><span class="t">Tracing</span><span class="d"><code>langfuse.ts</code> — OTel span processor (Langfuse SDK v5), tone detection, prompt builders</span></div>
+      <div class="box"><span class="t">Agent eval suite</span><span class="d"><code>packages/ai/evals/</code> — Langfuse Dataset <code>agent-golden</code> + CI regression gate, see p.3</span></div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">▼</div>
+
+  <div class="cols2">
+    <div class="layer llm" style="margin:0">
+      <span class="label">LLM providers — free tier, router-selected</span>
+      <div class="chips" style="margin-top:2px">
+        <span class="chip"><b>Groq</b> · GPT-OSS 120B / 20B · Qwen 3.6 27B (vision) · Whisper large-v3</span>
+        <span class="chip"><b>Gemini</b> · 3.7 Flash · 3.5 Flash-Lite · embedding-2</span>
+        <span class="chip"><b>Cerebras</b> · gpt-oss-120b</span>
+        <span class="chip"><b>OpenRouter</b> · Llama 3.3 70B (free)</span>
+        <span class="chip"><b>Mistral</b> · mistral-small-latest</span>
+      </div>
+    </div>
+    <div class="layer data" style="margin:0">
+      <span class="label">Data &amp; platform</span>
+      <div class="chips" style="margin-top:2px">
+        <span class="chip"><b>Supabase</b> — Postgres + Auth + Storage</span>
+        <span class="chip"><b>pgvector</b> — HNSW cosine index</span>
+        <span class="chip"><b>Langfuse</b> — traces, generations, datasets, LLM-as-judge</span>
+        <span class="chip"><b>PostHog</b> — product analytics</span>
+        <span class="chip"><b>Vercel</b> — hosting / edge</span>
+        <span class="chip"><b>GitHub Actions</b> — CI + eval gate + nightly demo reset</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="k"><span class="sw" style="background:var(--client-soft);border-color:var(--client)"></span>Client</span>
+    <span class="k"><span class="sw" style="background:var(--api-soft);border-color:var(--api)"></span>API routes</span>
+    <span class="k"><span class="sw" style="background:var(--ai-soft);border-color:var(--ai)"></span>AI orchestration</span>
+    <span class="k"><span class="sw" style="background:var(--llm-soft);border-color:var(--llm)"></span>LLM providers</span>
+    <span class="k"><span class="sw" style="background:var(--data-soft);border-color:var(--data)"></span>Data &amp; platform</span>
+  </div>
+
+  <footer class="doc"><span>Truffle — System Architecture</span><span>Generated 2026-09-19 · main</span></footer>
+</section>
+
+<!-- ================= PAGE 2 ================= -->
+<section class="page">
+  <header class="doc">
+    <div><h1>Truffle</h1><div class="tag">Runtime flows</div></div>
+    <div style="text-align:right"><div class="sub">Request Lifecycle &amp; Agent Graph</div><div class="tag">voice question → spoken answer</div></div>
+  </header>
+
+  <h2 class="section">End-to-end voice request</h2>
+  <svg viewBox="0 0 1000 236" font-family="Inter,Helvetica,Arial,sans-serif">
+    <defs>
+      <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" fill="#6b4423"/>
+      </marker>
+    </defs>
+    <!-- lane guides -->
+    <text x="2" y="32" font-size="9.5" font-weight="700" fill="#2f6f4f">CLIENT</text>
+    <text x="2" y="112" font-size="9.5" font-weight="700" fill="#1f6f8b">API</text>
+    <text x="2" y="192" font-size="9.5" font-weight="700" fill="#7c3aed">AI / DATA</text>
+    <line x1="0" y1="48" x2="1000" y2="48" stroke="#e6ebe8"/>
+    <line x1="0" y1="128" x2="1000" y2="128" stroke="#e6ebe8"/>
+
+    <g font-size="9">
+      <rect x="60"  y="10"  width="128" height="32" rx="5" fill="#e7f2ec" stroke="#2f6f4f"/>
+      <text x="124" y="24" text-anchor="middle" font-weight="700">Hold-to-talk</text>
+      <text x="124" y="35" text-anchor="middle" fill="#5b6660">MediaRecorder blob</text>
+
+      <rect x="60"  y="90" width="128" height="32" rx="5" fill="#e3f0f4" stroke="#1f6f8b"/>
+      <text x="124" y="104" text-anchor="middle" font-weight="700">/api/voice</text>
+      <text x="124" y="115" text-anchor="middle" fill="#5b6660">auth + validate</text>
+
+      <rect x="255" y="170" width="140" height="32" rx="5" fill="#fce9df" stroke="#c2410c"/>
+      <text x="325" y="184" text-anchor="middle" font-weight="700">Groq Whisper</text>
+      <text x="325" y="195" text-anchor="middle" fill="#5b6660">large-v3 → transcript</text>
+
+      <rect x="255" y="90" width="140" height="32" rx="5" fill="#e3f0f4" stroke="#1f6f8b"/>
+      <text x="325" y="104" text-anchor="middle" font-weight="700">/api/chat</text>
+      <text x="325" y="115" text-anchor="middle" fill="#5b6660">load context · build prompt</text>
+
+      <rect x="455" y="160" width="128" height="24" rx="5" fill="#efe8fb" stroke="#7c3aed"/>
+      <text x="519" y="176" text-anchor="middle" font-weight="700">intentRouter</text>
+      <rect x="455" y="192" width="128" height="24" rx="5" fill="#efe8fb" stroke="#7c3aed"/>
+      <text x="519" y="208" text-anchor="middle" font-weight="700">RAG retrieval</text>
+
+      <rect x="635" y="160" width="140" height="24" rx="5" fill="#fbefdd" stroke="#b45309"/>
+      <text x="705" y="176" text-anchor="middle" font-weight="700">pgvector match</text>
+      <rect x="635" y="192" width="140" height="24" rx="5" fill="#efe8fb" stroke="#7c3aed"/>
+      <text x="705" y="208" text-anchor="middle" font-weight="700">LLM Router → model</text>
+
+      <rect x="635" y="90" width="140" height="32" rx="5" fill="#e3f0f4" stroke="#1f6f8b"/>
+      <text x="705" y="104" text-anchor="middle" font-weight="700">streamText</text>
+      <text x="705" y="115" text-anchor="middle" fill="#5b6660">tokens + tool calls</text>
+
+      <rect x="835" y="10" width="150" height="32" rx="5" fill="#e7f2ec" stroke="#2f6f4f"/>
+      <text x="910" y="24" text-anchor="middle" font-weight="700">Streamed reply</text>
+      <text x="910" y="35" text-anchor="middle" fill="#5b6660">+ proposal card</text>
+
+      <rect x="835" y="90" width="150" height="32" rx="5" fill="#e7f2ec" stroke="#2f6f4f"/>
+      <text x="910" y="104" text-anchor="middle" font-weight="700">Web Speech API</text>
+      <text x="910" y="115" text-anchor="middle" fill="#5b6660">reads answer aloud</text>
+
+      <rect x="835" y="170" width="150" height="32" rx="5" fill="#eef1f5" stroke="#475569"/>
+      <text x="910" y="184" text-anchor="middle" font-weight="700">Langfuse trace</text>
+      <text x="910" y="195" text-anchor="middle" fill="#5b6660">eval_logs · usage++</text>
+    </g>
+
+    <g stroke="#6b4423" stroke-width="1.3" fill="none" marker-end="url(#ah)">
+      <path d="M124 42 V90"/>
+      <path d="M188 100 C 214 100, 214 186, 255 186"/>
+      <path d="M325 170 V122"/>
+      <path d="M395 108 C 420 108, 430 172, 455 172"/>
+      <path d="M395 112 C 420 112, 430 204, 455 204"/>
+      <path d="M583 172 H635"/>
+      <path d="M583 204 H635"/>
+      <path d="M705 160 V122"/>
+      <path d="M775 105 H835"/>
+      <path d="M910 42 V90"/>
+      <path d="M775 116 C 805 140, 810 168, 835 176"/>
+    </g>
+    <text x="130" y="66" font-size="8" fill="#5b6660">audio</text>
+    <text x="200" y="150" font-size="8" fill="#5b6660">audio</text>
+    <text x="335" y="146" font-size="8" fill="#5b6660">transcript</text>
+    <text x="790" y="100" font-size="8" fill="#5b6660">SSE</text>
+  </svg>
+  <p class="card-note">
+    The client sends recent context with every turn. <code>/api/chat</code> loads the last 50 transactions, snapshots, anomalies,
+    goals, habits and budgets from Supabase in parallel, runs intent classification + semantic retrieval, builds a system prompt,
+    then streams the reply. Tool calls (<code>proposeGoal</code>, <code>proposeTransaction</code>, <code>proposeHabit</code>) render confirmation cards the user taps to commit.
+  </p>
+
+  <h2 class="section">LangGraph agent graph — <code>packages/ai/src/graph.ts</code></h2>
+  <svg viewBox="0 0 1000 210" font-family="Inter,Helvetica,Arial,sans-serif">
+    <defs>
+      <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" fill="#7c3aed"/>
+      </marker>
+    </defs>
+    <g font-size="9">
+      <rect x="20" y="80" width="90" height="40" rx="6" fill="#f3ebe3" stroke="#6b4423"/>
+      <text x="65" y="98" text-anchor="middle" font-weight="700">START</text>
+      <text x="65" y="110" text-anchor="middle" fill="#5b6660">user query</text>
+
+      <rect x="150" y="80" width="110" height="40" rx="6" fill="#efe8fb" stroke="#7c3aed"/>
+      <text x="205" y="98" text-anchor="middle" font-weight="700">ragRetrieval</text>
+      <text x="205" y="110" text-anchor="middle" fill="#5b6660">top-20 vector hits</text>
+
+      <rect x="300" y="80" width="110" height="40" rx="6" fill="#efe8fb" stroke="#7c3aed"/>
+      <text x="355" y="98" text-anchor="middle" font-weight="700">intentRouter</text>
+      <text x="355" y="110" text-anchor="middle" fill="#5b6660">classify intent</text>
+
+      <!-- specialists -->
+      <g>
+        <rect x="470" y="6"   width="150" height="26" rx="5" fill="#efe8fb" stroke="#7c3aed"/>
+        <text x="545" y="23" text-anchor="middle" font-weight="700">spendingAnalyst</text>
+        <rect x="470" y="40"  width="150" height="26" rx="5" fill="#efe8fb" stroke="#7c3aed"/>
+        <text x="545" y="57" text-anchor="middle" font-weight="700">forecaster</text>
+        <rect x="470" y="74"  width="150" height="26" rx="5" fill="#efe8fb" stroke="#7c3aed"/>
+        <text x="545" y="91" text-anchor="middle" font-weight="700">affordabilityChecker</text>
+        <rect x="470" y="108" width="150" height="26" rx="5" fill="#efe8fb" stroke="#7c3aed"/>
+        <text x="545" y="125" text-anchor="middle" font-weight="700">anomalyReviewer</text>
+        <rect x="470" y="142" width="150" height="26" rx="5" fill="#efe8fb" stroke="#7c3aed"/>
+        <text x="545" y="159" text-anchor="middle" font-weight="700">savingsGoalAdvisor</text>
+      </g>
+
+      <rect x="700" y="60" width="110" height="40" rx="6" fill="#efe8fb" stroke="#7c3aed"/>
+      <text x="755" y="78" text-anchor="middle" font-weight="700">synthesizer</text>
+      <text x="755" y="90" text-anchor="middle" fill="#5b6660">calm spoken tone</text>
+
+      <rect x="860" y="60" width="110" height="40" rx="6" fill="#f3ebe3" stroke="#6b4423"/>
+      <text x="915" y="78" text-anchor="middle" font-weight="700">END</text>
+      <text x="915" y="90" text-anchor="middle" fill="#5b6660">answer + card</text>
+    </g>
+    <g stroke="#7c3aed" stroke-width="1.3" fill="none" marker-end="url(#ah2)">
+      <path d="M110 100 H150"/>
+      <path d="M260 100 H300"/>
+      <path d="M410 100 C 435 100, 445 19, 470 19"/>
+      <path d="M410 100 C 435 100, 445 53, 470 53"/>
+      <path d="M410 100 H470"/>
+      <path d="M410 100 C 435 100, 445 121, 470 121"/>
+      <path d="M410 100 C 435 100, 445 155, 470 155"/>
+      <path d="M620 19  C 660 19, 670 80, 700 80"/>
+      <path d="M620 53  C 660 53, 675 80, 700 80"/>
+      <path d="M620 87  H700"/>
+      <path d="M620 121 C 660 121, 675 90, 700 90"/>
+      <path d="M620 155 C 660 155, 675 95, 700 95"/>
+      <path d="M810 80 H860"/>
+    </g>
+    <text x="420" y="100" font-size="8" fill="#5b6660" transform="rotate(-90 420 100)">conditional edge</text>
+  </svg>
+  <p class="card-note">
+    <code>routeAfterIntent()</code> maps the classified intent to exactly one specialist node. Each node calls
+    <code>routedGenerateText(taskType, options)</code>, which selects a provider, runs the call, logs to <code>eval_logs</code>,
+    and increments the daily usage counter. The <code>proactive.ts</code> graph reuses the same annotation and agents for
+    unsolicited nudges (anomaly / habit-streak / goal milestone), written straight to <code>chat_messages</code> with a unique <code>nudge_key</code>.
+    <b>Note:</b> this graph itself has no live caller yet — <code>spendingAnalyst</code>, <code>forecaster</code> and <code>affordabilityChecker</code>
+    only run today through the CI eval suite (below) and are exercised directly, not via <code>buildTruffleGraph()</code>.
+  </p>
+
+  <footer class="doc"><span>Truffle — Runtime Flows</span><span>Generated 2026-09-19 · main</span></footer>
+</section>
+
+<!-- ================= PAGE 3 ================= -->
+<section class="page">
+  <header class="doc">
+    <div><h1>Truffle</h1><div class="tag">Router, eval, data model, delivery</div></div>
+    <div style="text-align:right"><div class="sub">LLM Router · Eval &amp; CI Gate · Persistence · Ops</div></div>
+  </header>
+
+  <div class="cols2">
+    <div>
+      <h2 class="section">Task-aware LLM router — <code>router.ts</code></h2>
+      <p class="card-note" style="margin-top:0">
+        On every call the router reads today's global per-provider request counts from Postgres and walks the priority
+        list for that task type, skipping any provider already at its daily budget. First one under budget wins;
+        streaming callers get the full ordered candidate list and fall through on per-minute rate limits.
+      </p>
+      <table class="grid">
+        <tr><th>Task type</th><th>Priority order (first available wins)</th></tr>
+        <tr><td class="mono">fast-chat</td><td>Groq → Cerebras → OpenRouter → Mistral</td></tr>
+        <tr><td class="mono">reasoning</td><td>Gemini → Groq → Cerebras → OpenRouter</td></tr>
+        <tr><td class="mono">tool-calling</td><td>Groq → Gemini → Cerebras</td></tr>
+        <tr><td class="mono">vision</td><td>Gemini → Groq</td></tr>
+      </table>
+      <table class="grid">
+        <tr><th>Provider</th><th>Daily cap</th><th>Models</th></tr>
+        <tr><td>Groq</td><td>900</td><td class="mono">gpt-oss-120b / 20b · qwen3.6-27b · whisper-large-v3</td></tr>
+        <tr><td>Gemini</td><td>1&nbsp;300</td><td class="mono">gemini-3.7-flash · 3.5-flash-lite · embedding-2</td></tr>
+        <tr><td>Cerebras</td><td>1&nbsp;500</td><td class="mono">gpt-oss-120b</td></tr>
+        <tr><td>OpenRouter</td><td>250</td><td class="mono">llama-3.3-70b-instruct:free</td></tr>
+        <tr><td>Mistral</td><td>600</td><td class="mono">mistral-small-latest</td></tr>
+      </table>
+      <p class="card-note">Counters are incremented via the race-safe <code>increment_llm_usage</code> Postgres RPC. Caps sit ~10% under real free-tier limits.</p>
+
+      <h2 class="section">Agent eval suite &amp; CI gate — <code>packages/ai/evals/</code></h2>
+      <p class="card-note" style="margin:0 0 2px">
+        Rebuilt 2026-09 on Langfuse Datasets + Experiments (replaced an assertion-free golden script).
+        Dataset <code>agent-golden</code> (27 items: 15 router-intent cases + 2 per LLM-calling agent) is
+        source-controlled in <code>dataset-items.ts</code> and synced via <code>pnpm eval:sync-dataset</code>.
+      </p>
+      <div class="pipeline">
+        <span class="step">dataset-items.ts</span><span class="arrow">→</span>
+        <span class="step">sync-dataset.ts</span><span class="arrow">→</span>
+        <span class="step">Langfuse Dataset<br>"agent-golden"</span><span class="arrow">→</span>
+        <span class="step">gate.ts / task.ts<br>(real agent fns)</span><span class="arrow">→</span>
+        <span class="step">3 evaluators</span><span class="arrow">→</span>
+        <span class="step">pass / fail<br>(push to main)</span>
+      </div>
+      <table class="grid" style="margin-top:4px">
+        <tr><th>Evaluator</th><th>Checks</th></tr>
+        <tr><td class="mono">intentExactMatch</td><td>deterministic — <code>routeIntent()</code> output equals the expected <code>QueryIntent</code></td></tr>
+        <tr><td class="mono">numericFaithfulness</td><td>deterministic — response cites the figure <code>computeMonthProjection()</code> actually computed (±€1), not the model's own mental math</td></tr>
+        <tr><td class="mono">responseQualityJudge</td><td>LLM-as-judge — mirrors the live <code>response-quality</code> Langfuse evaluator, 1–5 rubric</td></tr>
+      </table>
+      <p class="card-note">
+        <b>CI gate</b> — <code>langfuse-eval.yml</code> via <code>langfuse/experiment-action</code>, on every push to
+        <code>main</code> (no PR flow here); fails the job if <code>avg_intent_accuracy</code> &lt; 0.6,
+        <code>avg_response_quality</code> &lt; 3.0, or <code>avg_numeric_faithfulness</code> &lt; 0.75. Concurrency capped
+        at 2 for Gemini's free-tier quota. Confirmed green on <code>main</code>, 2026-09-19.
+      </p>
+      <p class="card-note">
+        Separately: the always-on production <b>response-quality</b> evaluator scores live <code>streamText</code> /
+        <code>adviseHabit</code> / <code>adviseSavingsGoals</code> / <code>reviewAnomalies</code> generations async in Langfuse;
+        <code>categorize-eval.ts</code> (Weco-tunable) scores <code>CATEGORY_GUIDANCE</code> against a <code>transactions.csv</code> sample.
+      </p>
+    </div>
+
+    <div>
+      <h2 class="section">Persistence — Supabase Postgres</h2>
+      <table class="grid">
+        <tr><th>Table</th><th>Holds</th></tr>
+        <tr><td class="mono">transactions</td><td>ledger rows + <code>embedding vector(768)</code></td></tr>
+        <tr><td class="mono">anomalies</td><td>detected unusual charges (type, severity)</td></tr>
+        <tr><td class="mono">monthly_snapshots</td><td>per-month income / expense / category rollup (JSON)</td></tr>
+        <tr><td class="mono">chat_messages</td><td>conversation + proactive nudges (<code>is_proactive</code>, <code>nudge_key</code>, <code>read_at</code>)</td></tr>
+        <tr><td class="mono">savings_goals</td><td>target, saved, deadline, emoji</td></tr>
+        <tr><td class="mono">savings_habits</td><td>recurring weekly / monthly saving rule</td></tr>
+        <tr><td class="mono">habit_contributions</td><td>per-period contribution log (streaks)</td></tr>
+        <tr><td class="mono">monthly_budgets</td><td>per-category spending limit</td></tr>
+        <tr><td class="mono">daily_llm_usage</td><td>global per-provider request counter (per day)</td></tr>
+        <tr><td class="mono">eval_logs</td><td>operational log per LLM call — provider, task, latency, tokens (quality/intent scoring moved to Langfuse 2026-09, dead columns dropped)</td></tr>
+      </table>
+      <table class="grid">
+        <tr><th>RPC / extension</th><th>Purpose</th></tr>
+        <tr><td class="mono">pgvector + HNSW</td><td>cosine-distance ANN index on <code>transactions.embedding</code></td></tr>
+        <tr><td class="mono">match_transactions</td><td>semantic retrieval for RAG context</td></tr>
+        <tr><td class="mono">increment_llm_usage</td><td>atomic, race-safe usage increment</td></tr>
+      </table>
+      <p class="card-note">Row-level security scopes every table to <code>auth.uid()</code>. Account deletion cascades via FK constraints. Auth = Supabase magic-link (passwordless); the demo account uses a server-minted one-time token.</p>
+
+      <h2 class="section">Monorepo &amp; delivery</h2>
+      <table class="grid">
+        <tr><th>Package</th><th>Role</th></tr>
+        <tr><td class="mono">apps/web</td><td>Next.js 14 PWA — pages, API routes, components, hooks</td></tr>
+        <tr><td class="mono">apps/landing</td><td>marketing site (Next.js, port 3001)</td></tr>
+        <tr><td class="mono">packages/ai</td><td>router, LangGraph, agents, prompts, embeddings, eval suite, Langfuse</td></tr>
+        <tr><td class="mono">packages/db</td><td>Supabase client + schema types + SQL migrations</td></tr>
+        <tr><td class="mono">packages/types</td><td>shared TS interfaces (Transaction, MonthlySnapshot, …)</td></tr>
+      </table>
+      <ul class="tight">
+        <li><b>Build</b> — pnpm workspaces + Turborepo; <b>deploy</b> — Vercel.</li>
+        <li><b>CI</b> (<code>ci.yml</code>) — type-check, lint, Vitest units, Playwright e2e on every push.</li>
+        <li><b>Eval gate</b> (<code>langfuse-eval.yml</code>) — <code>agent-golden</code> regression check on every push to <code>main</code>.</li>
+        <li><b>Nightly</b> (<code>demo-reset.yml</code>) — GitHub Action re-seeds the demo account from <code>transactions.csv</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer class="doc"><span>Truffle — Router, Eval, Data &amp; Ops</span><span>Generated 2026-09-19 · main</span></footer>
+</section>
+
+</body>
+</html>
