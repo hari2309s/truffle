@@ -31,8 +31,14 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Deliberately no Supabase secrets here: routedGenerateText()'s
+          # getGlobalUsage()/incrementUsage()/logEval() calls are all
+          # try/catch-wrapped specifically to degrade gracefully without DB
+          # access. Giving this job the production service-role key would
+          # needlessly expose it, and — worse — would make CI eval runs
+          # increment the real daily_llm_usage provider quota counters and
+          # write rows into the real eval_logs table alongside production
+          # traffic.
         with:
           langfuse_public_key: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
           langfuse_secret_key: ${{ secrets.LANGFUSE_SECRET_KEY }}
