@@ -146,7 +146,13 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
               <span className="h-px flex-1 bg-truffle-border" />
             </div>
             <form action="/api/auth/demo" method="post">
-              <button type="submit" className="btn-ghost w-full py-3 text-sm">
+              <button
+                type="submit"
+                className="btn-ghost w-full py-3 text-sm"
+                onClick={() =>
+                  posthog.capture('demo_link_clicked', undefined, { transport: 'sendBeacon' })
+                }
+              >
                 {t.auth.demoButton}
               </button>
             </form>
