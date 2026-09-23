@@ -37,19 +37,36 @@ export function CookieBanner({
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem(CONSENT_KEY)) setVisible(true)
+    // localStorage can throw (Safari private browsing, "Block all cookies",
+    // storage-blocking extensions) — treat that as "no stored consent" so
+    // the banner still shows instead of the effect crashing silently.
+    let stored: string | null = null
+    try {
+      stored = localStorage.getItem(CONSENT_KEY)
+    } catch {
+      // ignore — stored stays null
+    }
+    if (!stored) setVisible(true)
   }, [])
 
   if (!visible) return null
 
   function accept() {
-    localStorage.setItem(CONSENT_KEY, 'accepted')
+    try {
+      localStorage.setItem(CONSENT_KEY, 'accepted')
+    } catch {
+      // storage blocked — still honor the click, just won't persist across reloads
+    }
     onAccept?.()
     setVisible(false)
   }
 
   function reject() {
-    localStorage.setItem(CONSENT_KEY, 'rejected')
+    try {
+      localStorage.setItem(CONSENT_KEY, 'rejected')
+    } catch {
+      // storage blocked — still honor the click, just won't persist across reloads
+    }
     onReject?.()
     setVisible(false)
   }
