@@ -11,6 +11,7 @@ import { type VoiceId } from '@/lib/voices'
 import { LanguagePicker } from './LanguagePicker'
 import { VoicePicker } from './VoicePicker'
 import { CurrencyPicker } from './CurrencyPicker'
+import { LeaderRow, Rule } from './Tally'
 import { supabase } from '@/lib/supabase'
 
 interface SettingsSheetProps {
@@ -26,6 +27,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   const [deleteInput, setDeleteInput] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [showDelete, setShowDelete] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
 
@@ -128,12 +130,10 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col justify-end max-w-lg mx-auto"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 max-w-lg mx-auto" onClick={onClose}>
       <motion.div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0"
+        style={{ background: 'var(--t-scrim)' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -143,7 +143,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-sheet-title"
-        className="relative bg-truffle-bg rounded-t-2xl border-t border-truffle-border px-4 pt-4 pb-10 space-y-6 overflow-y-auto max-h-[85dvh]"
+        className="absolute left-3 right-3 bottom-0 top-24 bg-truffle-card flex flex-col gap-4 px-[18px] pt-5 pb-[max(28px,env(safe-area-inset-bottom))] text-sm overflow-y-auto"
         style={{ overscrollBehavior: 'contain' }}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
@@ -151,109 +151,101 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <h2 id="settings-sheet-title" className="font-semibold text-truffle-text">
+        <div className="flex justify-between items-center">
+          <h2 id="settings-sheet-title" className="text-base font-bold tracking-[.12em] uppercase">
             {t.settings.title}
           </h2>
           <button
             ref={closeButtonRef}
+            type="button"
             onClick={onClose}
-            aria-label="Close settings"
-            className="p-2 text-truffle-muted hover:text-truffle-text transition-colors"
+            aria-label={t.common.close}
+            className="w-11 h-11 rounded-lg border border-truffle-border grid place-items-center font-bold"
           >
-            <XIcon />
+            ✕
           </button>
         </div>
 
-        {/* Language */}
-        <div className="space-y-2">
-          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">
-            {t.settings.language}
-          </h3>
-          <LanguagePicker onChange={handleLocaleChange} />
-        </div>
+        <Rule />
 
-        {/* Currency */}
-        <div className="space-y-2">
-          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">
-            {t.settings.currency}
-          </h3>
-          <CurrencyPicker value={currency} onChange={handleCurrencyChange} />
-        </div>
+        <h3 className="text-xs text-truffle-text2 uppercase">{t.settings.currency}</h3>
+        <CurrencyPicker
+          value={currency}
+          onChange={handleCurrencyChange}
+          label={t.settings.currency}
+        />
+        <LanguagePicker onChange={handleLocaleChange} label={t.settings.language} />
 
-        {/* Voice */}
-        <div className="space-y-2">
-          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">{t.settings.voice}</h3>
-          <p className="text-xs text-truffle-muted">{t.settings.voiceDesc}</p>
-          <VoicePicker value={voiceId} onChange={handleVoiceChange} />
-        </div>
+        <Rule />
 
-        {/* Your data */}
-        <div className="space-y-2">
-          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">
-            {t.settings.yourData}
-          </h3>
-          <div className="card space-y-3">
-            <div>
-              <p className="text-sm font-medium text-truffle-text">{t.settings.downloadData}</p>
-              <p className="text-xs text-truffle-muted mt-0.5">{t.settings.downloadDataDesc}</p>
-            </div>
-            <button
-              onClick={handleExport}
-              disabled={isExporting}
-              className="btn-primary text-sm w-full disabled:opacity-50"
-            >
-              {isExporting ? t.settings.preparing : t.settings.exportData}
-            </button>
-          </div>
-        </div>
+        <h3 className="text-xs text-truffle-text2 uppercase">{t.settings.voice}</h3>
+        <VoicePicker value={voiceId} onChange={handleVoiceChange} />
 
-        {/* Danger zone */}
-        <div className="space-y-2">
-          <h3 className="text-xs text-truffle-muted uppercase tracking-wide">
-            {t.settings.dangerZone}
-          </h3>
-          <div className="card border-truffle-red/30 space-y-3">
-            <div>
-              <p className="text-sm font-medium text-truffle-text">{t.settings.deleteAccount}</p>
-              <p className="text-xs text-truffle-muted mt-0.5">{t.settings.deleteAccountDesc}</p>
-            </div>
+        <Rule />
+
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={isExporting}
+          aria-describedby="export-desc"
+          className="min-h-11 flex items-center text-left disabled:opacity-60"
+        >
+          <LeaderRow
+            className="flex-1"
+            left={t.settings.exportData}
+            right={isExporting ? t.settings.preparing : t.settings.exportFormat}
+          />
+        </button>
+        <p id="export-desc" className="sr-only">
+          {t.settings.downloadDataDesc}
+        </p>
+
+        <button
+          type="button"
+          onClick={signOut}
+          className="min-h-11 flex items-center text-left"
+        >
+          <LeaderRow className="flex-1" left={t.topBar.signOut} right="→" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowDelete((v) => !v)}
+          aria-expanded={showDelete}
+          className="min-h-11 flex items-center justify-between text-left text-truffle-negative font-bold"
+        >
+          <span>✕ {t.settings.deleteAccount}</span>
+          <span aria-hidden>{showDelete ? '↓' : '→'}</span>
+        </button>
+
+        {showDelete && (
+          <div className="flex flex-col gap-2 border-t-[6px] border-truffle-negative bg-truffle-surface p-3.5 print-in">
+            <p className="font-grotesk text-sm leading-[1.45]">{t.settings.deleteAccountDesc}</p>
             <input
               type="text"
               value={deleteInput}
               onChange={(e) => setDeleteInput(e.target.value)}
               placeholder={t.settings.deletePlaceholder}
-              className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-3 py-2 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-red"
+              aria-label={t.settings.deletePlaceholder}
+              autoCapitalize="characters"
+              className="field h-11"
             />
-            {deleteError && <p className="text-xs text-truffle-red">{deleteError}</p>}
+            {deleteError && (
+              <p role="alert" className="text-[11px] font-bold uppercase text-truffle-negative">
+                ■ {deleteError}
+              </p>
+            )}
             <button
+              type="button"
               onClick={handleDelete}
               disabled={deleteInput !== t.settings.deleteConfirmWord || isDeleting}
-              className="w-full py-2 rounded-xl text-sm font-medium bg-truffle-red/10 text-truffle-red border border-truffle-red/30 hover:bg-truffle-red/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="key key-danger h-11 text-xs uppercase"
             >
-              {isDeleting ? t.settings.deleting : t.settings.deleteMyAccount}
+              {isDeleting ? t.settings.deleting : `✕ ${t.settings.deleteMyAccount}`}
             </button>
           </div>
-        </div>
+        )}
       </motion.div>
     </div>
-  )
-}
-
-function XIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="w-4 h-4"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
   )
 }

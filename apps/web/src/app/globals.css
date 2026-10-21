@@ -2,54 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Tally Receipt tokens ──────────────────────────────────────────────────
+   Money as a friendly till receipt. Dark is the default theme; light is set
+   by the .light class or, with no class, by the OS preference. Every value
+   below comes straight from the Tally Receipt design spec. */
+
 /* ── Dark theme (default) ── */
 :root {
   color-scheme: dark;
-  --t-bg: #0e0d0c;
-  --t-surface: #1e1d1b;
-  --t-card: #2c2b28;
-  --t-border: #404038;
-  --t-muted: #706a5e;
-  --t-text: #f5ead2;
-  --t-text-secondary: #c4a87e;
-  --t-amber: #e8a84e;
-  --t-amber-light: #f0c070;
-  --t-green: #4a7a5a;
-  --t-red: #7a4a4a;
+  --t-bg: #121211;
+  --t-surface: #1a1918;
+  --t-card: #22201e;
+  --t-border: #3a3733;
+  --t-text: #efe9de;
+  --t-text2: #ada597;
+  --t-accent: #f6bd87;
+  --t-accent-ink: #f6bd87;
+  --t-accent-soft: #3b2a1c;
+  --t-accent-edge: #b07a4a;
+  --t-on-accent: #1b1a18;
+  --t-positive: #8cc79f;
+  --t-warning: #e9c062;
+  --t-negative: #f08c78;
+  --t-neg-soft: #4a231c;
+  --t-h0: #1a1918;
+  --t-h1: #3b2a1c;
+  --t-h2: #6e4524;
+  --t-h3: #c0814b;
+  --t-h4: #f6bd87;
+  --t-on-heat: #121211;
+  --t-e1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.35);
+  --t-scrim: rgba(0, 0, 0, 0.6);
 }
 
 /* ── Light theme ── */
 :root.light {
   color-scheme: light;
-  --t-bg: #faf6f0;
-  --t-surface: #f0e9df;
-  --t-card: #e8dfd3;
-  --t-border: #d4c8b8;
-  --t-muted: #8c7d6b;
-  --t-text: #1a1814;
-  --t-text-secondary: #6b4f2a;
-  --t-amber: #b86d10;
-  --t-amber-light: #c87f20;
-  --t-green: #2d5c3d;
-  --t-red: #7a3030;
+  --t-bg: #e9e5dd;
+  --t-surface: #f1ece3;
+  --t-card: #fffdf8;
+  --t-border: #cfc7b9;
+  --t-text: #1b1a18;
+  --t-text2: #5c5851;
+  --t-accent: #f6bd87;
+  --t-accent-ink: #a5500f;
+  --t-accent-soft: #fbe2c9;
+  --t-accent-edge: #c98a52;
+  --t-on-accent: #1b1a18;
+  --t-positive: #2f6b45;
+  --t-warning: #8a5a00;
+  --t-negative: #a8321f;
+  --t-neg-soft: #f4d6cf;
+  --t-h0: #f1ece3;
+  --t-h1: #fbe2c9;
+  --t-h2: #f6bd87;
+  --t-h3: #d98a46;
+  --t-h4: #8f4a14;
+  --t-on-heat: #ffffff;
+  --t-e1: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 10px rgba(0, 0, 0, 0.06);
+  --t-scrim: rgba(27, 26, 24, 0.4);
 }
 
 /* ── System theme (no class set) — respects OS preference ── */
 @media (prefers-color-scheme: light) {
   :root:not(.dark):not(.light) {
     color-scheme: light;
-    --t-bg: #faf6f0;
-    --t-surface: #f0e9df;
-    --t-card: #e8dfd3;
-    --t-border: #d4c8b8;
-    --t-muted: #8c7d6b;
-    --t-text: #1a1814;
-    --t-text-secondary: #6b4f2a;
-    --t-amber: #b86d10;
-    --t-amber-light: #c87f20;
-    --t-green: #2d5c3d;
-    --t-red: #7a3030;
+    --t-bg: #e9e5dd;
+    --t-surface: #f1ece3;
+    --t-card: #fffdf8;
+    --t-border: #cfc7b9;
+    --t-text: #1b1a18;
+    --t-text2: #5c5851;
+    --t-accent: #f6bd87;
+    --t-accent-ink: #a5500f;
+    --t-accent-soft: #fbe2c9;
+    --t-accent-edge: #c98a52;
+    --t-on-accent: #1b1a18;
+    --t-positive: #2f6b45;
+    --t-warning: #8a5a00;
+    --t-negative: #a8321f;
+    --t-neg-soft: #f4d6cf;
+    --t-h0: #f1ece3;
+    --t-h1: #fbe2c9;
+    --t-h2: #f6bd87;
+    --t-h3: #d98a46;
+    --t-h4: #8f4a14;
+    --t-on-heat: #ffffff;
+    --t-e1: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 10px rgba(0, 0, 0, 0.06);
+    --t-scrim: rgba(27, 26, 24, 0.4);
   }
+}
+
+:root {
+  /* Bottom nav: 4px top pad + 56px tabs + 4px bottom pad, plus the device's
+     home-indicator inset (added separately wherever this is used). */
+  --nav-h: 64px;
 }
 
 @layer base {
@@ -59,12 +106,13 @@
   }
 
   body {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-mono), ui-monospace, monospace;
     background-color: var(--t-bg);
     color: var(--t-text);
     height: 100dvh;
     overflow: hidden;
     overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
     transition:
       background-color 0.2s ease,
       color 0.2s ease;
@@ -80,6 +128,12 @@
     background-color: var(--t-surface);
     color: var(--t-text);
   }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--t-text2);
+    opacity: 0.7;
+  }
 }
 
 /* Shifts a `bottom-0` fixed element up to clear the home-indicator/gesture
@@ -90,25 +144,297 @@
   margin-bottom: env(safe-area-inset-bottom);
 }
 
-/* Spending heatmap — 5 intensity levels, auto-adapt to dark/light via CSS vars */
-.heat-0 { background-color: var(--t-surface); }
-.heat-1 { background-color: color-mix(in srgb, var(--t-green) 30%, var(--t-surface)); }
-.heat-2 { background-color: color-mix(in srgb, var(--t-green) 65%, var(--t-surface)); }
-.heat-3 { background-color: color-mix(in srgb, var(--t-amber) 60%, var(--t-surface)); }
-.heat-4 { background-color: color-mix(in srgb, var(--t-red) 70%, var(--t-surface)); }
-
 @layer components {
-  .card {
-    @apply bg-truffle-card border border-truffle-border rounded-2xl p-4;
+  /* ── Slips: receipt paper with a torn (zig-zag) bottom edge. One CSS mask,
+     no images. Callers add extra bottom padding to clear the teeth. ── */
+  .slip {
+    background: var(--t-card);
+    box-shadow: var(--t-e1);
+    -webkit-mask:
+      linear-gradient(#000 0 0) top/100% calc(100% - 10px) no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/16px
+        10px repeat-x;
+    mask:
+      linear-gradient(#000 0 0) top/100% calc(100% - 10px) no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/16px
+        10px repeat-x;
   }
 
-  .btn-primary {
-    @apply bg-truffle-amber text-truffle-bg font-semibold px-6 py-3 rounded-xl
-           hover:bg-truffle-amber-light active:scale-95 transition-all duration-150;
+  .slip-sm {
+    background: var(--t-card);
+    box-shadow: var(--t-e1);
+    -webkit-mask:
+      linear-gradient(#000 0 0) top/100% calc(100% - 8px) no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/12px 8px
+        repeat-x;
+    mask:
+      linear-gradient(#000 0 0) top/100% calc(100% - 8px) no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/12px 8px
+        repeat-x;
   }
 
-  .btn-ghost {
-    @apply text-truffle-text-secondary hover:text-truffle-text px-4 py-2 rounded-xl
-           hover:bg-truffle-surface transition-all duration-150;
+  /* Untorn paper (e1 "slip" elevation). */
+  .paper {
+    background: var(--t-card);
+    box-shadow: var(--t-e1);
   }
+
+  /* ── Rules and dotted leaders ── */
+  .rule {
+    border-top: 1px dashed var(--t-text2);
+  }
+
+  .rule-soft {
+    border-top: 1px dashed var(--t-border);
+  }
+
+  .leader {
+    flex: 1 1 auto;
+    min-width: 12px;
+    border-bottom: 2px dotted var(--t-border);
+    margin-bottom: 5px;
+  }
+
+  .leader-strong {
+    border-bottom-color: var(--t-text2);
+  }
+
+  /* ── Keys: physical buttons that press down 4px. ── */
+  .key {
+    --drop: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 8px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    user-select: none;
+    transition:
+      transform 80ms ease-out,
+      box-shadow 80ms ease-out,
+      opacity 120ms ease;
+  }
+
+  .key-3 {
+    --drop: 3px;
+  }
+
+  .key:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .key:active:not(:disabled),
+  .key[data-pressed='true'] {
+    transform: translateY(var(--drop));
+  }
+
+  .key-accent {
+    background: var(--t-accent);
+    color: var(--t-on-accent);
+    box-shadow: 0 var(--drop) 0 var(--t-accent-edge);
+  }
+
+  .key-accent:active:not(:disabled),
+  .key-accent[data-pressed='true'] {
+    box-shadow: inset 0 3px 0 var(--t-accent-edge);
+  }
+
+  .key-ink {
+    background: var(--t-text);
+    color: var(--t-bg);
+    box-shadow: 0 var(--drop) 0 var(--t-text2);
+  }
+
+  .key-plain {
+    background: var(--t-card);
+    color: var(--t-text);
+    border: 1px solid var(--t-border);
+    box-shadow: 0 var(--drop) 0 var(--t-border);
+  }
+
+  .key-line {
+    color: var(--t-text);
+    border: 1px solid var(--t-border);
+    box-shadow: 0 var(--drop) 0 var(--t-border);
+  }
+
+  .key-surface {
+    background: var(--t-surface);
+    color: var(--t-text2);
+    border: 1px solid var(--t-border);
+    box-shadow: 0 var(--drop) 0 var(--t-border);
+  }
+
+  .key-ink:active:not(:disabled),
+  .key-plain:active:not(:disabled),
+  .key-line:active:not(:disabled),
+  .key-surface:active:not(:disabled) {
+    box-shadow: none;
+  }
+
+  .key-outline {
+    color: var(--t-text);
+    border: 1px solid var(--t-text);
+  }
+
+  .key-danger {
+    background: var(--t-neg-soft);
+    color: var(--t-negative);
+  }
+
+  /* Square-ish icon key used in top bars. */
+  .key-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: var(--t-card);
+    border: 1px solid var(--t-border);
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+  }
+
+  /* Text inputs sitting on receipt paper. */
+  .field {
+    width: 100%;
+    background: var(--t-surface);
+    color: var(--t-text);
+    border: 1px solid var(--t-border);
+    border-radius: 8px;
+    padding: 0 14px;
+    height: 48px;
+    font-size: 14px;
+  }
+
+  .field:focus {
+    outline: none;
+    border-color: var(--t-text);
+  }
+
+  /* Bare input that reads as a value at the end of a leader row. */
+  .field-inline {
+    background: transparent;
+    color: var(--t-text);
+    font-weight: 700;
+    text-align: right;
+    min-width: 0;
+    border-bottom: 1px solid transparent;
+  }
+
+  .field-inline:focus {
+    outline: none;
+    border-bottom-color: var(--t-text);
+  }
+
+  /* Selectable chip (category, filter). */
+  .chip {
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 1px solid var(--t-border);
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--t-text);
+  }
+
+  .chip[aria-pressed='true'] {
+    background: var(--t-accent);
+    color: var(--t-on-accent);
+    border-color: var(--t-accent);
+  }
+
+  .print-in {
+    animation: tr-print 0.4s ease-out both;
+  }
+
+  .blink {
+    animation: tr-dot 1s infinite;
+  }
+
+  .caret {
+    display: inline-block;
+    width: 7px;
+    height: 13px;
+    background: var(--t-text);
+    vertical-align: -2px;
+    animation: tr-dot 0.8s infinite;
+  }
+}
+
+/* Motion: things print. New lines feed down 6px; keys press 4px. */
+@keyframes tr-print {
+  0% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes tr-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes tr-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes tr-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes tr-scan {
+  0% {
+    top: 8%;
+  }
+  50% {
+    top: 88%;
+  }
+  100% {
+    top: 8%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }

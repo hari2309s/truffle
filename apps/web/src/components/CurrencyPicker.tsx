@@ -8,25 +8,34 @@ const CURRENCIES = Object.keys(CURRENCY_SYMBOLS) as Currency[]
 interface CurrencyPickerProps {
   value: Currency
   onChange: (currency: Currency) => void
+  label?: string
 }
 
-export function CurrencyPicker({ value, onChange }: CurrencyPickerProps) {
+export function CurrencyPicker({ value, onChange, label }: CurrencyPickerProps) {
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {CURRENCIES.map((c) => (
-        <button
-          key={c}
-          type="button"
-          onClick={() => onChange(c)}
-          className={`py-2.5 rounded-xl text-sm font-medium transition-all ${
-            value === c
-              ? 'bg-truffle-amber text-truffle-bg'
-              : 'bg-truffle-surface text-truffle-muted border border-truffle-border'
-          }`}
-        >
-          {CURRENCY_SYMBOLS[c]} {c}
-        </button>
-      ))}
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="grid gap-1.5"
+      style={{ gridTemplateColumns: `repeat(${CURRENCIES.length}, minmax(0, 1fr))` }}
+    >
+      {CURRENCIES.map((c) => {
+        const selected = value === c
+        return (
+          <button
+            key={c}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(c)}
+            className={`h-12 rounded-lg border border-truffle-border text-[13px] font-bold ${
+              selected ? 'bg-truffle-text text-truffle-bg' : 'text-truffle-text'
+            }`}
+          >
+            {CURRENCY_SYMBOLS[c]} {c}
+          </button>
+        )
+      })}
     </div>
   )
 }

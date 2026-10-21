@@ -80,13 +80,17 @@ interface ImportSuccessProps {
   onDone?: () => void
 }
 
-/** The "✓ imported" success screen shared by CSVImport and ReceiptUpload. */
+/** The "✓ imported" success slip shared by CSVImport and ReceiptUpload. */
 export function ImportSuccess({ message, doneLabel, onDone }: ImportSuccessProps) {
   return (
-    <div className="card text-center space-y-3">
-      <p className="text-2xl">✓</p>
-      <p className="font-semibold text-truffle-text">{message}</p>
-      <button onClick={onDone} className="btn-primary w-full">
+    <div className="slip print-in mx-4 mt-3 px-[18px] pt-5 pb-8 flex flex-col gap-3 text-center">
+      <span aria-hidden className="text-3xl font-bold">
+        ✓
+      </span>
+      <p role="status" className="font-bold uppercase">
+        {message}
+      </p>
+      <button type="button" onClick={onDone} className="key key-accent h-14 w-full uppercase">
         {doneLabel}
       </button>
     </div>

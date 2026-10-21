@@ -82,7 +82,8 @@ describe('csvImport.selectedOf', () => {
 
 describe('csvImport.import', () => {
   it('en: formats count', () => {
-    expect(en.csvImport.import(3)).toBe('Import 3')
+    expect(en.csvImport.import(3)).toBe('Import 3 entries')
+    expect(en.csvImport.import(1)).toBe('Import 1 entry')
   })
 })
 

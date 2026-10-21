@@ -1,7 +1,9 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { AnimatePresence } from 'framer-motion'
 import { FinancialBrief } from './FinancialBrief'
 import { TransactionList } from './TransactionList'
 import { AddTransactionForm } from './AddTransactionForm'
@@ -9,8 +11,13 @@ import { WeeklySummary } from './WeeklySummary'
 import { BottomNav } from './BottomNav'
 import { ErrorBoundary } from './ErrorBoundary'
 import { TopBar } from './TopBar'
+import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
+import { NoticeSlip } from './Tally'
 import { PageEnter } from './PageMotion'
+import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
+import { MIC_UNAVAILABLE_ERROR, useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { setChatHandoff } from '@/lib/chatHandoff'
 
 const CSVImport = dynamic(() => import('./CSVImport').then((m) => m.CSVImport))
 const ReceiptUpload = dynamic(() => import('./ReceiptUpload').then((m) => m.ReceiptUpload))
@@ -22,9 +29,22 @@ interface DashboardProps {
 
 type ActivePanel = 'add' | 'csv' | 'receipt' | null
 
+function openChatWith(router: ReturnType<typeof useRouter>, prompt: string) {
+  setChatHandoff(prompt)
+  router.push('/chat')
+}
+
 export function Dashboard({ userId, name }: DashboardProps) {
   const { t } = useLanguage()
+  const router = useRouter()
   const [activePanel, setActivePanel] = useState<ActivePanel>(null)
+  const { data, isLoading } = useTransactionsQuery(userId)
+  const isEmpty = !isLoading && (data?.transactions.length ?? 0) === 0
+  const voice = useVoiceRecorder(userId)
+
+  useEffect(() => {
+    if (voice.transcript) openChatWith(router, voice.transcript)
+  }, [voice.transcript, router])
 
   const hour = new Date().getHours()
   const timeGreeting =
@@ -33,77 +53,151 @@ export function Dashboard({ userId, name }: DashboardProps) {
       : hour < 17
         ? t.dashboard.goodAfternoon
         : t.dashboard.goodEvening
-  const greeting = name ? `${timeGreeting}, ${name}` : timeGreeting
+  const greeting = isEmpty
+    ? t.dashboard.welcome(name)
+    : name
+      ? `${timeGreeting}, ${name}.`
+      : `${timeGreeting}.`
 
-  const togglePanel = (panel: Exclude<ActivePanel, null>) =>
-    setActivePanel((current) => (current === panel ? null : panel))
+  const voiceStatus: VoiceButtonStatus = voice.isRecording
+    ? 'recording'
+    : voice.isTranscribing
+      ? 'transcribing'
+      : 'idle'
+
+  const close = () => setActivePanel(null)
 
   return (
     <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
-      <TopBar title="Truffle" subtitle={name ? greeting : ''}>
-        <TopBar.ThemeToggle />
-        <TopBar.Settings userId={userId} />
-        <TopBar.SignOut />
-      </TopBar>
-
-      {/* Content — single scroll container so items flow behind the translucent nav */}
       <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <main className="flex-1 overflow-y-auto min-h-0">
-          {/* Sticky top section — stays visible as transactions scroll underneath */}
-          <div className="sticky top-0 z-10 bg-truffle-bg px-4 pt-6 pb-4 space-y-4">
-            <ErrorBoundary>
-              <WeeklySummary userId={userId} />
-            </ErrorBoundary>
-            <ErrorBoundary>
-              <FinancialBrief userId={userId} />
-            </ErrorBoundary>
+        <main className="flex-1 overflow-y-auto min-h-0 flex flex-col pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))]">
+          <TopBar>
+            <TopBar.ThemeToggle />
+            <TopBar.Settings userId={userId} />
+          </TopBar>
 
-            {activePanel === 'add' && (
-              <AddTransactionForm userId={userId} onClose={() => setActivePanel(null)} />
-            )}
+          <h1 className="px-6 pt-5 font-grotesk text-[32px] font-medium tracking-[-.01em] leading-tight">
+            {greeting}
+          </h1>
 
-            {activePanel === 'csv' && (
-              <CSVImport userId={userId} onClose={() => setActivePanel(null)} />
-            )}
-
-            {activePanel === 'receipt' && (
-              <ReceiptUpload userId={userId} onClose={() => setActivePanel(null)} />
-            )}
-          </div>
-
-          {/* Transactions — scroll naturally, last item clears the nav bar */}
           <ErrorBoundary>
-            <div className="px-4 pb-[calc(6rem_+_env(safe-area-inset-bottom))]">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold text-truffle-text">{t.dashboard.recent}</h2>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => togglePanel('receipt')}
-                    className="text-sm text-truffle-muted hover:text-truffle-text transition-colors"
-                  >
-                    {activePanel === 'receipt' ? t.dashboard.cancel : t.dashboard.scan}
-                  </button>
-                  <button
-                    onClick={() => togglePanel('csv')}
-                    className="text-sm text-truffle-muted hover:text-truffle-text transition-colors"
-                  >
-                    {activePanel === 'csv' ? t.dashboard.cancel : t.dashboard.csv}
-                  </button>
-                  <button
-                    onClick={() => togglePanel('add')}
-                    className="text-sm text-truffle-amber hover:text-truffle-amber-light transition-colors"
-                  >
-                    {activePanel === 'add' ? t.dashboard.cancel : t.dashboard.add}
-                  </button>
-                </div>
-              </div>
-              <TransactionList userId={userId} />
-            </div>
+            <FinancialBrief userId={userId} />
           </ErrorBoundary>
+          <ErrorBoundary>
+            <WeeklySummary userId={userId} />
+          </ErrorBoundary>
+
+          {isEmpty ? (
+            <>
+              <div className="mx-4 mt-5 flex flex-col gap-2">
+                <span className="px-1 text-xs font-bold uppercase">{t.dashboard.trySaying}</span>
+                {t.dashboard.trySuggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => openChatWith(router, s)}
+                    className="bg-truffle-surface px-3.5 py-3 font-grotesk text-[15px] text-left"
+                  >
+                    “{s}”
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2 mx-4 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setActivePanel('receipt')}
+                  className="key key-plain h-[52px] text-xs uppercase"
+                >
+                  {t.dashboard.scanStatement}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePanel('csv')}
+                  className="key key-plain h-[52px] text-xs uppercase"
+                >
+                  {t.dashboard.csv}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-2 mx-4 mt-5">
+                <button
+                  type="button"
+                  onClick={() => setActivePanel('add')}
+                  className="key key-accent h-[60px] flex-col !gap-0 text-xs uppercase"
+                >
+                  <span aria-hidden className="text-lg leading-none">
+                    +
+                  </span>
+                  {t.dashboard.add}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePanel('receipt')}
+                  className="key key-plain h-[60px] flex-col !gap-0 text-xs uppercase"
+                >
+                  <span aria-hidden className="text-base leading-[1.1]">
+                    ▤
+                  </span>
+                  {t.dashboard.scan}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePanel('csv')}
+                  className="key key-plain h-[60px] flex-col !gap-0 text-xs uppercase"
+                >
+                  <span aria-hidden className="text-base leading-[1.1]">
+                    ⇣
+                  </span>
+                  {t.dashboard.csv}
+                </button>
+              </div>
+
+              <ErrorBoundary>
+                <section
+                  aria-labelledby="itemised-heading"
+                  className="slip mx-4 mt-6 px-4 pt-4 pb-7 flex flex-col"
+                >
+                  <h2
+                    id="itemised-heading"
+                    className="text-[15px] font-bold tracking-[.08em] uppercase pb-2"
+                  >
+                    {t.dashboard.recent}
+                  </h2>
+                  <TransactionList userId={userId} />
+                </section>
+              </ErrorBoundary>
+            </>
+          )}
+
+          <div className="sticky bottom-0 mt-auto bg-truffle-bg px-4 pt-6 pb-2.5 flex flex-col gap-2">
+            {voice.error && (
+              <NoticeSlip
+                tone={voice.error === MIC_UNAVAILABLE_ERROR ? 'muted' : 'warning'}
+                title={voice.error === MIC_UNAVAILABLE_ERROR ? t.voice.micOff : t.voice.didntCatch}
+              >
+                {voice.error === MIC_UNAVAILABLE_ERROR ? t.voice.micOffBody : voice.error}
+              </NoticeSlip>
+            )}
+            <VoiceButton
+              status={voiceStatus}
+              onStart={voice.startRecording}
+              onStop={voice.stopRecording}
+              withIcon
+              className="h-16"
+            />
+          </div>
         </main>
       </PageEnter>
 
       <BottomNav active="home" />
+
+      <AnimatePresence>
+        {activePanel === 'add' && <AddTransactionForm key="add" userId={userId} onClose={close} />}
+        {activePanel === 'csv' && <CSVImport key="csv" userId={userId} onClose={close} />}
+        {activePanel === 'receipt' && <ReceiptUpload key="receipt" userId={userId} onClose={close} />}
+      </AnimatePresence>
     </div>
   )
 }

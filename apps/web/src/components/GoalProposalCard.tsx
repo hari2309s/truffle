@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
+import { LeaderRow } from './Tally'
 
 interface GoalProposal {
   name: string
@@ -107,72 +108,57 @@ export const GoalProposalCard = memo(function GoalProposalCard({
     },
   })
 
-  if (status === 'done') {
-    return (
-      <motion.div
-        className="flex justify-start mb-3"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.32, ease: truffleEase }}
-      >
-        <div className="max-w-[85%] bg-truffle-card border border-truffle-border rounded-2xl rounded-bl-sm px-4 py-3">
-          <p className="text-sm text-truffle-text">
-            {t.proposals.goal.addedToGoals(proposal.emoji, proposal.name)}
-          </p>
-        </div>
-      </motion.div>
-    )
-  }
-
-  if (status === 'declined') return null
+  // Return null on done/declined — ChatPage's output-available branch renders
+  // the persistent confirmation slip, avoiding a double print.
+  if (status === 'done' || status === 'declined') return null
 
   return (
     <motion.div
-      className="flex justify-start mb-3"
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className="slip px-4 pt-3.5 pb-[26px] flex flex-col gap-2 text-sm"
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.36, ease: truffleEase }}
     >
-      <div className="max-w-[85%] bg-truffle-card border border-truffle-amber/40 rounded-2xl rounded-bl-sm px-4 py-4 space-y-3">
-        {/* Goal summary */}
-        <div className="flex items-center gap-3">
-          <span className="text-3xl">{proposal.emoji}</span>
-          <div>
-            <p className="font-semibold text-truffle-text text-sm">{proposal.name}</p>
-            <p className="text-xs text-truffle-muted">
-              {formatAmount(proposal.targetAmount)}
-              {proposal.deadline
-                ? ` · by ${new Date(proposal.deadline).toLocaleDateString(toDateLocale(locale), {
-                    month: 'short',
-                    year: 'numeric',
-                  })}`
-                : ''}
-            </p>
-          </div>
-        </div>
+      <span className="text-xs font-bold uppercase text-truffle-accent-ink">
+        {t.proposals.goal.proposed}
+      </span>
+      <LeaderRow
+        className="text-base"
+        left={`${proposal.emoji} ${proposal.name}`}
+        right={<b>{formatAmount(proposal.targetAmount)}</b>}
+      />
+      {proposal.deadline && (
+        <LeaderRow
+          className="text-truffle-text2"
+          left={t.proposals.goal.deadline}
+          right={new Date(proposal.deadline).toLocaleDateString(toDateLocale(locale), {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })}
+        />
+      )}
+      <p className="font-grotesk text-sm leading-[1.45] text-truffle-text2">{proposal.pitch}</p>
 
-        <p className="text-xs text-truffle-text-secondary leading-relaxed">{proposal.pitch}</p>
+      {error && <p className="text-xs font-bold text-truffle-negative uppercase">■ {error}</p>}
 
-        <p className="text-sm font-medium text-truffle-text">{t.proposals.goal.addToGoals}</p>
-
-        {error && <p className="text-xs text-truffle-red">{error}</p>}
-
-        <div className="flex gap-2">
-          <button
-            onClick={handleNo}
-            disabled={status === 'saving'}
-            className="flex-1 btn-ghost text-sm py-2"
-          >
-            {t.proposals.goal.noThanks}
-          </button>
-          <button
-            onClick={handleYes}
-            disabled={status === 'saving'}
-            className="flex-1 btn-primary text-sm py-2 disabled:opacity-50"
-          >
-            {status === 'saving' ? t.proposals.goal.saving : t.proposals.goal.yesAddIt}
-          </button>
-        </div>
+      <div className="grid grid-cols-2 gap-2 pt-1.5">
+        <button
+          type="button"
+          onClick={handleYes}
+          disabled={status === 'saving'}
+          className="key key-ink h-12 text-[13px] uppercase"
+        >
+          {status === 'saving' ? t.proposals.goal.saving : t.proposals.goal.yesAddIt}
+        </button>
+        <button
+          type="button"
+          onClick={handleNo}
+          disabled={status === 'saving'}
+          className="key key-line h-12 text-[13px] uppercase"
+        >
+          {t.proposals.goal.noThanks}
+        </button>
       </div>
     </motion.div>
   )

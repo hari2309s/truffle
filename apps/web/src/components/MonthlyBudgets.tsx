@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import type { CategoryBudget, Transaction, TransactionCategory } from '@truffle/types'
 import { TRANSACTION_CATEGORIES } from '@truffle/types'
-import { CATEGORY_EMOJI } from '@/lib/categories'
 import { SkeletonPulse } from './PageMotion'
+import { LeaderRow } from './Tally'
+import { useBudgetsQuery } from '@/hooks/useBudgetsQuery'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useSectionAddForm } from '@/contexts/SectionAddFormContext'
@@ -14,16 +15,6 @@ import { useSectionAddForm } from '@/contexts/SectionAddFormContext'
 interface MonthlyBudgetsProps {
   userId: string
   transactions: Transaction[]
-}
-
-function mapBudget(row: Record<string, unknown>): CategoryBudget {
-  return {
-    id: row.id as string,
-    userId: (row.user_id ?? row.userId) as string,
-    category: row.category as TransactionCategory,
-    amount: Number(row.amount),
-    createdAt: (row.created_at ?? row.createdAt) as string,
-  }
 }
 
 function currentYearMonth() {
@@ -53,15 +44,7 @@ export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const spendByCategory = useSpendByCategory(transactions)
 
-  const { data: budgets = [], isLoading } = useQuery({
-    queryKey: ['budgets', userId],
-    queryFn: async () => {
-      const res = await fetch(`/api/budgets?userId=${userId}`)
-      if (!res.ok) throw new Error('Failed to fetch budgets')
-      const json = await res.json()
-      return (json.budgets ?? []).map(mapBudget) as CategoryBudget[]
-    },
-  })
+  const { data: budgets = [], isLoading } = useBudgetsQuery(userId)
 
   const handleDelete = async (budgetId: string) => {
     setDeletingId(budgetId)
@@ -88,36 +71,31 @@ export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
       )}
 
       {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2].map((i) => (
-            <SkeletonPulse key={i} className="card h-16" />
-          ))}
-        </div>
+        <SkeletonPulse className="flex flex-col gap-2">
+          <div className="h-3 bg-truffle-border" />
+          <div className="h-3.5 bg-truffle-border" />
+        </SkeletonPulse>
       ) : budgets.length === 0 && !showAdd ? (
-        <div className="card border-dashed text-center text-truffle-muted text-sm py-6">
-          {t.monthlyBudgets.noBudgets}
-        </div>
+        <p className="font-grotesk text-sm text-truffle-text2">{t.monthlyBudgets.noBudgets}</p>
       ) : (
-        <div className="space-y-2">
-          {budgets.map((budget) => (
-            <BudgetCard
-              key={budget.id}
-              budget={budget}
-              spent={spendByCategory[budget.category] ?? 0}
-              onDelete={() => handleDelete(budget.id)}
-              isDeleting={deletingId === budget.id}
-              isConfirmingDelete={confirmDeleteId === budget.id}
-              onRequestDelete={() => setConfirmDeleteId(budget.id)}
-              onCancelDelete={() => setConfirmDeleteId(null)}
-            />
-          ))}
-        </div>
+        budgets.map((budget) => (
+          <BudgetRow
+            key={budget.id}
+            budget={budget}
+            spent={spendByCategory[budget.category] ?? 0}
+            onDelete={() => handleDelete(budget.id)}
+            isDeleting={deletingId === budget.id}
+            isConfirmingDelete={confirmDeleteId === budget.id}
+            onRequestDelete={() => setConfirmDeleteId(budget.id)}
+            onCancelDelete={() => setConfirmDeleteId(null)}
+          />
+        ))
       )}
     </>
   )
 }
 
-function BudgetCard({
+function BudgetRow({
   budget,
   spent,
   onDelete,
@@ -136,56 +114,59 @@ function BudgetCard({
 }) {
   const { t } = useLanguage()
   const { formatAmount } = useCurrency()
-  const pct = Math.min(100, budget.amount > 0 ? (spent / budget.amount) * 100 : 0)
+  const rawPct = budget.amount > 0 ? (spent / budget.amount) * 100 : 0
   const remaining = Math.max(0, budget.amount - spent)
   const isOver = spent > budget.amount
+  const isHeadsUp = !isOver && rawPct >= 80
 
-  const barColor = isOver ? 'bg-truffle-red' : pct >= 80 ? 'bg-truffle-amber' : 'bg-truffle-green'
-  const amountColor = isOver
-    ? 'text-red-400'
-    : pct >= 80
-      ? 'text-truffle-amber'
-      : 'text-truffle-text-secondary'
+  const status = isOver
+    ? { glyph: '■', word: t.monthlyBudgets.statusOver, color: 'text-truffle-negative', fill: 'bg-truffle-negative border-truffle-negative' }
+    : isHeadsUp
+      ? { glyph: '▲', word: t.monthlyBudgets.statusHeadsUp, color: 'text-truffle-warning', fill: 'bg-truffle-warning border-truffle-warning' }
+      : { glyph: '●', word: t.monthlyBudgets.statusOnTrack, color: 'text-truffle-positive', fill: 'bg-truffle-positive border-truffle-positive' }
+  const filled = Math.min(10, Math.round(rawPct / 10))
+  const note = isOver
+    ? t.monthlyBudgets.over(formatAmount(spent - budget.amount))
+    : t.monthlyBudgets.left(formatAmount(remaining))
 
   return (
     <div
-      className={`card space-y-2 transition-opacity ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
+      className={`flex flex-col gap-[5px] transition-opacity ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-base leading-none">{CATEGORY_EMOJI[budget.category]}</span>
-          <div>
-            <p className="text-sm font-medium text-truffle-text">
-              {t.categories[budget.category] ?? budget.category}
-            </p>
-            <p className="text-xs text-truffle-muted">
-              {isOver
-                ? t.monthlyBudgets.over(formatAmount(spent - budget.amount))
-                : t.monthlyBudgets.left(formatAmount(remaining))}{' '}
-              · {t.monthlyBudgets.budgetLabel(formatAmount(budget.amount))}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-xs font-semibold tabular-nums ${amountColor}`}>
-            {formatAmount(spent)}
-          </span>
-          <button
-            onClick={() => (isConfirmingDelete ? onCancelDelete() : onRequestDelete())}
-            className={`text-xs transition-colors ${isConfirmingDelete ? 'text-truffle-red' : 'text-truffle-muted hover:text-truffle-red'}`}
-            aria-label={t.monthlyBudgets.removeBudget}
-          >
-            ✕
-          </button>
-        </div>
-      </div>
-
-      <div className="h-1.5 bg-truffle-surface rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-          style={{ width: `${pct}%` }}
+      <div className="flex items-center gap-1">
+        <LeaderRow
+          className="flex-1 min-w-0"
+          left={t.categories[budget.category] ?? budget.category}
+          right={`${formatAmount(spent)}/${formatAmount(budget.amount)}`}
         />
+        <button
+          type="button"
+          onClick={() => (isConfirmingDelete ? onCancelDelete() : onRequestDelete())}
+          aria-label={t.monthlyBudgets.removeBudget}
+          aria-expanded={isConfirmingDelete}
+          className={`w-7 h-7 -my-1 -mr-1.5 grid place-items-center text-[11px] ${isConfirmingDelete ? 'text-truffle-negative' : 'text-truffle-text2'}`}
+        >
+          ✕
+        </button>
       </div>
+      <div
+        role="meter"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(rawPct)}
+        aria-label={t.categories[budget.category] ?? budget.category}
+        className="grid grid-cols-10 gap-0.5"
+      >
+        {Array.from({ length: 10 }, (_, i) => (
+          <div
+            key={i}
+            className={`h-3.5 border ${i < filled ? status.fill : 'border-truffle-border'}`}
+          />
+        ))}
+      </div>
+      <span className={`text-[11px] font-bold uppercase ${status.color}`}>
+        {status.glyph} {status.word} {Math.round(rawPct)}% · {note}
+      </span>
 
       <AnimatePresence>
         {isConfirmingDelete && (
@@ -196,22 +177,24 @@ function BudgetCard({
             transition={{ duration: 0.18 }}
             style={{ overflow: 'hidden' }}
           >
-            <div className="flex items-center justify-between px-4 py-2 bg-truffle-surface rounded-xl border border-truffle-border">
-              <p className="text-xs text-truffle-muted">{t.monthlyBudgets.deleteConfirm}</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={onCancelDelete}
-                  className="text-xs text-truffle-muted hover:text-truffle-text transition-colors px-2 py-1"
-                >
-                  {t.savingsGoals.cancel}
-                </button>
-                <button
-                  onClick={onDelete}
-                  className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors px-2 py-1"
-                >
-                  {t.transactions.delete}
-                </button>
-              </div>
+            <div className="grid grid-cols-[1fr_auto_auto] items-center gap-1.5 pt-1">
+              <span className="text-[11px] font-bold uppercase text-truffle-negative">
+                {t.monthlyBudgets.deleteConfirm}
+              </span>
+              <button
+                type="button"
+                onClick={onCancelDelete}
+                className="key key-outline h-9 px-3 text-[11px] uppercase"
+              >
+                {t.savingsGoals.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={onDelete}
+                className="key key-danger h-9 px-3 text-[11px] uppercase"
+              >
+                ✕ {t.transactions.delete}
+              </button>
             </div>
           </motion.div>
         )}
@@ -233,7 +216,6 @@ function AddBudgetForm({
 }) {
   const { t } = useLanguage()
   const { symbol } = useCurrency()
-  const queryClient = useQueryClient()
   const available = BUDGET_CATEGORIES.filter((c) => !existingCategories.includes(c))
   const [category, setCategory] = useState<TransactionCategory>(available[0] ?? 'other')
   const [amount, setAmount] = useState('')
@@ -241,9 +223,9 @@ function AddBudgetForm({
 
   if (available.length === 0) {
     return (
-      <div className="card border-dashed text-center text-truffle-muted text-sm py-4 mb-2">
+      <p className="font-grotesk text-sm text-truffle-text2">
         {t.monthlyBudgets.allCategoriesHaveBudget}
-      </div>
+      </p>
     )
   }
 
@@ -267,36 +249,43 @@ function AddBudgetForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card space-y-3 mb-2">
+    <form onSubmit={handleSubmit} className="grid grid-cols-[1fr_110px] gap-2 print-in">
       <select
         value={category}
         onChange={(e) => setCategory(e.target.value as TransactionCategory)}
-        className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-sm text-truffle-text focus:outline-none focus:border-truffle-amber"
+        aria-label={t.addTransaction.categoryLabel}
+        className="field h-11"
       >
         {available.map((c) => (
           <option key={c} value={c}>
-            {CATEGORY_EMOJI[c]} {t.categories[c] ?? c}
+            {t.categories[c] ?? c}
           </option>
         ))}
       </select>
 
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-muted text-sm">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-text2 text-sm">
           {symbol}
         </span>
         <input
           type="number"
+          inputMode="decimal"
           placeholder={t.monthlyBudgets.monthlyLimit}
+          aria-label={t.monthlyBudgets.monthlyLimit}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           min="1"
           step="1"
           required
-          className="w-full bg-truffle-surface border border-truffle-border rounded-xl pl-7 pr-4 py-3 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
+          className="field h-11 pl-7 font-bold"
         />
       </div>
 
-      <button type="submit" disabled={isLoading} className="btn-primary w-full disabled:opacity-50">
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="key key-accent key-3 h-11 col-span-2 text-xs uppercase"
+      >
         {isLoading ? t.monthlyBudgets.saving : t.monthlyBudgets.setBudget}
       </button>
     </form>

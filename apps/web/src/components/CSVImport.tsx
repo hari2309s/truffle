@@ -6,6 +6,7 @@ import type { TransactionCategory } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useImportFlow, ImportSuccess } from '@/hooks/useImportFlow'
+import { LeaderRow, MINUS, NoticeSlip, Sheet } from './Tally'
 
 interface ParsedRow {
   date: string
@@ -13,6 +14,14 @@ interface ParsedRow {
   amount: number
   category: TransactionCategory
   merchant?: string
+}
+
+type MappedField = 'date' | 'description' | 'amount' | 'category' | 'merchant'
+
+interface ParsedCSV {
+  rows: ParsedRow[]
+  /** Which header in the file fed each Truffle field (only those found). */
+  mapping: { from: string; to: MappedField }[]
 }
 
 const CATEGORY_MAP: Record<string, TransactionCategory> = {
@@ -56,11 +65,13 @@ function guessCategory(description: string, category?: string): TransactionCateg
   return 'other'
 }
 
-function parseCSV(text: string): ParsedRow[] {
+function parseCSV(text: string): ParsedCSV {
+  const empty: ParsedCSV = { rows: [], mapping: [] }
   const lines = text.trim().split('\n')
-  if (lines.length < 2 || !lines[0]) return []
+  if (lines.length < 2 || !lines[0]) return empty
 
-  const headers = lines[0].split(',').map((h) => h.trim().toLowerCase().replace(/['"]/g, ''))
+  const rawHeaders = lines[0].split(',').map((h) => h.trim().replace(/['"]/g, ''))
+  const headers = rawHeaders.map((h) => h.toLowerCase())
 
   const dateIdx = headers.findIndex((h) => h === 'date')
   const descIdx = headers.findIndex((h) => ['description', 'desc', 'name', 'narrative'].includes(h))
@@ -68,7 +79,7 @@ function parseCSV(text: string): ParsedRow[] {
   const categoryIdx = headers.findIndex((h) => h === 'category')
   const merchantIdx = headers.findIndex((h) => ['merchant', 'payee', 'vendor'].includes(h))
 
-  if (dateIdx === -1 || descIdx === -1 || amountIdx === -1) return []
+  if (dateIdx === -1 || descIdx === -1 || amountIdx === -1) return empty
 
   const rows: ParsedRow[] = []
   for (let i = 1; i < lines.length; i++) {
@@ -93,12 +104,24 @@ function parseCSV(text: string): ParsedRow[] {
     })
   }
 
-  return rows
+  const mapping = (
+    [
+      [dateIdx, 'date'],
+      [descIdx, 'description'],
+      [amountIdx, 'amount'],
+      [categoryIdx, 'category'],
+      [merchantIdx, 'merchant'],
+    ] as const
+  )
+    .filter(([idx]) => idx !== -1)
+    .map(([idx, to]) => ({ from: rawHeaders[idx]!, to }))
+
+  return { rows, mapping }
 }
 
 interface CSVImportProps {
   userId: string
-  onClose?: () => void
+  onClose: () => void
 }
 
 const PREVIEW_LIMIT = 5
@@ -108,7 +131,9 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
   const { currency, formatAmount } = useCurrency()
   const queryClient = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
+  const [fileName, setFileName] = useState('')
   const [preview, setPreview] = useState<ParsedRow[] | null>(null)
+  const [mapping, setMapping] = useState<ParsedCSV['mapping']>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showAll, setShowAll] = useState(false)
   const flow = useImportFlow()
@@ -119,11 +144,13 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
     flow.reset()
     setPreview(null)
     setShowAll(false)
+    setFileName(file.name)
 
     const reader = new FileReader()
     reader.onload = (ev) => {
       const text = ev.target?.result as string
-      const rows = parseCSV(text).sort(
+      const parsed = parseCSV(text)
+      const rows = parsed.rows.sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       )
       if (rows.length === 0) {
@@ -131,6 +158,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
         return
       }
       setPreview(rows)
+      setMapping(parsed.mapping)
       setSelected(new Set(rows.map((_, i) => i)))
     }
     reader.readAsText(file)
@@ -140,6 +168,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
     setPreview(null)
     setSelected(new Set())
     setShowAll(false)
+    flow.reset()
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -196,11 +225,13 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
 
   if (flow.imported) {
     return (
-      <ImportSuccess
-        message={t.csvImport.imported(selected.size)}
-        doneLabel={t.csvImport.done}
-        onDone={onClose}
-      />
+      <Sheet title={t.csvImport.title} onClose={onClose} closeLabel={t.common.close}>
+        <ImportSuccess
+          message={t.csvImport.imported(selected.size)}
+          doneLabel={t.csvImport.done}
+          onDone={onClose}
+        />
+      </Sheet>
     )
   }
 
@@ -208,40 +239,88 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
   const hiddenCount = preview ? preview.length - PREVIEW_LIMIT : 0
   const allSelected = preview ? selected.size === preview.length : false
   const someSelected = selected.size > 0 && !allSelected
+  const dates = preview?.map((r) => r.date).filter(Boolean).sort() ?? []
+  const signed = (n: number) => `${n < 0 ? MINUS : '+'}${formatAmount(n)}`
 
   return (
-    <div className="card space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-truffle-text">{t.csvImport.title}</h3>
-        <span className="text-xs text-truffle-muted">{t.csvImport.hint}</span>
-      </div>
+    <Sheet
+      title={t.csvImport.title}
+      onClose={preview ? handleReset : onClose}
+      closeLabel={preview ? t.csvImport.cancel : t.common.close}
+      closeGlyph={preview ? '←' : '✕'}
+      footer={
+        preview && (
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={flow.isLoading || selected.size === 0}
+            className="key key-accent w-full h-[60px] text-[15px] uppercase"
+          >
+            {flow.isLoading ? t.csvImport.importing : t.csvImport.import(selected.size)}
+          </button>
+        )
+      }
+    >
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={handleFile}
+      />
 
       {!preview ? (
         <>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="w-full border-2 border-dashed border-truffle-border rounded-xl py-8 flex flex-col items-center gap-2 cursor-pointer hover:border-truffle-amber transition-colors"
+            className="mx-4 mt-3 py-14 border-2 border-dashed border-truffle-border rounded-lg flex flex-col items-center gap-2 hover:border-truffle-text transition-colors"
           >
-            <span className="text-2xl">📄</span>
-            <p className="text-sm text-truffle-muted">{t.csvImport.tapToSelect}</p>
+            <span aria-hidden className="text-2xl">
+              ⇣
+            </span>
+            <span className="text-sm font-bold uppercase">{t.csvImport.tapToSelect}</span>
+            <span className="text-xs text-truffle-text2 uppercase">{t.csvImport.hint}</span>
           </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={handleFile}
-          />
+          {flow.error && (
+            <NoticeSlip tone="negative" title={t.csvImport.couldntRead} className="mx-4 mt-4">
+              {flow.error}
+              <p className="text-truffle-text2 mt-1">{t.csvImport.nothingImported}</p>
+            </NoticeSlip>
+          )}
         </>
       ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-truffle-muted">
-            {t.csvImport.transactionsFound(preview.length)}
-          </p>
+        <>
+          <div className="px-6 pt-3 flex flex-col gap-1.5">
+            <span className="font-grotesk text-[28px] font-medium leading-[1.1] break-all">
+              {fileName}
+            </span>
+            <span className="text-xs text-truffle-text2 uppercase">
+              {t.csvImport.rows(preview.length)}
+              {dates.length > 0 && ` · ${dates[0]} – ${dates[dates.length - 1]}`}
+            </span>
+          </div>
 
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 py-1.5 px-1 border-b border-truffle-border">
+          <div className="paper mx-4 mt-[18px] px-4 py-3.5 flex flex-col gap-0.5 text-[13px]">
+            <span className="text-xs font-bold pb-1.5 uppercase">{t.csvImport.mapping}</span>
+            {mapping.map((m) => (
+              <div
+                key={m.to}
+                className="grid grid-cols-[1fr_20px_1fr] gap-1.5 items-center min-h-12 rule-soft"
+              >
+                <span className="font-bold truncate">{m.from}</span>
+                <span aria-hidden className="text-truffle-text2">
+                  →
+                </span>
+                <span className="h-9 px-2.5 rounded-md border border-truffle-text flex items-center text-xs font-bold uppercase">
+                  {t.csvImport.fields[m.to]}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="slip-sm mx-4 mt-3.5 px-4 pt-3 pb-[22px] flex flex-col gap-1.5 text-xs">
+            <label className="flex items-center gap-2 font-bold uppercase min-h-8">
               <input
                 type="checkbox"
                 checked={allSelected}
@@ -250,74 +329,57 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
                 }}
                 onChange={toggleAll}
                 disabled={flow.isLoading}
-                className="accent-truffle-amber cursor-pointer"
+                className="w-4 h-4 accent-[var(--t-accent)]"
               />
-              <span className="text-xs font-medium text-truffle-text-secondary">
-                {t.csvImport.selectedOf(selected.size, preview.length)}
-              </span>
-            </div>
-
-            <div className="max-h-48 overflow-y-auto space-y-0">
-              {visibleRows.map((row, i) => (
-                <label
-                  key={i}
-                  className="flex items-center gap-2 py-1.5 border-b border-truffle-border last:border-0 cursor-pointer px-1 transition-all duration-150 hover:bg-truffle-surface hover:border-transparent hover:px-2 rounded-lg"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.has(i)}
-                    onChange={() => toggleRow(i)}
-                    disabled={flow.isLoading}
-                    className="accent-truffle-amber cursor-pointer flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs text-truffle-text truncate block">
-                      {row.description}
+              {t.csvImport.preview} · {t.csvImport.selectedOf(selected.size, preview.length)}
+            </label>
+            {visibleRows.map((row, i) => (
+              <label key={i} className="flex items-center gap-2 min-h-8 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selected.has(i)}
+                  onChange={() => toggleRow(i)}
+                  disabled={flow.isLoading}
+                  className="w-4 h-4 flex-shrink-0 accent-[var(--t-accent)]"
+                />
+                <LeaderRow
+                  className={`flex-1 min-w-0 ${selected.has(i) ? '' : 'opacity-50'}`}
+                  left={
+                    <span className="block truncate">
+                      {row.date.slice(5)} {row.description}
                     </span>
-                    <span className="text-xs text-truffle-muted">
-                      {row.date} · {row.category.replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                  <span
-                    className={`ml-2 text-xs font-medium tabular-nums flex-shrink-0 ${row.amount >= 0 ? 'text-truffle-green' : 'text-truffle-red'}`}
-                  >
-                    {row.amount >= 0 ? '+' : ''}
-                    {formatAmount(row.amount)}
-                  </span>
-                </label>
-              ))}
-            </div>
-
+                  }
+                  right={<b>{signed(row.amount)}</b>}
+                />
+              </label>
+            ))}
             {hiddenCount > 0 && (
               <button
+                type="button"
                 onClick={() => setShowAll((v) => !v)}
-                className="w-full text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors py-1.5 text-center"
+                className="self-start underline underline-offset-2 uppercase min-h-8"
               >
                 {showAll ? t.csvImport.showLess : t.csvImport.showMore(hiddenCount)}
               </button>
             )}
           </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={handleReset}
-              disabled={flow.isLoading}
-              className="btn-ghost flex-1 text-sm disabled:opacity-50"
-            >
-              {t.csvImport.cancel}
-            </button>
-            <button
-              onClick={handleImport}
-              disabled={flow.isLoading || selected.size === 0}
-              className="btn-primary flex-1 text-sm disabled:opacity-50"
-            >
-              {flow.isLoading ? t.csvImport.importing : t.csvImport.import(selected.size)}
-            </button>
+          <div className="mx-4 mt-3.5 px-1 flex flex-col gap-1.5 text-[13px]">
+            <LeaderRow left={t.csvImport.newEntries} right={<b>{selected.size}</b>} />
+            <LeaderRow
+              className="text-truffle-text2"
+              left={t.csvImport.skipped}
+              right={preview.length - selected.size}
+            />
           </div>
-        </div>
-      )}
 
-      {flow.error && <p className="text-sm text-truffle-red">{flow.error}</p>}
-    </div>
+          {flow.error && (
+            <NoticeSlip tone="negative" title={t.csvImport.couldntRead} className="mx-4 mt-4">
+              {flow.error}
+            </NoticeSlip>
+          )}
+        </>
+      )}
+    </Sheet>
   )
 }

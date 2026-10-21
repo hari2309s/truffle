@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { computeForecast } from '../forecast'
+import { computeForecast, computeStatement } from '../forecast'
 
 // Pin time to 2026-05-20 (day 20 of 31-day month)
 const FAKE_NOW = new Date('2026-05-20T12:00:00Z')
@@ -89,5 +89,44 @@ describe('computeForecast', () => {
     const txs = [makeTx(2000, '2026-05-01')]
     const result = computeForecast(txs)!
     expect(result.projectedEndOfMonth).toBeCloseTo(2000) // no spend to project
+  })
+})
+
+describe('computeStatement', () => {
+  // Local-time date so day-of-month maths doesn't drift with the test TZ.
+  const today = new Date(2026, 9, 21) // Wed 21 Oct 2026, 10 days remaining
+
+  it('returns null with no transactions', () => {
+    expect(computeStatement([], today)).toBeNull()
+  })
+
+  it('balance is this month’s net only', () => {
+    const s = computeStatement(
+      [makeTx(3000, '2026-09-01'), makeTx(-500, '2026-09-10'), makeTx(-210, '2026-10-05')],
+      today
+    )!
+    expect(s.balance).toBe(-210)
+  })
+
+  it('returns null when nothing is logged this month', () => {
+    expect(computeStatement([makeTx(-50, '2026-09-04')], today)).toBeNull()
+  })
+
+  it('daily rate and forecast use this month’s spend only', () => {
+    const s = computeStatement([makeTx(2000, '2026-10-01'), makeTx(-420, '2026-10-02')], today)!
+    expect(s.spentThisMonth).toBe(420)
+    expect(s.dailyRate).toBe(20)
+    expect(s.forecastMonthSpend).toBe(620)
+    expect(s.projectedClose).toBe(1580 - 200)
+    expect(s.monthEnd.getDate()).toBe(31)
+  })
+
+  it('pace compares against last month up to the same day', () => {
+    const base = [makeTx(-100, '2026-10-03')]
+    const ahead = computeStatement([...base, makeTx(-150, '2026-09-04'), makeTx(-900, '2026-09-25')], today)!
+    expect(ahead.pace).toBe('ahead') // 100 vs 150 (the 25 Sep spend is after day 21)
+    const behind = computeStatement([...base, makeTx(-50, '2026-09-04')], today)!
+    expect(behind.pace).toBe('behind')
+    expect(computeStatement(base, today)!.pace).toBeNull()
   })
 })

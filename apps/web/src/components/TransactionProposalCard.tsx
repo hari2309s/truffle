@@ -12,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
 import { useProposalCard } from './GoalProposalCard'
+import { LeaderRow, MINUS } from './Tally'
 
 export interface TransactionProposal {
   description: string
@@ -39,7 +40,6 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
 
   const isExpense = proposal.amount < 0
   const formattedAmount = `${isExpense ? '-' : '+'}${formatAmount(proposal.amount)}`
-  const amountColor = isExpense ? 'text-red-400' : 'text-green-400'
   const emoji = CATEGORY_EMOJI[proposal.category] ?? '📝'
   const categoryLabel = t.categories[proposal.category] ?? proposal.category.replace(/_/g, ' ')
   const formattedDate = new Date(proposal.date).toLocaleDateString(toDateLocale(locale), {
@@ -95,44 +95,48 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
 
   return (
     <motion.div
-      className="flex justify-start mb-3"
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className="slip px-4 pt-3.5 pb-[26px] flex flex-col gap-2 text-sm border-t-[6px] border-truffle-accent"
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.36, ease: truffleEase }}
     >
-      <div className="max-w-[85%] bg-truffle-card border border-truffle-amber/40 rounded-2xl rounded-bl-sm px-4 py-4 space-y-3">
-        <div className="flex items-center gap-3">
-          <span className="text-3xl">{emoji}</span>
-          <div>
-            <p className="font-semibold text-truffle-text text-sm">{proposal.description}</p>
-            <p className="text-xs text-truffle-muted">
-              {proposal.merchant ? `${proposal.merchant} · ` : ''}
-              {categoryLabel} · {formattedDate}
-            </p>
-          </div>
-          <span className={`ml-auto font-semibold text-sm ${amountColor}`}>{formattedAmount}</span>
-        </div>
+      <span className="text-xs font-bold uppercase text-truffle-accent-ink">
+        {t.proposals.transaction.proposed}
+      </span>
+      <LeaderRow
+        className="text-base"
+        left={proposal.merchant ? `${proposal.merchant} · ${categoryLabel}` : `${proposal.description} · ${categoryLabel}`}
+        right={
+          <b className={isExpense ? '' : 'text-truffle-positive'}>
+            {isExpense ? MINUS : '+'}
+            {formatAmount(proposal.amount)}
+          </b>
+        }
+      />
+      <span className="text-xs text-truffle-text2 uppercase">
+        {formattedDate} · {currency}
+        {proposal.merchant ? ` · ${proposal.description}` : ''}
+      </span>
 
-        <p className="text-sm font-medium text-truffle-text">{t.proposals.transaction.logThis}</p>
+      {error && <p className="text-xs font-bold text-truffle-negative uppercase">■ {error}</p>}
 
-        {error && <p className="text-xs text-truffle-red">{error}</p>}
-
-        <div className="flex gap-2">
-          <button
-            onClick={handleNo}
-            disabled={status === 'saving'}
-            className="flex-1 btn-ghost text-sm py-2"
-          >
-            {t.proposals.transaction.noThanks}
-          </button>
-          <button
-            onClick={handleYes}
-            disabled={status === 'saving'}
-            className="flex-1 btn-primary text-sm py-2 disabled:opacity-50"
-          >
-            {status === 'saving' ? t.proposals.transaction.saving : t.proposals.transaction.add}
-          </button>
-        </div>
+      <div className="grid grid-cols-2 gap-2 pt-1.5">
+        <button
+          type="button"
+          onClick={handleYes}
+          disabled={status === 'saving'}
+          className="key key-accent h-12 text-[13px] uppercase"
+        >
+          {status === 'saving' ? t.proposals.transaction.saving : t.proposals.transaction.add}
+        </button>
+        <button
+          type="button"
+          onClick={handleNo}
+          disabled={status === 'saving'}
+          className="key key-line h-12 text-[13px] uppercase"
+        >
+          {t.proposals.transaction.noThanks}
+        </button>
       </div>
     </motion.div>
   )

@@ -1,37 +1,41 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { useRef, type RefObject } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Anomaly, Transaction } from '@truffle/types'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { detectSubscriptions } from '@/lib/subscriptions'
-import { staggerItemVariants, staggerListVariants, truffleEase } from '@/lib/motion'
-import { computeForecast } from '@/lib/forecast'
-import type { Forecast } from '@/lib/forecast'
-import { InsightsAccordionSection } from './InsightsAccordionSection'
 import { PageEnter, SkeletonPulse } from './PageMotion'
 import { SavingsGoalsEmbedded } from './SavingsGoals'
 import { SavingsHabits } from './SavingsHabits'
 import { SpendingHeatmap } from './SpendingHeatmap'
 import { MonthlyBudgets } from './MonthlyBudgets'
-import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
 import { ErrorBoundary } from './ErrorBoundary'
+import { LeaderRow, MINUS, Rule } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { SectionAddFormProvider, useSectionAddForm } from '@/contexts/SectionAddFormContext'
-import { toDateLocale } from '@/lib/date'
 
 interface InsightsPageProps {
   userId: string
 }
 
-export function InsightsPage({ userId }: InsightsPageProps) {
-  const { t, locale } = useLanguage()
-  const mainRef = useRef<HTMLElement>(null)
+const SECTIONS = ['rev', 'cal', 'bud', 'goal', 'hab', 'sub'] as const
+type SectionCode = (typeof SECTIONS)[number]
 
-  const { data: txData, isLoading: txLoading } = useTransactionsQuery(userId)
+const sectionId = (code: SectionCode) => `insights-${code}`
+
+/**
+ * Insights as one itemised statement. Section codes stick to the top and
+ * jump between sections; the active code follows the scroll position.
+ */
+export function InsightsPage({ userId }: InsightsPageProps) {
+  const { t } = useLanguage()
+  const mainRef = useRef<HTMLElement>(null)
+  const [active, setActive] = useState<SectionCode>('rev')
+
+  const { data: txData, isLoading } = useTransactionsQuery(userId)
 
   const { data: anomalyData, isLoading: anomalyLoading } = useQuery({
     queryKey: ['anomalies', userId],
@@ -43,128 +47,161 @@ export function InsightsPage({ userId }: InsightsPageProps) {
     },
   })
 
-  const { formatAmount } = useCurrency()
-  const forecast = txData?.transactions ? computeForecast(txData.transactions, formatAmount) : null
+  const transactions = txData?.transactions ?? []
   const anomalies = anomalyData ?? []
   const subscriptions = txData?.transactions ? detectSubscriptions(txData.transactions) : []
-  const isLoading = txLoading
+
+  // Scroll-spy: the active code is the last section whose top has passed
+  // just below the sticky code bar.
+  useEffect(() => {
+    const root = mainRef.current
+    if (!root) return
+    let frame = 0
+    const onScroll = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const rootTop = root.getBoundingClientRect().top
+        let current: SectionCode = SECTIONS[0]
+        for (const code of SECTIONS) {
+          const el = document.getElementById(sectionId(code))
+          if (el && el.getBoundingClientRect().top - rootTop <= 96) current = code
+        }
+        // At the very bottom, the last short sections can never reach the
+        // threshold — light up the final one so every code is reachable.
+        if (root.scrollTop + root.clientHeight >= root.scrollHeight - 2) {
+          current = 'sub'
+        }
+        setActive(current)
+      })
+    }
+    root.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      root.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(frame)
+    }
+  }, [])
+
+  const jumpTo = useCallback((code: SectionCode) => {
+    document.getElementById(sectionId(code))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const monthLabel = new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 
   return (
     <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
-      <TopBar title={t.insights.title} subtitle="" showControls userId={userId} />
-
       <PageEnter className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        <div className="flex-shrink-0 px-4 pt-4 pb-2 bg-truffle-bg">
-          <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide mb-3">
-            {t.insights.monthForecast}
-          </h2>
-          {isLoading ? (
-            <SkeletonPulse className="card h-24" />
-          ) : forecast ? (
-            <ForecastCard forecast={forecast} />
-          ) : (
-            <motion.div
-              className="card border-dashed text-center text-truffle-muted text-sm py-6"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.36, ease: truffleEase }}
-            >
-              {t.insights.addTransactionsForForecast}
-            </motion.div>
-          )}
-        </div>
-
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto px-4 py-6 pb-[calc(5rem_+_env(safe-area-inset-bottom))] space-y-6 min-h-0"
+          className="flex-1 overflow-y-auto min-h-0 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+28px)]"
         >
-          <ErrorBoundary>
-            <InsightsAccordionSection title={t.insights.spendingCalendar} scrollRootRef={mainRef}>
-              {isLoading ? (
-                <SkeletonPulse className="card h-64" />
-              ) : (
-                <SpendingHeatmap transactions={txData?.transactions ?? []} />
-              )}
-            </InsightsAccordionSection>
+          <header className="pt-[max(12px,env(safe-area-inset-top))] px-6 flex justify-between items-baseline">
+            <h1 className="font-grotesk text-4xl font-medium">{t.insights.title}</h1>
+            <span className="text-xs text-truffle-text2 uppercase">{monthLabel}</span>
+          </header>
 
-            <SectionAddFormProvider>
-              <BudgetsSection
-                userId={userId}
-                transactions={txData?.transactions ?? []}
-                isLoading={isLoading}
-                mainRef={mainRef}
-              />
-            </SectionAddFormProvider>
-
-            <SectionAddFormProvider>
-              <GoalsSection userId={userId} mainRef={mainRef} />
-            </SectionAddFormProvider>
-
-            <InsightsAccordionSection title={t.insights.savingHabits} scrollRootRef={mainRef}>
-              <SavingsHabits userId={userId} />
-            </InsightsAccordionSection>
-
-            {subscriptions.length > 0 && (
-              <InsightsAccordionSection
-                title={t.insights.recurringSubscriptions}
-                scrollRootRef={mainRef}
+          <nav
+            aria-label={t.insights.sectionsLabel}
+            className="sticky top-0 z-10 bg-truffle-bg px-4 pt-3.5 pb-2 grid grid-cols-6 gap-1"
+          >
+            {SECTIONS.map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => jumpTo(code)}
+                aria-current={active === code ? 'location' : undefined}
+                aria-label={t.insights.sections[code].title}
+                className={`h-11 rounded-md grid place-items-center text-[11px] font-bold uppercase ${
+                  active === code
+                    ? 'bg-truffle-text text-truffle-bg'
+                    : 'border border-truffle-border'
+                }`}
               >
-                <div className="space-y-2">
-                  {subscriptions.map((sub) => (
-                    <div key={sub.key} className="card flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-truffle-text">{sub.displayName}</p>
-                        <p className="text-xs text-truffle-muted">
-                          {t.insights.lastCharged}{' '}
-                          {new Date(sub.lastCharged).toLocaleDateString(toDateLocale(locale), {
-                            day: 'numeric',
-                            month: 'short',
-                          })}
-                          {' · '}
-                          {t.insights.detected(sub.monthsDetected)}
-                        </p>
-                      </div>
-                      <span className="text-sm font-semibold text-truffle-red">
-                        -{formatAmount(sub.monthlyAmount)}
-                        {t.insights.perMonth}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </InsightsAccordionSection>
-            )}
+                {t.insights.sections[code].code}
+              </button>
+            ))}
+          </nav>
 
-            <InsightsAccordionSection title={t.insights.thingsToReview} scrollRootRef={mainRef}>
-              {anomalyLoading ? (
-                <div className="space-y-2">
-                  {[1, 2].map((i) => (
-                    <SkeletonPulse key={i} className="card h-16" />
-                  ))}
-                </div>
-              ) : anomalies.length ? (
-                <motion.div
-                  className="space-y-2"
-                  initial="hidden"
-                  animate="show"
-                  variants={staggerListVariants}
-                >
-                  {anomalies.map((a) => (
-                    <motion.div key={a.id} variants={staggerItemVariants}>
-                      <AnomalyCard anomaly={a} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              ) : (
-                <motion.div
-                  className="card border-dashed text-center text-truffle-muted text-sm py-6"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.34, ease: truffleEase }}
-                >
-                  {t.insights.noUnusualActivity}
-                </motion.div>
-              )}
-            </InsightsAccordionSection>
+          <ErrorBoundary>
+            <div className="slip mx-4 mt-2 px-[18px] pt-[18px] pb-9 flex flex-col gap-3 text-[13px]">
+              <Section
+                code="rev"
+                title={t.insights.sections.rev.heading(anomalies.length)}
+              >
+                {anomalyLoading ? (
+                  <SkeletonPulse className="flex flex-col gap-2">
+                    <div className="h-3.5 bg-truffle-border" />
+                    <div className="h-3 bg-truffle-border w-2/3" />
+                  </SkeletonPulse>
+                ) : anomalies.length ? (
+                  anomalies.map((a) => (
+                    <AnomalyRow key={a.id} anomaly={a} transactions={transactions} />
+                  ))
+                ) : (
+                  <p className="font-grotesk text-sm text-truffle-text2">
+                    {t.insights.noUnusualActivity}
+                  </p>
+                )}
+              </Section>
+
+              <Rule className="mt-2" />
+              <Section code="cal" title={t.insights.sections.cal.heading}>
+                {isLoading ? (
+                  <SkeletonPulse className="h-48 bg-truffle-surface" />
+                ) : (
+                  <SpendingHeatmap transactions={transactions} />
+                )}
+              </Section>
+
+              <Rule className="mt-2" />
+              <SectionAddFormProvider>
+                <AddableSection code="bud" title={t.insights.sections.bud.heading}>
+                  <MonthlyBudgets userId={userId} transactions={transactions} />
+                </AddableSection>
+              </SectionAddFormProvider>
+
+              <Rule className="mt-2" />
+              <SectionAddFormProvider>
+                <AddableSection code="goal" title={t.insights.sections.goal.heading}>
+                  <SavingsGoalsEmbedded userId={userId} />
+                </AddableSection>
+              </SectionAddFormProvider>
+
+              <Rule className="mt-2" />
+              <Section code="hab" title={t.insights.sections.hab.heading}>
+                <SavingsHabits userId={userId} />
+              </Section>
+
+              <Rule className="mt-2" />
+              <Section code="sub" title={t.insights.sections.sub.heading}>
+                {subscriptions.length > 0 ? (
+                  <>
+                    {subscriptions.map((sub) => (
+                      <LeaderRow
+                        key={sub.key}
+                        left={
+                          <span>
+                            {sub.displayName}
+                            <span className="block text-[11px] text-truffle-text2">
+                              {t.insights.detected(sub.monthsDetected)}
+                            </span>
+                          </span>
+                        }
+                        right={<SubscriptionAmount amount={sub.monthlyAmount} />}
+                      />
+                    ))}
+                    <Rule />
+                    <div className="flex justify-between font-bold text-[15px] uppercase">
+                      <span>{t.insights.monthly}</span>
+                      <SubscriptionAmount
+                        amount={subscriptions.reduce((s, sub) => s + sub.monthlyAmount, 0)}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <p className="font-grotesk text-sm text-truffle-text2">{t.insights.subsEmpty}</p>
+                )}
+              </Section>
+            </div>
           </ErrorBoundary>
         </main>
       </PageEnter>
@@ -174,164 +211,108 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   )
 }
 
-/** Reads its own SectionAddFormProvider so the header's "add" toggle and the
- * embedded MonthlyBudgets both share open/close state without InsightsPage
- * threading it as controlled props. */
-function BudgetsSection({
-  userId,
-  transactions,
-  isLoading,
-  mainRef,
+function SubscriptionAmount({ amount }: { amount: number }) {
+  const { formatAmount } = useCurrency()
+  return <span>{formatAmount(amount)}</span>
+}
+
+function Section({
+  code,
+  title,
+  right,
+  children,
 }: {
-  userId: string
-  transactions: Transaction[]
-  isLoading: boolean
-  mainRef: RefObject<HTMLElement | null>
+  code: SectionCode
+  title: string
+  right?: React.ReactNode
+  children: React.ReactNode
 }) {
   const { t } = useLanguage()
-  const { open, setOpen } = useSectionAddForm()
-
+  const headingId = `${sectionId(code)}-heading`
   return (
-    <InsightsAccordionSection
-      title={t.insights.monthlyBudgets}
-      scrollRootRef={mainRef}
-      headerRight={
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-        >
-          {open ? t.savingsGoals.cancel : t.insights.newBudget}
-        </button>
-      }
+    <section
+      id={sectionId(code)}
+      aria-labelledby={headingId}
+      className="flex flex-col gap-3 scroll-mt-[72px]"
     >
-      {isLoading ? (
-        <SkeletonPulse className="card h-24" />
-      ) : (
-        <MonthlyBudgets userId={userId} transactions={transactions} />
-      )}
-    </InsightsAccordionSection>
+      <div className="flex justify-between items-center min-h-6">
+        <h2 id={headingId} className="font-bold tracking-[.08em] uppercase">
+          {t.insights.sections[code].code} · {title}
+        </h2>
+        {right}
+      </div>
+      {children}
+    </section>
   )
 }
 
-/** Same pattern as BudgetsSection, for the embedded savings-goals accordion section. */
-function GoalsSection({
-  userId,
-  mainRef,
+/** A section whose header toggles an inline "+ New" form (budgets, goals). */
+function AddableSection({
+  code,
+  title,
+  children,
 }: {
-  userId: string
-  mainRef: RefObject<HTMLElement | null>
+  code: SectionCode
+  title: string
+  children: React.ReactNode
 }) {
   const { t } = useLanguage()
   const { open, setOpen } = useSectionAddForm()
-
   return (
-    <InsightsAccordionSection
-      title={t.insights.savingsGoals}
-      scrollRootRef={mainRef}
-      onLeaveViewport={() => setOpen(false)}
-      headerRight={
+    <Section
+      code={code}
+      title={title}
+      right={
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+          aria-expanded={open}
+          className="-my-2 min-h-8 text-xs font-bold uppercase underline underline-offset-2"
         >
-          {open ? t.savingsGoals.cancel : t.insights.newGoal}
+          {open ? t.savingsGoals.cancel : t.insights.newItem}
         </button>
       }
     >
-      <SavingsGoalsEmbedded userId={userId} />
-    </InsightsAccordionSection>
+      {children}
+    </Section>
   )
 }
 
-function ForecastCard({ forecast }: { forecast: Forecast }) {
+const SEVERITY = {
+  high: { glyph: '■', color: 'text-truffle-negative' },
+  medium: { glyph: '▲', color: 'text-truffle-warning' },
+  low: { glyph: '●', color: 'text-truffle-text2' },
+} as const
+
+function AnomalyRow({ anomaly, transactions }: { anomaly: Anomaly; transactions: Transaction[] }) {
   const { t } = useLanguage()
   const { formatAmount } = useCurrency()
-  const isPositive = forecast.projectedEndOfMonth >= 0
-  const progress = Math.min(
-    100,
-    Math.max(
-      0,
-      forecast.projectedEndOfMonth > 0 && forecast.currentBalance > 0
-        ? (forecast.currentBalance / forecast.projectedEndOfMonth) * 100
-        : 0
-    )
-  )
+  const tx = transactions.find((x) => x.id === anomaly.transactionId)
+  const severity = SEVERITY[anomaly.severity]
 
   return (
-    <motion.div
-      className="card space-y-4"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.38, ease: truffleEase }}
-    >
-      <div className="flex justify-between items-end">
-        <div>
-          <p className="text-xs text-truffle-muted mb-1">{t.insights.projectedEndOfMonth}</p>
-          <p
-            className={`text-2xl font-bold ${isPositive ? 'text-truffle-green' : 'text-truffle-red'}`}
-          >
-            {formatAmount(forecast.projectedEndOfMonth)}
-          </p>
-        </div>
-        <span
-          className={`text-xs px-2 py-1 rounded-full ${
-            forecast.confidence === 'high'
-              ? 'bg-truffle-green/20 text-truffle-green'
-              : forecast.confidence === 'medium'
-                ? 'bg-truffle-amber/20 text-truffle-amber'
-                : 'bg-truffle-muted/20 text-truffle-muted'
-          }`}
-        >
-          {t.financialBrief.confidence[forecast.confidence]}
-        </span>
-      </div>
-
-      <div className="h-2 bg-truffle-surface rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${isPositive ? 'bg-truffle-green' : 'bg-truffle-red'}`}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-
-      <ul className="space-y-1">
-        {forecast.assumptions.map((assumption, i) => (
-          <li key={i} className="text-xs text-truffle-muted flex items-center gap-1">
-            <span className="w-1 h-1 rounded-full bg-truffle-muted inline-block flex-shrink-0" />
-            {assumption}
-          </li>
-        ))}
-      </ul>
-    </motion.div>
-  )
-}
-
-function AnomalyCard({ anomaly }: { anomaly: Anomaly }) {
-  const severityColors = {
-    high: 'text-truffle-red bg-truffle-red/10',
-    medium: 'text-truffle-amber bg-truffle-amber/10',
-    low: 'text-truffle-muted bg-truffle-muted/10',
-  }
-
-  const typeEmoji = {
-    unusual_amount: '⚠️',
-    forgotten_subscription: '🔄',
-    category_spike: '📈',
-    new_merchant: '🆕',
-  }
-
-  return (
-    <div className="card flex gap-3">
-      <span className="text-xl flex-shrink-0">{typeEmoji[anomaly.type] ?? '⚠️'}</span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-truffle-text">{anomaly.description}</p>
-        <span
-          className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full ${severityColors[anomaly.severity]}`}
-        >
-          {anomaly.severity}
-        </span>
-      </div>
+    <div className="flex flex-col gap-1.5">
+      <LeaderRow
+        className="text-sm"
+        left={
+          <span className="block truncate">
+            ?? {tx ? tx.description : t.insights.anomalyTypes[anomaly.type]}
+          </span>
+        }
+        right={
+          tx ? (
+            <b>
+              {tx.amount < 0 ? MINUS : '+'}
+              {formatAmount(tx.amount)}
+            </b>
+          ) : null
+        }
+      />
+      <p className="font-grotesk text-sm leading-[1.45] text-truffle-text2">{anomaly.description}</p>
+      <span className={`text-[11px] font-bold uppercase ${severity.color}`}>
+        {severity.glyph} {t.insights.severity[anomaly.severity]}
+        {tx ? ` · ${t.insights.anomalyTypes[anomaly.type]}` : ''}
+      </span>
     </div>
   )
 }

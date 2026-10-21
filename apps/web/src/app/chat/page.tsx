@@ -5,15 +5,20 @@ import { useRouter } from 'next/navigation'
 import type { TruffleUIMessage } from '@/hooks/useFinancialChat'
 import { supabase } from '@/lib/supabase'
 import { ChatPage } from '@/components/ChatPage'
-import { LoadingSpinner } from '@/components/PageMotion'
-import { TopBar } from '@/components/TopBar'
-import { BottomNav } from '@/components/BottomNav'
+import { ChatShell } from '@/components/ChatShell'
+import { takeChatHandoff } from '@/lib/chatHandoff'
 
 export default function Chat() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null | undefined>(undefined)
   const [name, setName] = useState<string>('')
   const [initialMessages, setInitialMessages] = useState<TruffleUIMessage[] | undefined>(undefined)
+  const [initialPrompt, setInitialPrompt] = useState<string | null>(null)
+
+  // Something spoken or tapped on Home (see lib/chatHandoff).
+  useEffect(() => {
+    setInitialPrompt(takeChatHandoff())
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -63,16 +68,14 @@ export default function Chat() {
 
   // Wait for both auth and history before mounting ChatPage so useChat
   // receives a stable initialMessages and never resets mid-conversation.
-  if (!userId || initialMessages === undefined)
-    return (
-      <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden min-h-0">
-        <TopBar />
-        <main className="flex-1 flex items-center justify-center pb-14">
-          <LoadingSpinner />
-        </main>
-        <BottomNav active="chat" />
-      </div>
-    )
+  if (!userId || initialMessages === undefined) return <ChatShell />
 
-  return <ChatPage userId={userId} name={name} initialMessages={initialMessages} />
+  return (
+    <ChatPage
+      userId={userId}
+      name={name}
+      initialMessages={initialMessages}
+      initialPrompt={initialPrompt}
+    />
+  )
 }

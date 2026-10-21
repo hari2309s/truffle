@@ -7,12 +7,14 @@ import { usePostHog } from 'posthog-js/react'
 import { PageEnter } from './PageMotion'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { LOCALE_LABELS, type Locale } from '@/lib/i18n'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import { LeaderRow, Rule, TRUFFLE_ICON } from './Tally'
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''
 
 export function AuthPage({ error: initialError = null }: { error?: string | null }) {
-  const { t, locale, setLocale } = useLanguage()
+  const { t } = useLanguage()
+  const { formatAmount } = useCurrency()
   const posthog = usePostHog()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
@@ -55,53 +57,41 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
     setIsLoading(false)
   }
 
-  const LOCALE_CYCLE: Locale[] = ['en']
-  const currentIdx = LOCALE_CYCLE.indexOf(locale)
-  const nextLocale = LOCALE_CYCLE[
-    (currentIdx === -1 ? 0 : currentIdx + 1) % LOCALE_CYCLE.length
-  ] as Locale
-  const next = LOCALE_LABELS[nextLocale]
+  const demoEnabled = process.env.NEXT_PUBLIC_DEMO_ENABLED === '1'
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-truffle-bg">
-      {/* Language toggle */}
-      <div className="absolute top-4 right-4">
-        <button
-          onClick={() => setLocale(nextLocale)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-truffle-muted hover:text-truffle-text bg-truffle-surface border border-truffle-border transition-colors"
-        >
-          <span>{next.flag}</span>
-          <span>{next.label}</span>
-        </button>
-      </div>
-
-      <PageEnter className="w-full max-w-sm space-y-8">
-        {/* Logo */}
-        <div className="text-center">
-          <div className="mb-4">
-            <Image
-              src="/icons/truffle.png"
-              alt="Truffle"
-              width={96}
-              height={96}
-              priority
-              className="mx-auto"
-            />
+    <div className="min-h-dvh w-full max-w-lg mx-auto flex flex-col bg-truffle-bg overflow-y-auto">
+      <PageEnter className="flex-1 flex flex-col">
+        <div className="slip mx-8 mt-[max(36px,env(safe-area-inset-top))] px-6 pt-7 pb-9 flex flex-col items-center gap-3.5">
+          <Image src={TRUFFLE_ICON} alt="" width={88} height={88} priority />
+          <h1 className="text-[26px] font-bold tracking-[.2em] uppercase">Truffle</h1>
+          <p className="text-xs text-truffle-text2 tracking-[.06em] uppercase">{t.auth.tagline}</p>
+          <Rule className="w-full mt-1.5" />
+          <div className="w-full flex flex-col gap-1.5 text-sm">
+            <LeaderRow strong left={t.auth.receiptTalk} right="✓" />
+            <LeaderRow strong left={t.auth.receiptSee} right="✓" />
+            <LeaderRow strong left={t.auth.receiptDread} right={formatAmount(0)} />
           </div>
-          <h1 className="text-3xl font-bold text-truffle-text">Truffle</h1>
-          <p className="text-truffle-text-secondary mt-2">{t.auth.tagline}</p>
+          <Rule className="w-full" />
+          <div className="w-full flex justify-between text-base font-bold uppercase">
+            <span>{t.auth.receiptTotal}</span>
+            <span>{t.auth.receiptCalm}</span>
+          </div>
         </div>
 
-        {sent ? (
-          <div className="card text-center space-y-3">
-            <div className="text-4xl">📬</div>
-            <h2 className="font-semibold text-truffle-text">{t.auth.checkEmail}</h2>
-            <p className="text-sm text-truffle-text-secondary">{t.auth.magicLinkSent(email)}</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+        <div className="mt-auto pt-8 px-6 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-3">
+          {sent ? (
+            <div role="status" className="paper print-in border-t-[6px] border-truffle-accent p-4 flex flex-col gap-2">
+              <h2 className="text-xs font-bold uppercase">✓ {t.auth.checkEmail}</h2>
+              <p className="font-grotesk text-[15px] leading-[1.45]">{t.auth.magicLinkSent(email)}</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+              <label htmlFor="auth-email" className="sr-only">
+                {t.auth.emailPlaceholder}
+              </label>
               <input
+                id="auth-email"
                 type="email"
                 placeholder={t.auth.emailPlaceholder}
                 value={email}
@@ -111,55 +101,59 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
                 }}
                 autoComplete="email"
                 spellCheck={false}
-                className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-4 text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber text-center"
+                className="field h-14 text-[15px] text-center"
                 required
               />
-            </div>
 
-            {SITE_KEY && (
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={SITE_KEY}
-                onSuccess={setCaptchaToken}
-                onExpire={() => setCaptchaToken(null)}
-                options={{ theme: 'dark', size: 'invisible' }}
-              />
-            )}
+              {SITE_KEY && (
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={SITE_KEY}
+                  onSuccess={setCaptchaToken}
+                  onExpire={() => setCaptchaToken(null)}
+                  options={{ theme: 'dark', size: 'invisible' }}
+                />
+              )}
 
-            {error && <p className="text-sm text-truffle-red text-center">{error}</p>}
+              {error && (
+                <p role="alert" className="text-xs font-bold text-truffle-negative text-center">
+                  ■ {error}
+                </p>
+              )}
 
-            <button
-              type="submit"
-              disabled={isLoading || !captchaToken}
-              className="btn-primary w-full py-4 disabled:opacity-50"
-            >
-              {isLoading ? t.auth.sending : t.auth.continueWithEmail}
-            </button>
-          </form>
-        )}
-
-        {!sent && process.env.NEXT_PUBLIC_DEMO_ENABLED === '1' && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-truffle-border" />
-              <span className="text-xs text-truffle-muted">{t.auth.demoHint}</span>
-              <span className="h-px flex-1 bg-truffle-border" />
-            </div>
-            <form action="/api/auth/demo" method="post">
               <button
                 type="submit"
-                className="btn-ghost w-full py-3 text-sm"
-                onClick={() =>
-                  posthog.capture('demo_link_clicked', undefined, { transport: 'sendBeacon' })
-                }
+                disabled={isLoading || !captchaToken}
+                className="key key-ink h-14 text-[15px]"
               >
-                {t.auth.demoButton}
+                {isLoading ? t.auth.sending : t.auth.continueWithEmail}
               </button>
             </form>
-          </div>
-        )}
+          )}
 
-        <p className="text-xs text-truffle-muted text-center">{t.auth.footer}</p>
+          {!sent && demoEnabled && (
+            <>
+              <div aria-hidden className="flex items-center gap-2 text-xs text-truffle-text2">
+                <span>✂</span>
+                <span className="flex-1 rule" />
+              </div>
+              <form action="/api/auth/demo" method="post">
+                <button
+                  type="submit"
+                  className="key key-accent w-full h-14 text-[15px]"
+                  onClick={() =>
+                    posthog.capture('demo_link_clicked', undefined, { transport: 'sendBeacon' })
+                  }
+                >
+                  {t.auth.demoButton}
+                </button>
+              </form>
+              <p className="text-xs text-truffle-text2 text-center">{t.auth.demoHint}</p>
+            </>
+          )}
+
+          <p className="text-[11px] text-truffle-text2 text-center uppercase">{t.auth.footer}</p>
+        </div>
       </PageEnter>
     </div>
   )

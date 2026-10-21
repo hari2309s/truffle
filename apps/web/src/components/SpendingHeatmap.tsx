@@ -5,14 +5,14 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { Transaction } from '@truffle/types'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { CATEGORY_EMOJI } from '@/lib/categories'
 import { toDateLocale } from '@/lib/date'
+import { LeaderRow, MINUS } from './Tally'
 
 interface Props {
   transactions: Transaction[]
 }
 
-const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 // Maps absolute spend to a 0–4 bucket relative to the month's max-spend day
 function heatBucket(spend: number, max: number): 0 | 1 | 2 | 3 | 4 {
@@ -24,20 +24,22 @@ function heatBucket(spend: number, max: number): 0 | 1 | 2 | 3 | 4 {
   return 4
 }
 
-// Explicit lookup so the full class strings are statically present for any tooling
-const HEAT_CLASS: Record<0 | 1 | 2 | 3 | 4, string> = {
-  0: 'heat-0',
-  1: 'heat-1',
-  2: 'heat-2',
-  3: 'heat-3',
-  4: 'heat-4',
+// Explicit lookup so the full class strings are statically present for Tailwind
+const HEAT_BG: Record<0 | 1 | 2 | 3 | 4, string> = {
+  0: 'bg-truffle-h0',
+  1: 'bg-truffle-h1',
+  2: 'bg-truffle-h2',
+  3: 'bg-truffle-h3',
+  4: 'bg-truffle-h4',
 }
 
+/** CAL · by day — the month as a grid of spend intensity. */
 export function SpendingHeatmap({ transactions }: Props) {
   const { formatAmount } = useCurrency()
-  const { locale } = useLanguage()
+  const { t, locale } = useLanguage()
   const today = new Date()
   const todayStr = today.toISOString().slice(0, 10)
+  const dateLocale = toDateLocale(locale)
 
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1) // 1-indexed
@@ -50,7 +52,7 @@ export function SpendingHeatmap({ transactions }: Props) {
   const firstDayJS = new Date(viewYear, viewMonth - 1, 1).getDay()
   const leadingBlanks = (firstDayJS + 6) % 7
 
-  const { dayMap, maxSpend, monthTotal } = useMemo(() => {
+  const { dayMap, maxSpend, peakDay } = useMemo(() => {
     const prefix = `${viewYear}-${String(viewMonth).padStart(2, '0')}`
     const map = new Map<string, { spend: number; txs: Transaction[] }>()
 
@@ -66,11 +68,16 @@ export function SpendingHeatmap({ transactions }: Props) {
       }
     }
 
-    const values = Array.from(map.values())
-    const max = values.length > 0 ? Math.max(...values.map((v) => v.spend)) : 0
-    const total = values.reduce((s, v) => s + v.spend, 0)
+    let max = 0
+    let peak: string | null = null
+    for (const [date, v] of map) {
+      if (v.spend > max) {
+        max = v.spend
+        peak = date
+      }
+    }
 
-    return { dayMap: map, maxSpend: max, monthTotal: total }
+    return { dayMap: map, maxSpend: max, peakDay: peak }
   }, [transactions, viewYear, viewMonth])
 
   function navigate(delta: number) {
@@ -97,53 +104,46 @@ export function SpendingHeatmap({ transactions }: Props) {
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ]
 
-  const monthLabel = new Date(viewYear, viewMonth - 1).toLocaleString(toDateLocale(locale), {
-    month: 'long',
+  const monthLabel = new Date(viewYear, viewMonth - 1).toLocaleString(dateLocale, {
+    month: 'short',
     year: 'numeric',
   })
 
   return (
-    <div className="card space-y-4">
-      {/* Month navigation */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => navigate(-1)}
-          aria-label="Previous month"
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-truffle-muted hover:text-truffle-text hover:bg-truffle-surface transition-colors text-xl leading-none"
-        >
-          ‹
-        </button>
-        <div className="text-center">
-          <p className="text-sm font-medium text-truffle-text">{monthLabel}</p>
-          {monthTotal > 0 && (
-            <p className="text-[10px] text-truffle-muted mt-0.5">
-              {formatAmount(monthTotal)} spent · max {formatAmount(maxSpend)}/day
-            </p>
-          )}
-        </div>
-        <button
-          onClick={() => navigate(1)}
-          disabled={isCurrentMonth}
-          aria-label="Next month"
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-truffle-muted hover:text-truffle-text hover:bg-truffle-surface transition-colors text-xl leading-none disabled:opacity-25 disabled:cursor-default"
-        >
-          ›
-        </button>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between text-truffle-text2 uppercase">
+        <span className="flex items-center">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label={t.insights.previousMonth}
+            className="w-8 h-8 -ml-2 grid place-items-center text-base hover:text-truffle-text"
+          >
+            ‹
+          </button>
+          <span className="min-w-[72px] text-center">{monthLabel}</span>
+          <button
+            type="button"
+            onClick={() => navigate(1)}
+            disabled={isCurrentMonth}
+            aria-label={t.insights.nextMonth}
+            className="w-8 h-8 grid place-items-center text-base hover:text-truffle-text disabled:opacity-25"
+          >
+            ›
+          </button>
+        </span>
+        {peakDay && (
+          <span>{t.insights.peak(Number(peakDay.slice(8, 10)), formatAmount(maxSpend))}</span>
+        )}
       </div>
 
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {/* Week-day headers */}
-        {DAY_LABELS.map((d) => (
-          <div
-            key={d}
-            className="h-5 flex items-center justify-center text-[10px] font-medium text-truffle-muted"
-          >
+      <div className="grid grid-cols-7 gap-[3px]">
+        {DAY_LABELS.map((d, i) => (
+          <div key={i} className="text-center text-[10px] text-truffle-text2">
             {d}
           </div>
         ))}
 
-        {/* Day cells */}
         {cells.map((day, i) => {
           if (day === null) return <div key={`blank-${i}`} />
 
@@ -154,54 +154,49 @@ export function SpendingHeatmap({ transactions }: Props) {
           const isSelected = selectedDate === dateStr
           const isFuture = dateStr > todayStr
 
+          if (isFuture) {
+            return (
+              <div
+                key={dateStr}
+                className="h-[38px] grid place-items-center text-[11px] font-bold text-truffle-text2 border border-dashed border-truffle-border"
+              >
+                {day}
+              </div>
+            )
+          }
+
           return (
             <button
               key={dateStr}
-              onClick={() => !isFuture && setSelectedDate(isSelected ? null : dateStr)}
-              className={[
-                'relative aspect-square rounded-lg flex items-center justify-center',
-                'transition-all duration-150 select-none',
-                HEAT_CLASS[bucket],
-                isFuture
-                  ? 'opacity-25 cursor-default'
-                  : 'cursor-pointer hover:brightness-110 active:scale-95',
-                isSelected
-                  ? 'ring-2 ring-truffle-amber ring-offset-1 ring-offset-truffle-card'
-                  : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
+              type="button"
+              onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+              aria-pressed={isSelected}
+              aria-label={`${day}: ${data ? formatAmount(data.spend) : t.insights.noSpending}`}
+              className={`h-[38px] flex items-center justify-center gap-px text-[11px] font-bold ${HEAT_BG[bucket]} ${
+                bucket >= 3 ? 'text-truffle-on-heat' : 'text-truffle-text'
+              } ${isToday ? 'border-2 border-truffle-text' : 'border border-transparent'} ${
+                isSelected ? 'outline outline-2 outline-offset-1 outline-truffle-accent-ink' : ''
+              }`}
             >
-              <span
-                className={`text-[11px] font-medium leading-none ${
-                  isToday ? 'text-truffle-amber' : 'text-truffle-text'
-                }`}
-              >
-                {day}
-              </span>
-              {isToday && (
-                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-truffle-amber" />
-              )}
+              {day}
+              {bucket === 4 ? '•' : ''}
             </button>
           )
         })}
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] text-truffle-muted">Less</span>
-        <div className="flex gap-1 flex-1 justify-center">
-          {([0, 1, 2, 3, 4] as const).map((b) => (
-            <div key={b} className={`w-5 h-3 rounded-sm ${HEAT_CLASS[b]}`} />
-          ))}
-        </div>
-        <span className="text-[10px] text-truffle-muted">More</span>
+      <div className="flex items-center gap-1 text-[10px] text-truffle-text2 uppercase">
+        {t.insights.low}
+        {([0, 1, 2, 3, 4] as const).map((b) => (
+          <div key={b} className={`w-[22px] h-2.5 border border-truffle-border ${HEAT_BG[b]}`} />
+        ))}
+        {t.insights.high} · • {t.insights.busiest}
       </div>
 
-      {/* Selected-day detail panel
-          Outer (key="detail"): slides open/closed only when selection appears or disappears.
-          Inner (key={selectedDate}): cross-fades the content when the selected date changes,
-          keeping the container stable so there's no collapse→re-expand on date switch. */}
+      {dayMap.size === 0 && (
+        <p className="font-grotesk text-sm text-truffle-text2">{t.insights.calEmpty}</p>
+      )}
+
       <AnimatePresence initial={false}>
         {selectedDate && (
           <motion.div
@@ -215,48 +210,35 @@ export function SpendingHeatmap({ transactions }: Props) {
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={selectedDate}
-                initial={{ opacity: 0, y: 4 }}
+                initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.14, ease: [0.4, 0, 0.2, 1] }}
-                className="pt-3 border-t border-truffle-border"
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.14 }}
+                className="rule-soft pt-2 flex flex-col gap-1.5"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-truffle-text">
-                    {new Date(selectedDate + 'T12:00:00').toLocaleDateString(toDateLocale(locale), {
+                <div className="flex justify-between text-xs font-bold uppercase">
+                  <span>
+                    {new Date(selectedDate + 'T12:00:00').toLocaleDateString(dateLocale, {
+                      weekday: 'short',
                       day: 'numeric',
-                      month: 'long',
+                      month: 'short',
                     })}
-                  </p>
-                  {selectedData ? (
-                    <p className="text-xs font-semibold text-truffle-text-secondary">
-                      {formatAmount(selectedData.spend)} spent
-                    </p>
-                  ) : (
-                    <p className="text-xs text-truffle-muted">No spending</p>
-                  )}
+                  </span>
+                  <span>{selectedData ? formatAmount(selectedData.spend) : '—'}</span>
                 </div>
-
                 {selectedData ? (
-                  <div className="space-y-2">
-                    {[...selectedData.txs]
-                      .sort((a, b) => a.amount - b.amount)
-                      .map((tx) => (
-                        <div key={tx.id} className="flex items-center gap-2">
-                          <span className="text-sm leading-none flex-shrink-0">
-                            {CATEGORY_EMOJI[tx.category] ?? '📦'}
-                          </span>
-                          <span className="flex-1 text-xs text-truffle-muted truncate">
-                            {tx.description}
-                          </span>
-                          <span className="text-xs text-red-400 flex-shrink-0 font-medium tabular-nums">
-                            -{formatAmount(tx.amount)}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
+                  [...selectedData.txs]
+                    .sort((a, b) => a.amount - b.amount)
+                    .map((tx) => (
+                      <LeaderRow
+                        key={tx.id}
+                        className="text-xs"
+                        left={<span className="block truncate">{tx.description}</span>}
+                        right={`${MINUS}${formatAmount(tx.amount)}`}
+                      />
+                    ))
                 ) : (
-                  <p className="text-xs text-truffle-muted">Nothing logged on this day.</p>
+                  <p className="font-grotesk text-sm text-truffle-text2">{t.insights.nothingLogged}</p>
                 )}
               </motion.div>
             </AnimatePresence>

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { NoticeSlip } from './Tally'
 
 interface Props {
   children: React.ReactNode
@@ -27,15 +28,20 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback
       return (
-        <div className="card border-dashed text-center py-6 space-y-2">
-          <p className="text-truffle-muted text-sm">Something went wrong loading this section.</p>
-          <button
-            onClick={() => this.setState({ hasError: false })}
-            className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
-          >
-            Try again
-          </button>
-        </div>
+        <NoticeSlip
+          tone="negative"
+          title="Couldn’t load this section"
+          className="mx-4 mt-4"
+          actions={
+            <button
+              type="button"
+              onClick={() => this.setState({ hasError: false })}
+              className="key key-line key-3 h-11 text-xs uppercase"
+            >
+              Try again
+            </button>
+          }
+        />
       )
     }
     return this.props.children

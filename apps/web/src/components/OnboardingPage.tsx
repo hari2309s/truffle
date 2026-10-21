@@ -1,20 +1,23 @@
 'use client'
 
-import Image from 'next/image'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PageEnter } from './PageMotion'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useVoicePreference } from '@/contexts/VoiceContext'
 import type { Currency } from '@/contexts/CurrencyContext'
+import { getPersona } from '@/lib/voices'
 import { LanguagePicker } from './LanguagePicker'
 import { VoicePicker } from './VoicePicker'
 import { CurrencyPicker } from './CurrencyPicker'
+import { LeaderRow, MINUS, Rule } from './Tally'
 
 interface OnboardingPageProps {
   onComplete: () => void
 }
+
+// Steps 1–2 collect details; the rest are the tour.
+const SETUP_STEPS = 2
 
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const { t, locale, setLocale } = useLanguage()
@@ -23,12 +26,18 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const [currency, setCurrency] = useState<Currency>('EUR')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [tourStep, setTourStep] = useState<number | null>(null)
+  const [step, setStep] = useState(0)
+
+  // Tour samples print in the currency picked in step 1, not the saved one.
+  const formatAmount = (n: number) =>
+    new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(Math.abs(n))
 
   const tourSteps = t.tour.steps
+  const totalSteps = SETUP_STEPS + tourSteps.length
+  const isTour = step >= SETUP_STEPS
+  const isLast = step === totalSteps - 1
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSave = async () => {
     if (!name.trim()) return
 
     setIsLoading(true)
@@ -38,7 +47,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         data: { name: name.trim(), currency, language: locale, voice: voiceId },
       })
       if (error) throw error
-      setTourStep(0)
+      setStep(SETUP_STEPS)
     } catch {
       setError(t.onboarding.errorSave)
     } finally {
@@ -46,122 +55,200 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     }
   }
 
-  if (tourStep !== null) {
-    const step = tourSteps[tourStep]!
-    const isLast = tourStep === tourSteps.length - 1
+  const next = () => {
+    if (step === 0) {
+      if (name.trim()) setStep(1)
+      return
+    }
+    if (step === 1) {
+      void handleSave()
+      return
+    }
+    if (isLast) onComplete()
+    else setStep((s) => s + 1)
+  }
 
-    return (
-      <div className="min-h-screen bg-truffle-bg flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm space-y-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={tourStep}
-              className="text-center space-y-4"
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={{ duration: 0.28 }}
-            >
-              <span className="text-5xl block">{step.emoji}</span>
-              <h2 className="text-2xl font-bold text-truffle-text">{step.title}</h2>
-              <p className="text-truffle-muted text-sm leading-relaxed">{step.body}</p>
-            </motion.div>
-          </AnimatePresence>
+  // Details are saved once step 2 completes — the tour can't go back past it.
+  const canGoBack = step > 0 && step !== SETUP_STEPS
+  const tourStep = isTour ? tourSteps[step - SETUP_STEPS]! : null
 
-          {/* Step dots */}
-          <div className="flex justify-center gap-2">
-            {tourSteps.map((_, i) => (
-              <span
-                key={i}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  i === tourStep ? 'bg-truffle-amber w-4' : 'bg-truffle-border'
-                }`}
-              />
-            ))}
-          </div>
+  const title = step === 0 ? t.onboarding.heading : step === 1 ? t.onboarding.voiceHeading : tourStep!.title
+  const body = step === 0 ? t.onboarding.subtitle : step === 1 ? null : tourStep!.body
 
+  const primaryLabel =
+    step === 0
+      ? t.onboarding.continue
+      : step === 1
+        ? isLoading
+          ? t.onboarding.saving
+          : t.onboarding.chooseVoice(getPersona(voiceId).name)
+        : isLast
+          ? t.tour.letsGo
+          : t.tour.next
+  const primaryAccent = step === 1 || isLast
+
+  return (
+    <div className="min-h-dvh w-full max-w-lg mx-auto bg-truffle-bg flex flex-col overflow-y-auto">
+      <div className="flex justify-between items-center pt-[max(12px,env(safe-area-inset-top))] pr-5 pl-6">
+        <span className="text-[13px] font-bold uppercase">{t.onboarding.stepOf(step + 1, totalSteps)}</span>
+        {isTour ? (
           <button
-            onClick={() => (isLast ? onComplete() : setTourStep((s) => (s ?? 0) + 1))}
-            className="btn-primary w-full"
-          >
-            {isLast ? t.tour.letsGo : t.tour.next}
-          </button>
-
-          <button
+            type="button"
             onClick={onComplete}
-            className="block w-full text-center text-xs text-truffle-muted hover:text-truffle-text transition-colors"
+            className="h-11 px-2 text-[13px] text-truffle-text2 uppercase"
           >
             {t.tour.skip}
           </button>
-        </div>
+        ) : (
+          <span className="h-11" />
+        )}
       </div>
-    )
-  }
 
-  return (
-    <div className="min-h-screen bg-truffle-bg flex flex-col items-center justify-center px-6">
-      <PageEnter className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <Image
-            src="/icons/truffle.png"
-            alt="Truffle"
-            width={64}
-            height={64}
-            priority
-            className="mx-auto"
-          />
-          <h1 className="text-2xl font-bold text-truffle-text">{t.onboarding.heading}</h1>
-          <p className="text-truffle-muted text-sm">{t.onboarding.subtitle}</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs text-truffle-muted uppercase tracking-wide">
-              {t.onboarding.languageLabel}
-            </label>
-            <LanguagePicker onChange={setLocale} />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          className="flex flex-col"
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.24 }}
+        >
+          <div className="px-6 pt-6 flex flex-col gap-3">
+            <h1 className="font-grotesk text-[42px] font-medium leading-[1.02] tracking-[-.02em] whitespace-pre-line">
+              {title}
+            </h1>
+            {body && (
+              <p className="font-grotesk text-[17px] leading-normal text-truffle-text2">{body}</p>
+            )}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-truffle-muted uppercase tracking-wide">
-              {t.onboarding.nameLabel}
-            </label>
-            <input
-              type="text"
-              placeholder={t.onboarding.namePlaceholder}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
-            />
-          </div>
+          {step === 0 && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                next()
+              }}
+              className="slip mx-4 mt-7 px-[18px] pt-4 pb-[30px] flex flex-col gap-3 text-sm"
+            >
+              <div className="flex gap-1.5 items-center min-h-11">
+                <label htmlFor="onboarding-name" className="text-truffle-text2 whitespace-nowrap">
+                  {t.onboarding.nameLabel}
+                </label>
+                <span aria-hidden className="leader !-mb-1 !flex-[0_1_40px]" />
+                <input
+                  id="onboarding-name"
+                  type="text"
+                  placeholder={t.onboarding.namePlaceholder}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  autoFocus
+                  autoComplete="given-name"
+                  className="field-inline flex-1 text-base"
+                />
+              </div>
+              <Rule />
+              <span className="text-xs text-truffle-text2 uppercase">{t.onboarding.currencyLabel}</span>
+              <CurrencyPicker value={currency} onChange={setCurrency} label={t.onboarding.currencyLabel} />
+              <LanguagePicker onChange={setLocale} label={t.onboarding.languageLabel} />
+            </form>
+          )}
 
-          <div className="space-y-1">
-            <label className="text-xs text-truffle-muted uppercase tracking-wide">
-              {t.onboarding.currencyLabel}
-            </label>
-            <CurrencyPicker value={currency} onChange={setCurrency} />
-          </div>
+          {step === 1 && (
+            <div className="px-5 pt-7 flex flex-col gap-2">
+              <VoicePicker value={voiceId} onChange={setVoiceId} variant="card" />
+              <p className="px-1 pt-1 text-xs text-truffle-text2">{t.onboarding.voiceHint}</p>
+            </div>
+          )}
 
-          <div className="space-y-1">
-            <label className="text-xs text-truffle-muted uppercase tracking-wide">
-              {t.onboarding.voiceLabel}
-            </label>
-            <VoicePicker value={voiceId} onChange={setVoiceId} />
-            <p className="text-xs text-truffle-muted pt-1">{t.onboarding.voiceHint}</p>
-          </div>
+          {step === SETUP_STEPS && (
+            <div className="slip mx-6 mt-7 px-[18px] pt-4 pb-[26px] flex flex-col gap-2 text-sm">
+              <span className="text-xs text-truffle-text2 uppercase">{t.tour.sample.youSaid}</span>
+              <span>“{t.tour.sample.quote}”</span>
+              <Rule />
+              <LeaderRow
+                left={t.tour.sample.line}
+                right={<b>{MINUS}{formatAmount(45)}</b>}
+              />
+              <div className="flex justify-between text-truffle-text2">
+                <span>{t.tour.sample.today}</span>
+                <span>{currency}</span>
+              </div>
+            </div>
+          )}
 
-          {error && <p className="text-sm text-truffle-red text-center">{error}</p>}
+          {step === SETUP_STEPS + 1 && (
+            <div className="slip mx-6 mt-7 px-4 pt-4 pb-7 flex flex-col text-sm">
+              <span className="text-[15px] font-bold tracking-[.08em] uppercase pb-1.5">
+                {t.dashboard.recent}
+              </span>
+              {t.tour.sample.items.map((item) => (
+                <div key={item.name} className="rule-soft py-2.5 flex flex-col">
+                  <LeaderRow
+                    baseline
+                    left={<b>{item.name}</b>}
+                    right={
+                      <b className={item.amount > 0 ? 'text-truffle-positive' : ''}>
+                        {item.amount > 0 ? '+' : MINUS}
+                        {formatAmount(item.amount)}
+                      </b>
+                    }
+                  />
+                  <span className="text-[11px] text-truffle-text2 pt-0.5">{item.meta}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
+          {step === SETUP_STEPS + 2 && (
+            <div className="slip mx-6 mt-7 px-4 pt-3.5 pb-6 flex flex-col gap-2">
+              <span className="text-xs font-bold uppercase">{t.tour.sample.notices}</span>
+              {t.tour.sample.nudges.map((n) => (
+                <div key={n.title} className="grid grid-cols-[20px_1fr] gap-2 rule-soft pt-2">
+                  <span
+                    className={`text-[13px] ${n.tone === 'warning' ? 'text-truffle-warning' : 'text-truffle-accent-ink'}`}
+                  >
+                    {n.tone === 'warning' ? '▲' : '✦'}
+                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[13px] font-bold">{n.title}</span>
+                    <span className="font-grotesk text-sm leading-[1.4] text-truffle-text2">
+                      {n.body}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      {error && (
+        <p role="alert" className="mx-6 mt-4 text-xs font-bold uppercase text-truffle-negative">
+          ■ {error}
+        </p>
+      )}
+
+      <div className="mt-auto pt-8 px-6 pb-[max(28px,env(safe-area-inset-bottom))] flex gap-2.5">
+        {canGoBack && (
           <button
-            type="submit"
-            disabled={isLoading || !name.trim()}
-            className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            type="button"
+            onClick={() => setStep((s) => s - 1)}
+            aria-label={t.onboarding.back}
+            className="key key-line w-14 h-14 text-base flex-none"
           >
-            {isLoading ? t.onboarding.saving : t.onboarding.continue}
+            ←
           </button>
-        </form>
-      </PageEnter>
+        )}
+        <button
+          type="button"
+          onClick={next}
+          disabled={isLoading || (step === 0 && !name.trim())}
+          className={`key ${primaryAccent ? 'key-accent' : 'key-ink'} flex-1 h-14 text-[15px]`}
+        >
+          {primaryLabel}
+        </button>
+      </div>
     </div>
   )
 }

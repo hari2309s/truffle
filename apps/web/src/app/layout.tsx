@@ -1,9 +1,18 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Space_Grotesk, Space_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 
-const inter = Inter({ subsets: ['latin'] })
+const spaceMono = Space_Mono({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-mono',
+})
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-grotesk',
+})
 
 export const metadata: Metadata = {
   title: 'Truffle — Your finances, unearthed.',
@@ -37,10 +46,10 @@ export const viewport: Viewport = {
   // lock) — locking it out blocks low-vision users from zooming the page.
   // A single tag (not a media-query pair) — the in-app theme toggle can
   // diverge from the OS color scheme. This is only the pre-JS fallback
-  // (matches --t-surface's dark value in globals.css, the default theme);
+  // (matches --t-bg's dark value in globals.css, the default theme);
   // the inline script below and `useTheme.ts` immediately replace it with
-  // whatever --t-surface actually resolves to, so it can never drift.
-  themeColor: '#1e1d1b',
+  // whatever --t-bg actually resolves to, so it can never drift.
+  themeColor: '#121211',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -48,14 +57,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
         {/* Prevent theme flash on load — also seeds the tab/PWA chrome color
-            (meta[name=theme-color]) from the live --t-surface CSS variable
-            (same one the TopBar renders), ahead of useTheme's effect. */}
+            (meta[name=theme-color]) from the live --t-bg CSS variable
+            (the color behind the top of every screen), ahead of useTheme's effect. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){
               var t = localStorage.getItem('truffle-theme') || 'dark';
               if (t !== 'system') document.documentElement.classList.add(t);
-              var color = getComputedStyle(document.documentElement).getPropertyValue('--t-surface').trim();
+              var color = getComputedStyle(document.documentElement).getPropertyValue('--t-bg').trim();
               if (color) {
                 var meta = document.querySelector('meta[name="theme-color"]');
                 if (meta) meta.setAttribute('content', color);
@@ -64,7 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className={`${inter.className} h-full`}>
+      <body className={`${spaceMono.variable} ${spaceGrotesk.variable} font-mono h-full`}>
         <Providers>{children}</Providers>
       </body>
     </html>

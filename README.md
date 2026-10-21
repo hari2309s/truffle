@@ -60,7 +60,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 - 📅 **Monthly AI finance report** — on visiting Insights at the start of a new month, Truffle generates a prose summary of the previous month (income, expenses, top categories, goal and habit progress) and delivers it as a chat message; generated once per month per user
 - 🔊 **Weekly audio summary** — spoken recap of your week, once per week
 - 💱 **Multi-currency** — EUR, GBP, USD converted to EUR for consistent totals
-- 🌗 **Dark / light theme** — system-aware with manual override, available on all pages
+- 🌗 **Dark / light theme** — system-aware with manual override from the Home top bar
 - 📱 **PWA** — installs on iOS and Android
 - 🚀 **Onboarding tour** — new users are walked through the three core features (chat, tracking, nudges) immediately after sign-up
 - 📦 **Data export** — download all your transactions, goals, budgets, and habits as a single JSON file from the Settings sheet

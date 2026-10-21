@@ -4,13 +4,13 @@ export type Theme = 'dark' | 'light' | 'system'
 
 const THEMES: Theme[] = ['dark', 'light', 'system']
 const STORAGE_KEY = 'truffle-theme'
-// The TopBar renders `bg-truffle-surface` (--t-surface) — read that same CSS
+// The top of every screen renders `bg-truffle-bg` (--t-bg) — read that same CSS
 // custom property for the tab/PWA chrome color instead of a hand-maintained
 // hex table, so the two can never drift apart. Works for 'system' too: with
-// no .dark/.light class set, --t-surface already resolves via the
+// no .dark/.light class set, --t-bg already resolves via the
 // `@media (prefers-color-scheme)` block in globals.css, so getComputedStyle
 // gives the right answer without any JS-side OS-preference logic.
-const COLOR_VAR = '--t-surface'
+const COLOR_VAR = '--t-bg'
 
 function syncThemeColorMeta() {
   if (typeof document === 'undefined') return
@@ -46,7 +46,7 @@ export function useTheme() {
   }, [])
 
   // When following the OS ("system"), keep the tab color live as the OS
-  // scheme flips while the app is open — CSS re-resolves --t-surface on its
+  // scheme flips while the app is open — CSS re-resolves --t-bg on its
   // own, but the theme-color meta tag needs an explicit re-read to catch up.
   useEffect(() => {
     if (theme !== 'system' || typeof window === 'undefined') return

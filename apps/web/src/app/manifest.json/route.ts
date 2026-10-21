@@ -1,15 +1,15 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-// Mirrors globals.css --t-bg / --t-surface for each theme. The installed PWA's
+// Mirrors globals.css --t-bg for each theme. The installed PWA's
 // OS chrome (Android status bar) is colored from this manifest's theme_color,
 // not from the live meta[name=theme-color] tag useTheme.ts keeps in sync — so
 // without this, a user on the light theme gets a dark status bar over a light
 // app. Served dynamically (instead of public/manifest.json) so it can read
 // the theme cookie useTheme.ts writes alongside localStorage.
 const PALETTES = {
-  dark: { background_color: '#0e0d0c', theme_color: '#1e1d1b' },
-  light: { background_color: '#faf6f0', theme_color: '#f0e9df' },
+  dark: { background_color: '#121211', theme_color: '#121211' },
+  light: { background_color: '#e9e5dd', theme_color: '#e9e5dd' },
 } as const
 
 export async function GET() {

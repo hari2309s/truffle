@@ -1,6 +1,9 @@
 'use client'
 
-import { useCallback } from 'react'
+import Image from 'next/image'
+import { useCallback, useEffect, useState } from 'react'
+import { TRUFFLE_ICON } from './Tally'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export type VoiceButtonStatus = 'idle' | 'recording' | 'transcribing' | 'speaking'
 
@@ -8,17 +11,43 @@ interface VoiceButtonProps {
   status: VoiceButtonStatus
   onStart: () => void
   onStop: () => void
+  /** Tap while Truffle is talking — cancels speech. Omit where Truffle never speaks. */
+  onStopSpeaking?: () => void
+  /** Show the truffle mark on the idle key (Home). */
+  withIcon?: boolean
+  className?: string
 }
 
-export function VoiceButton({ status, onStart, onStop }: VoiceButtonProps) {
+/**
+ * The print key: hold to speak, release to print. Four states — idle,
+ * listening (pressed in, with a timer), thinking and speaking.
+ */
+export function VoiceButton({
+  status,
+  onStart,
+  onStop,
+  onStopSpeaking,
+  withIcon = false,
+  className = 'h-[72px]',
+}: VoiceButtonProps) {
+  const { t } = useLanguage()
   const isRecording = status === 'recording'
   const isTranscribing = status === 'transcribing'
+  const isSpeaking = status === 'speaking'
+  const [seconds, setSeconds] = useState(0)
+
+  useEffect(() => {
+    if (!isRecording) return
+    setSeconds(0)
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [isRecording])
 
   const start = useCallback(() => {
-    if (!isRecording && !isTranscribing) {
+    if (!isRecording && !isTranscribing && !isSpeaking) {
       onStart()
     }
-  }, [isRecording, isTranscribing, onStart])
+  }, [isRecording, isTranscribing, isSpeaking, onStart])
 
   const stop = useCallback(() => {
     if (isRecording) {
@@ -31,9 +60,10 @@ export function VoiceButton({ status, onStart, onStop }: VoiceButtonProps) {
       if (e.key !== ' ' && e.key !== 'Enter') return
       e.preventDefault()
       if (e.repeat) return
-      start()
+      if (isSpeaking) onStopSpeaking?.()
+      else start()
     },
-    [start]
+    [start, isSpeaking, onStopSpeaking]
   )
 
   const handleKeyUp = useCallback(
@@ -45,67 +75,39 @@ export function VoiceButton({ status, onStart, onStop }: VoiceButtonProps) {
     [stop]
   )
 
-  const buttonClasses = {
-    idle: 'bg-truffle-amber hover:bg-truffle-amber-light shadow-lg shadow-truffle-amber/20',
-    recording: 'bg-red-500 shadow-lg shadow-red-500/40 scale-110 animate-pulse',
-    transcribing: 'bg-truffle-muted shadow-none cursor-wait',
-    speaking: 'bg-truffle-green shadow-lg shadow-truffle-green/30 animate-pulse-slow',
-  }[status]
+  const variant = isSpeaking ? 'key-ink' : isTranscribing ? 'key-surface' : 'key-accent'
+  const timer = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 
-  const label = {
-    idle: 'Hold to speak',
-    recording: 'Listening…',
-    transcribing: 'Thinking…',
-    speaking: 'Speaking…',
-  }[status]
+  const label = isRecording
+    ? `${t.voice.listening} ${timer}`
+    : isTranscribing
+      ? t.voice.thinking
+      : isSpeaking
+        ? t.voice.tapToStop
+        : t.voice.holdSpeak
 
   return (
-    <div className="flex flex-col items-center gap-3 select-none">
-      <button
-        onPointerDown={start}
-        onPointerUp={stop}
-        onPointerLeave={stop}
-        onKeyDown={handleKeyDown}
-        onKeyUp={handleKeyUp}
-        className={`w-14 h-14 rounded-full transition-all duration-200 flex items-center justify-center touch-none ${buttonClasses}`}
-        aria-label={label}
-        disabled={isTranscribing}
-      >
-        <MicIcon isRecording={isRecording} />
-      </button>
-      <span className="text-sm text-truffle-text-secondary">{label}</span>
-    </div>
-  )
-}
-
-function MicIcon({ isRecording }: { isRecording: boolean }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={`w-6 h-6 text-truffle-bg transition-transform duration-200 ${isRecording ? 'scale-90' : ''}`}
+    <button
+      type="button"
+      onPointerDown={start}
+      onPointerUp={stop}
+      onPointerLeave={stop}
+      onPointerCancel={stop}
+      onClick={isSpeaking ? onStopSpeaking : undefined}
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
+      onContextMenu={(e) => e.preventDefault()}
+      data-pressed={isRecording}
+      aria-label={label}
+      disabled={isTranscribing}
+      className={`key ${variant} w-full gap-2.5 text-sm uppercase touch-none select-none disabled:!opacity-100 disabled:cursor-wait ${className}`}
     >
-      <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" />
-      <path d="M19 10v1a7 7 0 0 1-14 0v-1a1 1 0 0 1 2 0v1a5 5 0 0 0 10 0v-1a1 1 0 0 1 2 0z" />
-      <line
-        x1="12"
-        y1="18"
-        x2="12"
-        y2="22"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <line
-        x1="8"
-        y1="22"
-        x2="16"
-        y2="22"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
+      {isRecording && <span aria-hidden className="w-2.5 h-2.5 rounded-full bg-truffle-on-accent blink" />}
+      {status === 'idle' && withIcon && (
+        <Image src={TRUFFLE_ICON} alt="" width={28} height={28} draggable={false} />
+      )}
+      {isSpeaking && <span aria-hidden>■</span>}
+      <span>{label}</span>
+    </button>
   )
 }

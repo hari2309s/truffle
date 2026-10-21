@@ -9,6 +9,7 @@ import type { SavingsGoal } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useSectionAddForm } from '@/contexts/SectionAddFormContext'
+import { LeaderRow } from './Tally'
 
 const GOAL_EMOJIS = ['🎯', '✈️', '🏠', '🚗', '💻', '🎓', '💍', '🏖️', '🎸', '📱', '🏋️', '🌍']
 
@@ -34,7 +35,7 @@ interface SavingsGoalsBodyProps {
 /** Shared content — fetches goals, renders the add form and goal list. No section wrapper or header. */
 function SavingsGoalsBody({ userId, showAdd, onShowAddChange }: SavingsGoalsBodyProps) {
   const { t } = useLanguage()
-  const { currency } = useCurrency()
+  const { currency, formatAmount } = useCurrency()
   const queryClient = useQueryClient()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -102,33 +103,42 @@ function SavingsGoalsBody({ userId, showAdd, onShowAddChange }: SavingsGoalsBody
         />
       )}
 
-      {fundsError && <p className="text-xs text-truffle-red mb-2">{fundsError}</p>}
+      {fundsError && (
+        <p role="alert" className="text-[11px] font-bold uppercase text-truffle-negative">
+          ■ {fundsError}
+        </p>
+      )}
 
       {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2].map((i) => (
-            <SkeletonPulse key={i} className="card h-20" />
-          ))}
-        </div>
+        <SkeletonPulse className="flex flex-col gap-2">
+          <div className="h-3 bg-truffle-border" />
+          <div className="h-3.5 bg-truffle-border" />
+        </SkeletonPulse>
       ) : goals.length === 0 && !showAdd ? (
-        <div className="card border-dashed text-center text-truffle-muted text-sm py-6">
-          {t.savingsGoals.noGoals}
-        </div>
+        <>
+          <LeaderRow className="text-truffle-text2" left={t.savingsGoals.noGoalsShort} right={formatAmount(0)} />
+          <p className="font-grotesk text-sm text-truffle-text2">{t.savingsGoals.noGoals}</p>
+          <button
+            type="button"
+            onClick={() => onShowAddChange(true)}
+            className="h-12 rounded-lg border border-dashed border-truffle-text grid place-items-center text-xs font-bold uppercase"
+          >
+            {t.savingsGoals.startGoal}
+          </button>
+        </>
       ) : (
-        <div className="space-y-3">
-          {goals.map((goal) => (
-            <GoalCard
-              key={goal.id}
-              goal={goal}
-              onAddFunds={(amount) => handleAddFunds(goal.id, goal.savedAmount, amount)}
-              onDelete={() => handleDelete(goal.id)}
-              isDeleting={deletingId === goal.id}
-              isConfirmingDelete={confirmDeleteId === goal.id}
-              onRequestDelete={() => setConfirmDeleteId(goal.id)}
-              onCancelDelete={() => setConfirmDeleteId(null)}
-            />
-          ))}
-        </div>
+        goals.map((goal) => (
+          <GoalRow
+            key={goal.id}
+            goal={goal}
+            onAddFunds={(amount) => handleAddFunds(goal.id, goal.savedAmount, amount)}
+            onDelete={() => handleDelete(goal.id)}
+            isDeleting={deletingId === goal.id}
+            isConfirmingDelete={confirmDeleteId === goal.id}
+            onRequestDelete={() => setConfirmDeleteId(goal.id)}
+            onCancelDelete={() => setConfirmDeleteId(null)}
+          />
+        ))
       )}
     </>
   )
@@ -144,15 +154,13 @@ export function SavingsGoals({ userId }: SavingsGoalsProps) {
   const [showAdd, setShowAdd] = useState(false)
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-medium text-truffle-text-secondary uppercase tracking-wide">
-          {t.savingsGoals.title}
-        </h2>
+    <section className="flex flex-col gap-3 text-[13px]">
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold tracking-[.08em] uppercase">{t.savingsGoals.title}</h2>
         <button
           type="button"
           onClick={() => setShowAdd(!showAdd)}
-          className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+          className="text-xs font-bold uppercase underline underline-offset-2"
         >
           {showAdd ? t.savingsGoals.cancel : t.savingsGoals.newGoal}
         </button>
@@ -164,16 +172,16 @@ export function SavingsGoals({ userId }: SavingsGoalsProps) {
 }
 
 /**
- * Variant for embedding inline inside an `InsightsAccordionSection`: no wrapper, no header —
+ * Variant for embedding inside an Insights statement section: no wrapper, no header —
  * the section owns the header/toggle button itself. Open/close state comes from the
- * `SectionAddFormProvider` the accordion section is wrapped in, rather than controlled props.
+ * `SectionAddFormProvider` the section is wrapped in, rather than controlled props.
  */
 export function SavingsGoalsEmbedded({ userId }: SavingsGoalsProps) {
   const { open, setOpen } = useSectionAddForm()
   return <SavingsGoalsBody userId={userId} showAdd={open} onShowAddChange={setOpen} />
 }
 
-function GoalCard({
+function GoalRow({
   goal,
   onAddFunds,
   onDelete,
@@ -205,39 +213,49 @@ function GoalCard({
 
   return (
     <div
-      className={`card space-y-3 transition-opacity ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
+      className={`flex flex-col gap-[5px] transition-opacity ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">{goal.emoji}</span>
-          <div>
-            <p className="font-medium text-truffle-text text-sm">{goal.name}</p>
-            <p className="text-xs text-truffle-muted">
-              {formatAmount(goal.savedAmount)} / {formatAmount(goal.targetAmount)}
-              {daysLeft !== null && daysLeft > 0 && ` · ${t.savingsGoals.daysLeft(daysLeft)}`}
-              {daysLeft !== null && daysLeft <= 0 && ` · ${t.savingsGoals.deadlinePassed}`}
-            </p>
-          </div>
-        </div>
-        {done ? (
-          <span className="text-xs text-truffle-green font-medium">{t.savingsGoals.complete}</span>
-        ) : (
+      <div className="flex items-center gap-1 text-sm">
+        <LeaderRow
+          className="flex-1 min-w-0"
+          left={
+            <b>
+              {goal.emoji} {goal.name}
+            </b>
+          }
+          right={<b>{Math.round(progress)}%</b>}
+        />
+        {!done && (
           <button
+            type="button"
             onClick={() => (isConfirmingDelete ? onCancelDelete() : onRequestDelete())}
             aria-label={t.savingsGoals.deleteGoal}
-            className={`text-xs transition-colors ${isConfirmingDelete ? 'text-truffle-red' : 'text-truffle-muted hover:text-truffle-red'}`}
+            aria-expanded={isConfirmingDelete}
+            className={`w-7 h-7 -my-1 -mr-1.5 grid place-items-center text-[11px] ${isConfirmingDelete ? 'text-truffle-negative' : 'text-truffle-text2'}`}
           >
             ✕
           </button>
         )}
       </div>
-
-      <div className="h-1.5 bg-truffle-surface rounded-full overflow-hidden">
+      <div
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(progress)}
+        aria-label={goal.name}
+        className="h-3.5 bg-truffle-surface border border-truffle-border"
+      >
         <div
-          className={`h-full rounded-full transition-all duration-500 ${done ? 'bg-truffle-green' : 'bg-truffle-amber'}`}
+          className={`h-full transition-[width] duration-500 ${done ? 'bg-truffle-positive' : 'bg-truffle-accent'}`}
           style={{ width: `${progress}%` }}
         />
       </div>
+      <span className="text-[11px] text-truffle-text2">
+        {t.savingsGoals.ofTarget(formatAmount(goal.savedAmount), formatAmount(goal.targetAmount))}
+        {done && <b className="text-truffle-positive uppercase"> · ● {t.savingsGoals.complete}</b>}
+        {!done && daysLeft !== null && daysLeft > 0 && ` · ${t.savingsGoals.daysLeft(daysLeft)}`}
+        {!done && daysLeft !== null && daysLeft <= 0 && ` · ${t.savingsGoals.deadlinePassed}`}
+      </span>
 
       <AnimatePresence>
         {isConfirmingDelete && (
@@ -248,64 +266,73 @@ function GoalCard({
             transition={{ duration: 0.18 }}
             style={{ overflow: 'hidden' }}
           >
-            <div className="flex items-center justify-between px-4 py-2 bg-truffle-surface rounded-xl border border-truffle-border">
-              <p className="text-xs text-truffle-muted">{t.savingsGoals.deleteConfirm}</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={onCancelDelete}
-                  className="text-xs text-truffle-muted hover:text-truffle-text transition-colors px-2 py-1"
-                >
-                  {t.savingsGoals.cancel}
-                </button>
-                <button
-                  onClick={onDelete}
-                  className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors px-2 py-1"
-                >
-                  {t.transactions.delete}
-                </button>
-              </div>
+            <div className="grid grid-cols-[1fr_auto_auto] items-center gap-1.5 pt-1">
+              <span className="text-[11px] font-bold uppercase text-truffle-negative">
+                {t.savingsGoals.deleteConfirm}
+              </span>
+              <button
+                type="button"
+                onClick={onCancelDelete}
+                className="key key-outline h-9 px-3 text-[11px] uppercase"
+              >
+                {t.savingsGoals.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={onDelete}
+                className="key key-danger h-9 px-3 text-[11px] uppercase"
+              >
+                ✕ {t.transactions.delete}
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {!done && (
-        <>
-          {showDeposit ? (
-            <div className="flex gap-2">
+      {!done &&
+        (showDeposit ? (
+          <div className="grid grid-cols-[1fr_auto] gap-2 pt-1">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-text2 text-sm">
+                {symbol}
+              </span>
               <input
                 type="number"
-                placeholder={`${symbol}0 — ${t.savingsGoals.remaining(formatAmount(remaining))}`}
+                inputMode="decimal"
+                placeholder={t.savingsGoals.remaining(formatAmount(remaining))}
+                aria-label={t.savingsGoals.addFunds}
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 min="0"
                 step="0.01"
-                className="flex-1 bg-truffle-surface border border-truffle-border rounded-xl px-3 py-2 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
+                autoFocus
+                className="field h-11 pl-7"
               />
-              <button
-                onClick={() => {
-                  const amt = parseFloat(depositAmount)
-                  if (amt > 0) {
-                    onAddFunds(amt)
-                    setDepositAmount('')
-                    setShowDeposit(false)
-                  }
-                }}
-                className="btn-primary text-xs px-3 py-2"
-              >
-                {t.savingsGoals.add}
-              </button>
             </div>
-          ) : (
             <button
-              onClick={() => setShowDeposit(true)}
-              className="text-xs text-truffle-amber hover:text-truffle-amber-light transition-colors"
+              type="button"
+              onClick={() => {
+                const amt = parseFloat(depositAmount)
+                if (amt > 0) {
+                  onAddFunds(amt)
+                  setDepositAmount('')
+                  setShowDeposit(false)
+                }
+              }}
+              className="key key-accent key-3 h-11 px-4 text-xs uppercase"
             >
-              {t.savingsGoals.addFunds}
+              {t.savingsGoals.add}
             </button>
-          )}
-        </>
-      )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowDeposit(true)}
+            className="self-start min-h-8 text-[11px] font-bold uppercase underline underline-offset-2"
+          >
+            {t.savingsGoals.addFunds}
+          </button>
+        ))}
     </div>
   )
 }
@@ -356,14 +383,15 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card space-y-3 mb-3">
-      <div className="flex gap-2 flex-wrap">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2 print-in">
+      <div role="group" aria-label={t.savingsGoals.iconLabel} className="flex gap-1 flex-wrap">
         {GOAL_EMOJIS.map((e) => (
           <button
             key={e}
             type="button"
+            aria-pressed={form.emoji === e}
             onClick={() => setForm((f) => ({ ...f, emoji: e }))}
-            className={`text-xl p-1 rounded-lg transition-all ${form.emoji === e ? 'bg-truffle-amber/20 ring-1 ring-truffle-amber' : 'hover:bg-truffle-surface'}`}
+            className={`w-9 h-9 grid place-items-center text-lg rounded-md border ${form.emoji === e ? 'border-truffle-text bg-truffle-accent-soft' : 'border-transparent'}`}
           >
             {e}
           </button>
@@ -373,38 +401,50 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
       <input
         type="text"
         placeholder={t.savingsGoals.goalNamePlaceholder}
+        aria-label={t.savingsGoals.goalNamePlaceholder}
         value={form.name}
         onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-        className="w-full bg-truffle-surface border border-truffle-border rounded-xl px-4 py-3 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
+        className="field h-11"
         required
       />
 
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-muted text-sm">
+      <div className="grid grid-cols-[1fr_auto] gap-2">
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-text2 text-sm">
             {symbol}
           </span>
           <input
             type="number"
+            inputMode="decimal"
             placeholder={t.savingsGoals.targetAmount}
+            aria-label={t.savingsGoals.targetAmount}
             value={form.targetAmount}
             onChange={(e) => setForm((f) => ({ ...f, targetAmount: e.target.value }))}
             min="1"
             step="0.01"
-            className="w-full bg-truffle-surface border border-truffle-border rounded-xl pl-7 pr-4 py-3 text-sm text-truffle-text placeholder-truffle-muted focus:outline-none focus:border-truffle-amber"
+            className="field h-11 pl-7 font-bold"
             required
           />
         </div>
         <input
           type="date"
           value={form.deadline}
+          aria-label={t.savingsGoals.deadlineLabel}
           onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
-          className="bg-truffle-surface border border-truffle-border rounded-xl px-3 py-3 text-sm text-truffle-text focus:outline-none focus:border-truffle-amber"
+          className="field h-11 w-auto"
         />
       </div>
 
-      {submitError && <p className="text-xs text-truffle-red">{submitError}</p>}
-      <button type="submit" disabled={isLoading} className="btn-primary w-full disabled:opacity-50">
+      {submitError && (
+        <p role="alert" className="text-[11px] font-bold uppercase text-truffle-negative">
+          ■ {submitError}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="key key-ink key-3 h-11 text-xs uppercase"
+      >
         {isLoading ? t.savingsGoals.creating : t.savingsGoals.createGoal}
       </button>
     </form>

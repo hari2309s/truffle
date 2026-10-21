@@ -16,6 +16,20 @@ export interface CookieBannerProps {
   onAccept?: () => void
   /** Extra side effect beyond the localStorage write — e.g. posthog.opt_out_capturing(). */
   onReject?: () => void
+  /** Per-part class overrides, for apps whose design system differs from the default. */
+  classes?: Partial<Record<'root' | 'panel' | 'message' | 'link' | 'reject' | 'accept', string>>
+}
+
+const DEFAULT_CLASSES = {
+  root: 'safe-bottom fixed bottom-0 inset-x-0 z-50 p-4 flex justify-center pointer-events-none',
+  panel:
+    'w-full max-w-lg bg-truffle-surface border border-truffle-border rounded-2xl shadow-lg px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3 pointer-events-auto',
+  message: 'flex-1 text-xs text-truffle-muted leading-relaxed',
+  link: 'text-truffle-amber hover:underline',
+  reject:
+    'px-3 py-1.5 rounded-lg text-xs text-truffle-muted border border-truffle-border hover:text-truffle-text transition-colors',
+  accept:
+    'px-3 py-1.5 rounded-lg text-xs font-medium bg-truffle-amber text-truffle-bg hover:bg-truffle-amber-light transition-colors',
 }
 
 /**
@@ -33,7 +47,9 @@ export function CookieBanner({
   rejectLabel,
   onAccept,
   onReject,
+  classes,
 }: CookieBannerProps) {
+  const cls = { ...DEFAULT_CLASSES, ...classes }
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -72,14 +88,14 @@ export function CookieBanner({
   }
 
   return (
-    <div className="safe-bottom fixed bottom-0 inset-x-0 z-50 p-4 flex justify-center pointer-events-none">
-      <div className="w-full max-w-lg bg-truffle-surface border border-truffle-border rounded-2xl shadow-lg px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3 pointer-events-auto">
-        <p className="flex-1 text-xs text-truffle-muted leading-relaxed">
+    <div className={cls.root}>
+      <div className={cls.panel}>
+        <p className={cls.message}>
           {message}{' '}
           <a
             href={privacyHref}
             {...(privacyExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-            className="text-truffle-amber hover:underline"
+            className={cls.link}
           >
             {privacyLabel}
           </a>
@@ -87,13 +103,13 @@ export function CookieBanner({
         <div className="flex gap-2 flex-shrink-0">
           <button
             onClick={reject}
-            className="px-3 py-1.5 rounded-lg text-xs text-truffle-muted border border-truffle-border hover:text-truffle-text transition-colors"
+            className={cls.reject}
           >
             {rejectLabel}
           </button>
           <button
             onClick={accept}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-truffle-amber text-truffle-bg hover:bg-truffle-amber-light transition-colors"
+            className={cls.accept}
           >
             {acceptLabel}
           </button>

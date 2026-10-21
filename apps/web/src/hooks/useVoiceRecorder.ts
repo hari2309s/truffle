@@ -3,6 +3,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import posthog from 'posthog-js'
 
+/** `error` value when the mic can't be opened (permission denied / no device). */
+export const MIC_UNAVAILABLE_ERROR = 'Microphone access denied or unavailable'
+
 interface UseVoiceRecorderReturn {
   isRecording: boolean
   startRecording: () => Promise<void>
@@ -56,7 +59,7 @@ export function useVoiceRecorder(userId: string): UseVoiceRecorderReturn {
       mediaRecorder.start(250) // collect data every 250ms
       setIsRecording(true)
     } catch (err) {
-      setError('Microphone access denied or unavailable')
+      setError(MIC_UNAVAILABLE_ERROR)
       console.error('Recording error:', err)
     }
   }, [])

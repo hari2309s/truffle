@@ -11,7 +11,7 @@ interface SectionAddFormContextValue {
 const SectionAddFormContext = createContext<SectionAddFormContextValue | null>(null)
 
 /**
- * Scopes "is the add-form open" state to a single accordion section on the
+ * Scopes "is the add-form open" state to a single statement section on the
  * Insights page. Both the section's header toggle button and its embedded
  * content (e.g. SavingsGoalsEmbedded, MonthlyBudgets) read/write this via
  * `useSectionAddForm`, so the parent page doesn't need to own the state and

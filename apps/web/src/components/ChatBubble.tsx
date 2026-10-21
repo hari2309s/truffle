@@ -2,87 +2,99 @@
 
 import { memo } from 'react'
 import { motion } from 'framer-motion'
-import Image from 'next/image'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ChatBubbleProps {
   role: 'user' | 'assistant'
   content: string
   name?: string
   timestamp?: string
+  /** Truffle reached out unprompted (a nudge) — prints as a notice. */
+  proactive?: boolean
   traceId?: string
   reaction?: 1 | -1 | null
   onReact?: (traceId: string, score: 1 | -1) => void
 }
 
+/** You speak in ink; Truffle replies on a torn slip. */
 export const ChatBubble = memo(function ChatBubble({
   role,
   content,
   name,
   timestamp,
+  proactive = false,
   traceId,
   reaction,
   onReact,
 }: ChatBubbleProps) {
-  const isUser = role === 'user'
+  const { t } = useLanguage()
+  const time = timestamp
+    ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null
+
+  if (role === 'user') {
+    return (
+      <motion.div
+        className="self-end max-w-[80%] bg-truffle-text text-truffle-bg rounded-lg px-3.5 py-3 font-grotesk text-base leading-[1.4]"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.24, ease: 'easeOut' }}
+        aria-label={name ? `${name}: ${content}` : undefined}
+      >
+        <p className="whitespace-pre-wrap break-words">{content}</p>
+        {time && <p className="font-mono text-[11px] opacity-70 pt-1 text-right">{time}</p>}
+      </motion.div>
+    )
+  }
 
   return (
     <motion.div
-      className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}
-      initial={{ opacity: 0, y: 10, scale: 0.93, x: isUser ? 12 : -12 }}
-      animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
-      transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.8 }}
+      className={`self-start w-[84%] slip-sm px-3.5 pt-3 pb-[22px] flex flex-col gap-1.5 text-[13px] ${
+        proactive ? 'border-t-[6px] border-truffle-accent' : ''
+      }`}
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
     >
-      <div
-        className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-          isUser
-            ? 'bg-truffle-amber text-truffle-bg rounded-br-sm'
-            : 'bg-truffle-card border border-truffle-border text-truffle-text rounded-bl-sm'
-        }`}
-      >
-        {!isUser && (
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <div className="w-4 h-4 rounded-full overflow-hidden flex items-center justify-center">
-              <Image src="/icons/truffle.png" alt="Truffle" width={16} height={16} />
-            </div>
-            <span className="text-xs font-medium text-truffle-amber">Truffle</span>
-          </div>
-        )}
-        {isUser && name && (
-          <div className="flex items-center justify-end mb-1.5">
-            <span className="text-xs font-medium text-truffle-bg/70">{name}</span>
-          </div>
-        )}
-        <p className={`text-sm leading-relaxed ${isUser ? 'font-medium' : ''}`}>{content}</p>
-        {timestamp && (
-          <p className={`text-xs mt-1 ${isUser ? 'text-truffle-bg/60' : 'text-truffle-muted'}`}>
-            {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </p>
-        )}
-        {!isUser && traceId && onReact && (
-          <div className="flex gap-0.5 mt-2">
-            <button
-              onClick={() => !reaction && onReact(traceId, 1)}
-              disabled={!!reaction}
-              aria-label="Helpful"
-              className={`p-1 rounded-md transition-colors disabled:cursor-default ${
-                reaction === 1 ? 'text-truffle-green' : 'text-truffle-muted hover:text-truffle-text'
-              }`}
-            >
-              <ThumbUpIcon />
-            </button>
-            <button
-              onClick={() => !reaction && onReact(traceId, -1)}
-              disabled={!!reaction}
-              aria-label="Not helpful"
-              className={`p-1 rounded-md transition-colors disabled:cursor-default ${
-                reaction === -1 ? 'text-red-400' : 'text-truffle-muted hover:text-truffle-text'
-              }`}
-            >
-              <ThumbDownIcon />
-            </button>
-          </div>
-        )}
-      </div>
+      {proactive && (
+        <span className="text-xs font-bold uppercase text-truffle-accent-ink">✦ {t.chat.notice}</span>
+      )}
+      <p className="font-grotesk text-[15px] leading-[1.4] whitespace-pre-wrap break-words">
+        {content}
+      </p>
+      {(time || (traceId && onReact)) && (
+        <div className="flex items-center justify-between text-[11px] text-truffle-text2 pt-0.5">
+          <span>{time}</span>
+          {traceId && onReact && (
+            <span className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => !reaction && onReact(traceId, 1)}
+                disabled={!!reaction}
+                aria-label="Helpful"
+                aria-pressed={reaction === 1}
+                className={`w-8 h-8 grid place-items-center rounded-md disabled:cursor-default ${
+                  reaction === 1 ? 'text-truffle-positive' : 'hover:text-truffle-text'
+                }`}
+              >
+                <ThumbUpIcon />
+              </button>
+              <button
+                type="button"
+                onClick={() => !reaction && onReact(traceId, -1)}
+                disabled={!!reaction}
+                aria-label="Not helpful"
+                aria-pressed={reaction === -1}
+                className={`w-8 h-8 grid place-items-center rounded-md disabled:cursor-default ${
+                  reaction === -1 ? 'text-truffle-negative' : 'hover:text-truffle-text'
+                }`}
+              >
+                <ThumbDownIcon />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
     </motion.div>
   )
 })

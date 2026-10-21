@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useProposalCard } from './GoalProposalCard'
+import { LeaderRow } from './Tally'
 
 export interface HabitProposal {
   name: string
@@ -66,63 +67,49 @@ export const HabitProposalCard = memo(function HabitProposalCard({
 
   return (
     <motion.div
-      className="flex justify-start mb-3"
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className="slip px-4 pt-3.5 pb-[26px] flex flex-col gap-2 text-sm"
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.36, ease: truffleEase }}
     >
-      <div className="max-w-[85%] bg-truffle-card border border-truffle-green/40 rounded-2xl rounded-bl-sm overflow-hidden">
-        {/* Header band */}
-        <div className="bg-truffle-green/10 px-4 py-3 flex items-center gap-2">
-          <span className="text-base">🔁</span>
-          <span className="text-xs font-semibold text-truffle-green uppercase tracking-wide">
-            {frequencyLabel}
-          </span>
-        </div>
+      <span className="text-xs font-bold uppercase text-truffle-accent-ink">
+        {t.proposals.habit.proposed}
+      </span>
+      <LeaderRow
+        className="text-base"
+        left={`${proposal.emoji} ${proposal.name}`}
+        right={
+          <b>
+            {formatAmount(proposal.amount)}/{periodLabel}
+          </b>
+        }
+      />
+      <LeaderRow
+        className="text-truffle-text2"
+        left={frequencyLabel}
+        right={t.proposals.habit.logEachPeriod(periodLabel)}
+      />
+      <p className="font-grotesk text-sm leading-[1.45] text-truffle-text2">{proposal.pitch}</p>
 
-        <div className="px-4 py-4 space-y-4">
-          {/* Habit identity */}
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">{proposal.emoji}</span>
-            <div>
-              <p className="font-semibold text-truffle-text text-sm">{proposal.name}</p>
-              <p className="text-xs text-truffle-muted">
-                {t.proposals.habit.logEachPeriod(periodLabel)}
-              </p>
-            </div>
-          </div>
+      {error && <p className="text-xs font-bold text-truffle-negative uppercase">■ {error}</p>}
 
-          {/* Amount callout */}
-          <div className="bg-truffle-surface rounded-xl px-4 py-3 flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-truffle-green">
-              {formatAmount(proposal.amount)}
-            </span>
-            <span className="text-sm text-truffle-muted">/ {periodLabel}</span>
-          </div>
-
-          {/* Pitch */}
-          <p className="text-xs text-truffle-muted leading-relaxed">{proposal.pitch}</p>
-
-          {error && <p className="text-xs text-truffle-red">{error}</p>}
-
-          {/* Actions */}
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleNo}
-              disabled={status === 'saving'}
-              className="flex-1 btn-ghost text-sm py-2"
-            >
-              {t.proposals.habit.notNow}
-            </button>
-            <button
-              onClick={handleYes}
-              disabled={status === 'saving'}
-              className="flex-1 text-sm py-2 rounded-xl font-semibold bg-truffle-green text-truffle-bg disabled:opacity-50 transition-opacity"
-            >
-              {status === 'saving' ? t.proposals.habit.settingUp : t.proposals.habit.startSaving}
-            </button>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 gap-2 pt-1.5">
+        <button
+          type="button"
+          onClick={handleYes}
+          disabled={status === 'saving'}
+          className="key key-ink h-12 text-[13px] uppercase"
+        >
+          {status === 'saving' ? t.proposals.habit.settingUp : t.proposals.habit.startSaving}
+        </button>
+        <button
+          type="button"
+          onClick={handleNo}
+          disabled={status === 'saving'}
+          className="key key-line h-12 text-[13px] uppercase"
+        >
+          {t.proposals.habit.notNow}
+        </button>
       </div>
     </motion.div>
   )
