@@ -11,6 +11,7 @@ import { TransactionProposalCard } from './TransactionProposalCard'
 import { HabitProposalCard } from './HabitProposalCard'
 import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
 import { BottomNav } from './BottomNav'
+import { TopBar } from './TopBar'
 import { PageEnter } from './PageMotion'
 import { ErrorBoundary } from './ErrorBoundary'
 import { LeaderRow, MINUS, NoticeSlip, Tallying } from './Tally'
@@ -153,8 +154,15 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
   const persona = getPersona(voiceId)
 
   return (
-    <PageEnter className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden min-h-0 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))]">
-      <header className="flex justify-between items-center pt-[max(8px,env(safe-area-inset-top))] pb-3 pr-4 pl-5 border-b border-dashed border-truffle-border flex-shrink-0">
+    <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden min-h-0 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))]">
+      <TopBar>
+        <TopBar.ThemeToggle />
+        <TopBar.Settings userId={userId} />
+      </TopBar>
+
+      <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden">
+
+      <header className="flex justify-between items-center pt-2 pb-3 pr-4 pl-5 border-b border-dashed border-truffle-border flex-shrink-0">
         <div className="flex flex-col">
           <h1 className="font-grotesk text-2xl font-medium">{t.chat.title}</h1>
           <span className="text-[11px] text-truffle-text2 uppercase">
@@ -423,7 +431,9 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
         </div>
       </div>
 
+      </PageEnter>
+
       <BottomNav active="chat" />
-    </PageEnter>
+    </div>
   )
 }

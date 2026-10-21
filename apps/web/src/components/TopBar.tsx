@@ -13,10 +13,13 @@ interface TopBarProps {
   children?: React.ReactNode
 }
 
-/** Brand bar: the truffle mark + wordmark, with optional keys on the right. */
+/**
+ * Brand bar: the truffle mark + wordmark, with optional keys on the right.
+ * Pages render it outside their scroll container so it stays put on scroll.
+ */
 export function TopBar({ children }: TopBarProps) {
   return (
-    <header className="flex justify-between items-center pt-[max(8px,env(safe-area-inset-top))] pr-4 pl-5 flex-shrink-0 min-h-[52px]">
+    <header className="flex justify-between items-center pt-[max(8px,env(safe-area-inset-top))] pr-4 pl-5 flex-shrink-0 min-h-[52px] bg-truffle-bg">
       <div className="flex items-center gap-2">
         <Image src={TRUFFLE_ICON} alt="" width={28} height={28} priority />
         <span className="text-[15px] font-bold tracking-[.16em] uppercase">Truffle</span>

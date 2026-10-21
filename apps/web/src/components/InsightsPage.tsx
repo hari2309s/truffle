@@ -11,6 +11,7 @@ import { SavingsHabits } from './SavingsHabits'
 import { SpendingHeatmap } from './SpendingHeatmap'
 import { MonthlyBudgets } from './MonthlyBudgets'
 import { BottomNav } from './BottomNav'
+import { TopBar } from './TopBar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { LeaderRow, MINUS, Rule } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -89,12 +90,17 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
   return (
     <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
+      <TopBar>
+        <TopBar.ThemeToggle />
+        <TopBar.Settings userId={userId} />
+      </TopBar>
+
       <PageEnter className="flex flex-col flex-1 min-h-0 overflow-hidden">
         <main
           ref={mainRef}
           className="flex-1 overflow-y-auto min-h-0 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+28px)]"
         >
-          <header className="pt-[max(12px,env(safe-area-inset-top))] px-6 flex justify-between items-baseline">
+          <header className="pt-3 px-6 flex justify-between items-baseline">
             <h1 className="font-grotesk text-4xl font-medium">{t.insights.title}</h1>
             <span className="text-xs text-truffle-text2 uppercase">{monthLabel}</span>
           </header>

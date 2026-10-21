@@ -69,12 +69,13 @@ export function Dashboard({ userId, name }: DashboardProps) {
 
   return (
     <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
+      <TopBar>
+        <TopBar.ThemeToggle />
+        <TopBar.Settings userId={userId} />
+      </TopBar>
+
       <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <main className="flex-1 overflow-y-auto min-h-0 flex flex-col pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))]">
-          <TopBar>
-            <TopBar.ThemeToggle />
-            <TopBar.Settings userId={userId} />
-          </TopBar>
 
           <h1 className="px-6 pt-5 font-grotesk text-[32px] font-medium tracking-[-.01em] leading-tight">
             {greeting}
