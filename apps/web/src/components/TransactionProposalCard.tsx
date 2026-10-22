@@ -11,6 +11,7 @@ import { CATEGORY_EMOJI } from '@/lib/categories'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
+import { parseLocalDay } from '@/lib/toolArgs'
 import { useProposalCard } from './GoalProposalCard'
 import { LeaderRow, MINUS } from './Tally'
 import { enqueueTransaction } from '@/lib/offlineQueue'
@@ -44,7 +45,7 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
   const formattedAmount = `${isExpense ? '-' : '+'}${formatAmount(proposal.amount)}`
   const emoji = CATEGORY_EMOJI[proposal.category] ?? '📝'
   const categoryLabel = t.categories[proposal.category] ?? proposal.category.replace(/_/g, ' ')
-  const formattedDate = new Date(proposal.date).toLocaleDateString(toDateLocale(locale), {
+  const formattedDate = parseLocalDay(proposal.date).toLocaleDateString(toDateLocale(locale), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',

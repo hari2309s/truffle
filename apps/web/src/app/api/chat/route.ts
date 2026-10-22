@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server'
-import { streamText, tool, convertToModelMessages, isToolUIPart, type UIMessage } from 'ai'
+import { streamText, convertToModelMessages, isToolUIPart, type UIMessage } from 'ai'
 import { normalizeHistory } from '@/lib/chatHistory'
-import { parseAmount } from '@/lib/csv'
-import { z } from 'zod'
+import { proposalTools } from '@/lib/proposalTools'
 import { startObservation, propagateAttributes } from '@langfuse/tracing'
 import {
   queryTransactions,
@@ -19,7 +18,7 @@ import {
 } from '@truffle/ai'
 import { createServerClient as createDbClient } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory, QueryIntent } from '@truffle/types'
-import { INTENT, TRANSACTION_CATEGORIES } from '@truffle/types'
+import { INTENT } from '@truffle/types'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
 import { localDate, parseDateRange, userToday } from '@/lib/date'
 import { requireUser } from '@/lib/supabase-server'
@@ -31,12 +30,6 @@ import { detectSubscriptions } from '@/lib/subscriptions'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
-
-/**
- * A tool's amount argument. Models sometimes send "€100.00" or "1.234,56"
- * instead of a number; read it the way the CSV import reads bank amounts.
- */
-const amountArg = z.union([z.number(), z.string().transform((s) => parseAmount(s))])
 
 /** This month's transactions shown to the model for summaries and anomaly scans. */
 const MAX_MONTH_CONTEXT_ROWS = 150
@@ -395,81 +388,6 @@ export async function POST(request: NextRequest) {
       const followUpIntent = looksLikeCode ? null : detectFollowUpIntent(prevAssistantText, false)
       if (followUpIntent) intent = followUpIntent
 
-      const proposeGoalTool = {
-        proposeGoal: tool({
-          description:
-            "Propose a savings goal card for the user to confirm. STRICT RULES: (1) NEVER call on the turn the user first names a goal — always ask for the price first in plain text. (2) Only call when the user's CURRENT message contains a specific numeric amount for THIS goal. A number from a previous turn does not count. (3) Never guess, infer, or reuse amounts from other goals in the conversation. (4) After getting the amount, ask for a target deadline before calling this tool — e.g. 'When would you like to reach this goal?' If the user explicitly says they have no deadline or don't know, you may omit it.",
-          inputSchema: z.object({
-            name: z.string().describe('Short goal name, e.g. "Holiday in Greece"'),
-            targetAmount: amountArg
-              .refine((n) => n > 0, {
-                message: 'targetAmount must be positive — ask the user for an amount first',
-              })
-              .describe('Target amount stated by the user, as a plain number (e.g. 2000). Do not guess.'),
-            deadline: z
-              .string()
-              .optional()
-              .describe(
-                'Optional target date in YYYY-MM-DD format (e.g. "2026-04-30"). Omit if the user gave no deadline.'
-              ),
-            emoji: z.string().describe('A single relevant emoji'),
-            pitch: z
-              .string()
-              .describe(
-                'One warm sentence explaining why this goal is achievable based on their finances'
-              ),
-          }),
-        }),
-      }
-
-      const proposeTransactionTool = {
-        proposeTransaction: tool({
-          description:
-            'Show a ONE-TIME transaction confirmation card. ONLY call this when the user explicitly states they have already made a real, past purchase or received real income — e.g. "I just bought", "I paid", "I received". DO NOT call this for hypothetical questions ("I might buy", "should I get"), jokes, future plans, impossible scenarios, or anything the user has not actually done. For hypotheticals, give advice or an affordability check in plain text instead. DO NOT use this for recurring saving habits — use proposeHabit for those. Use negative amounts for expenses, positive for income.',
-          inputSchema: z.object({
-            description: z.string().describe('Short description, e.g. "Coffee at Costa"'),
-            amount: amountArg
-              .refine((n) => !isNaN(n as number), { message: 'amount must be a valid number' })
-              .describe(
-                'Transaction amount. Negative for expenses (e.g. -4.50), positive for income (e.g. 1500).'
-              ),
-            category: z
-              .enum(TRANSACTION_CATEGORIES)
-              .describe('The most appropriate category for this transaction.'),
-            merchant: z.string().optional().describe('Optional merchant or payee name.'),
-            date: z
-              .string()
-              .describe(
-                `Transaction date in YYYY-MM-DD format. Default to today: ${new Date().toISOString().slice(0, 10)}`
-              ),
-          }),
-        }),
-      }
-
-      const proposeHabitTool = {
-        proposeHabit: tool({
-          description:
-            'Show a recurring savings habit confirmation card. Only call when you have a specific amount AND a frequency (weekly or monthly). Never guess the amount. Put a brief calculation breakdown (e.g. "50/week = ~200/month") in the pitch field.',
-          inputSchema: z.object({
-            name: z
-              .string()
-              .describe(
-                'Short habit name based ONLY on what the user said. If the user did not state a purpose, use a generic name like "Weekly savings" or "Monthly savings". NEVER infer a name from prior conversation or goals.'
-              ),
-            amount: amountArg
-              .refine((n) => (n as number) > 0, { message: 'amount must be positive' })
-              .describe('Amount to save each period, as a plain number (e.g. 100). Must be stated by the user.'),
-            frequency: z
-              .enum(['weekly', 'monthly'])
-              .describe('How often to save: weekly or monthly.'),
-            emoji: z.string().describe('A single relevant emoji'),
-            pitch: z
-              .string()
-              .describe('One warm sentence motivating this habit based on their finances'),
-          }),
-        }),
-      }
-
       const candidates = await candidatesPromise
 
       // Drop assistant messages left with nothing — some providers reject
@@ -487,7 +405,7 @@ export async function POST(request: NextRequest) {
       // was not in request.tools"), which a misrouted "I spent €12 on lunch"
       // used to trigger. Intent still decides the rules in the prompt and
       // whether a card is forced, and every card needs the user's confirmation.
-      const allTools = { ...proposeTransactionTool, ...proposeGoalTool, ...proposeHabitTool }
+      const allTools = proposalTools(localDate(now))
       const isToolIntent =
         intent === INTENT.HABIT_SETTING ||
         intent === INTENT.GOAL_SETTING ||

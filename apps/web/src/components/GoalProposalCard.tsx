@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
+import { parseLocalDay } from '@/lib/toolArgs'
 import { LeaderRow } from './Tally'
 
 interface GoalProposal {
@@ -131,7 +132,7 @@ export const GoalProposalCard = memo(function GoalProposalCard({
         <LeaderRow
           className="text-truffle-text2"
           left={t.proposals.goal.deadline}
-          right={new Date(proposal.deadline).toLocaleDateString(toDateLocale(locale), {
+          right={parseLocalDay(proposal.deadline).toLocaleDateString(toDateLocale(locale), {
             day: 'numeric',
             month: 'short',
             year: 'numeric',

@@ -2,31 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
 import { startObservation } from '@langfuse/tracing'
 import { visionModel, langfuseSpanProcessor } from '@truffle/ai'
-import type { TransactionCategory } from '@truffle/types'
 import { requireUser } from '@/lib/supabase-server'
+import { toAmount, toCategory } from '@/lib/toolArgs'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
-const VALID_CATEGORIES = new Set<TransactionCategory>([
-  'food_groceries',
-  'food_delivery',
-  'transport',
-  'housing',
-  'utilities',
-  'subscriptions',
-  'health',
-  'entertainment',
-  'shopping',
-  'income',
-  'savings',
-  'other',
-])
-
-function sanitiseCategory(raw: string): TransactionCategory {
-  const cleaned = raw.toLowerCase().replace(/\s+/g, '_') as TransactionCategory
-  return VALID_CATEGORIES.has(cleaned) ? cleaned : 'other'
-}
 
 const EXTRACT_PROMPT = (today: string) => `You are a financial data extraction assistant.
 Look at this file and decide whether it is a single shop RECEIPT or a bank STATEMENT.
@@ -155,20 +136,20 @@ export async function POST(req: NextRequest) {
 
     // ── Receipt: one entry for the total, plus the printed line items ──
     if (isObject(raw) && raw.kind === 'receipt') {
-      const total = Number(raw.total)
+      const total = toAmount(raw.total)
       if (raw.total === null || isNaN(total) || total === 0) {
         return NextResponse.json({ kind: 'receipt', transactions: [], receipt: null })
       }
       const items = (Array.isArray(raw.items) ? raw.items : [])
         .filter(isObject)
-        .map((item) => ({ name: String(item.name ?? '').trim(), amount: Number(item.amount) }))
+        .map((item) => ({ name: String(item.name ?? '').trim(), amount: toAmount(item.amount) }))
         .filter((item) => item.name && !isNaN(item.amount))
         .slice(0, 60)
       const receipt = {
         merchant: String(raw.merchant ?? 'Receipt').trim() || 'Receipt',
         date: dateOf(raw.date, today),
         currency: currencyOf(raw.currency),
-        category: sanitiseCategory(String(raw.category ?? 'other')),
+        category: toCategory(raw.category),
         total,
         items,
         itemsLegible: raw.itemsLegible !== false && items.length > 0,
@@ -203,9 +184,9 @@ export async function POST(req: NextRequest) {
       .map((item) => ({
         date: dateOf(item.date, today),
         description: String(item.description ?? 'Unknown'),
-        amount: Number(item.amount ?? 0),
+        amount: toAmount(item.amount),
         currency: currencyOf(item.currency),
-        category: sanitiseCategory(String(item.category ?? 'other')),
+        category: toCategory(item.category),
       }))
       .filter((t) => !isNaN(t.amount) && t.amount !== 0)
 
