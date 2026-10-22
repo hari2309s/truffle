@@ -6,6 +6,12 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
 
+  // Email links built from a token hash are handled by /auth/confirm — e.g.
+  // an installed app still sending this route as its redirect.
+  if (searchParams.has('token_hash')) {
+    return NextResponse.redirect(`${origin}/auth/confirm?${searchParams.toString()}`)
+  }
+
   if (code) {
     const cookieStore = await cookies()
     const supabase = createServerClient(

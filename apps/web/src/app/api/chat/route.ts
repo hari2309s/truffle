@@ -373,8 +373,7 @@ export async function POST(request: NextRequest) {
 
       // Keep only text parts on assistant history and strip any leaked
       // <function=…> XML. Tool parts are resolved locally on the client and
-      // never replayed to the server, so `activeTools` stays scoped strictly by
-      // the current intent and the model can't pick a stale tool.
+      // never replayed to the server, so the model never sees a stale tool call.
       const normalizedMessages: UIMessage[] = clientMessages.map((m) => {
         if (m.role !== 'assistant') return m
         const parts = (m.parts ?? [])
@@ -492,14 +491,16 @@ export async function POST(request: NextRequest) {
       const boundedMessages =
         filteredMessages.length > 10 ? filteredMessages.slice(-10) : filteredMessages
 
-      // Scope tools strictly by intent. Only tool-eligible intents get a tool;
-      // all other intents produce plain text only.
-      const activeTools = (() => {
-        if (intent === INTENT.HABIT_SETTING) return { ...proposeHabitTool }
-        if (intent === INTENT.GOAL_SETTING) return { ...proposeGoalTool }
-        if (intent === INTENT.ADD_TRANSACTION) return { ...proposeTransactionTool }
-        return undefined
-      })()
+      // Every request carries all three tools: Groq rejects the whole reply if
+      // the model calls a tool it wasn't sent ("attempted to call tool … which
+      // was not in request.tools"), which a misrouted "I spent €12 on lunch"
+      // used to trigger. Intent still decides the rules in the prompt and
+      // whether a card is forced, and every card needs the user's confirmation.
+      const allTools = { ...proposeTransactionTool, ...proposeGoalTool, ...proposeHabitTool }
+      const isToolIntent =
+        intent === INTENT.HABIT_SETTING ||
+        intent === INTENT.GOAL_SETTING ||
+        intent === INTENT.ADD_TRANSACTION
 
       // Detect whether the user's message describes a definite past transaction
       // (not hypothetical). If definite, force tool call; otherwise let the model
@@ -510,14 +511,14 @@ export async function POST(request: NextRequest) {
           message
         )
 
-      // 'required' forces a tool call — use only when the user clearly wants a
+      // A named tool choice forces that card — use only when the user clearly wants a
       // card (definite past transaction, or new habit with all details and no
       // existing habits). Otherwise 'auto' lets the model respond with text
       // (e.g. for hypotheticals, vague requests, or acknowledging existing data).
       const toolChoice = (() => {
-        if (!activeTools) return undefined
-        if (isDefiniteTransaction) return 'required' as const
-        if (intent === INTENT.HABIT_SETTING && habitRows.length === 0) return 'required' as const
+        if (isDefiniteTransaction) return { type: 'tool' as const, toolName: 'proposeTransaction' as const }
+        if (intent === INTENT.HABIT_SETTING && habitRows.length === 0)
+          return { type: 'tool' as const, toolName: 'proposeHabit' as const }
         return 'auto' as const
       })()
 
@@ -549,9 +550,9 @@ export async function POST(request: NextRequest) {
             // Only on the text-only intents — the tool paths (add_transaction,
             // goal_setting, habit_setting) emit structured card arguments
             // (amount, category, date) that must stay faithful, so keep those cold.
-            temperature: activeTools ? 0.2 : 0.75,
+            temperature: isToolIntent ? 0.2 : 0.75,
             providerOptions: groqChatProviderOptions,
-            tools: activeTools,
+            tools: allTools,
             toolChoice,
             onFinish: async ({ text, usage }) => {
               try {

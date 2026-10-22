@@ -39,7 +39,8 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // The email templates append ?token_hash=…&type=email to this.
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
         captchaToken,
       },
     })

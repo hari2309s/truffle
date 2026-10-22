@@ -237,7 +237,11 @@ function buildToolRules(intent: QueryIntent): string {
 - After a confirmed habit, respond with one warm encouraging sentence.
 - If the user declined, respond warmly and do not re-propose.`
   }
-  return ''
+  // Every intent is sent the tools (see the chat route), so a misrouted
+  // "I spent €12 on lunch" can still get a card — with the essentials right.
+  return `Tool rules:
+- Answer in plain text unless the user's CURRENT message states a real, past purchase or income, a specific new savings goal with an amount, or a specific saving habit with an amount and frequency. Only then call the matching tool.
+- Use the exact amount from the user's CURRENT message. Use a negative amount for expenses and a positive amount for income.`
 }
 
 // Live spend-by-category computed from actual transactions in route.ts.
