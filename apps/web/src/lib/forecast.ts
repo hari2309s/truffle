@@ -60,15 +60,18 @@ export interface Statement {
   dailyRate: number
   /** Spend projected for the whole month at the current daily rate. */
   forecastMonthSpend: number
-  /** `balance` at month end if spending continues at the daily rate. */
+  /** This month's income minus projected spend — where the month closes. */
   projectedClose: number
-  /** Last day of the current month (for the "Forecast 31 Oct" line). */
+  /** Last day of the current month (for the "Projected spend · 31 Oct" line). */
   monthEnd: Date
   /**
    * Spend this month vs last month over the same number of days:
-   * 'ahead' = spending less, 'behind' = spending more, null = no last-month data.
+   * 'ahead' = spending less, 'behind' = spending more, 'even' = within €1,
+   * null = no last-month data.
    */
-  pace: 'ahead' | 'behind' | null
+  pace: 'ahead' | 'behind' | 'even' | null
+  /** How far apart the two are (always ≥ 0); 0 when pace is null. */
+  paceDelta: number
   /** First day of last month (for "ahead of September"). */
   lastMonth: Date
 }
@@ -119,18 +122,20 @@ export function computeStatement(
   const dailyRate = spentThisMonth / dayOfMonth
   const daysRemaining = daysInMonth - dayOfMonth
 
-  const shownBalance = allTimeBalance ?? balance
+  const forecastMonthSpend = spentThisMonth + dailyRate * daysRemaining
+  const paceGap = spentThisMonth - spentLastMonthToDate
   return {
-    balance: shownBalance,
+    balance: allTimeBalance ?? balance,
     balanceIsAllTime: allTimeBalance !== null,
     incomeThisMonth,
     spentThisMonth,
     netThisMonth: balance,
     dailyRate,
-    forecastMonthSpend: spentThisMonth + dailyRate * daysRemaining,
-    projectedClose: shownBalance - dailyRate * daysRemaining,
+    forecastMonthSpend,
+    projectedClose: incomeThisMonth - forecastMonthSpend,
     monthEnd: new Date(y, m, daysInMonth),
-    pace: hasLastMonth ? (spentThisMonth <= spentLastMonthToDate ? 'ahead' : 'behind') : null,
+    pace: !hasLastMonth ? null : Math.abs(paceGap) < 1 ? 'even' : paceGap < 0 ? 'ahead' : 'behind',
+    paceDelta: hasLastMonth ? Math.abs(paceGap) : 0,
     lastMonth: lastMonthDate,
   }
 }

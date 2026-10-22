@@ -10,10 +10,9 @@ const facts: FinancialFacts = {
   daily_rate: '€69.31',
   forecast_month_spend: '€2,148.58',
   days_remaining: 10,
-  projected_close: '€982',
-  projected_close_basis: 'net_this_month',
+  projected_close: '€732.39',
   net_of_everything_logged: null,
-  pace_vs_last_month: 'spending less than last month',
+  pace_vs_last_month: 'spent €140.12 less than by this point last month',
   recurring: ['Netflix: €13.99 a month'],
 }
 
@@ -40,7 +39,7 @@ describe('chat system prompt — figures', () => {
   it('gives the Home statement figures as labelled facts, verbatim', () => {
     const prompt = build()
     expect(prompt).toContain('net_this_month: €1,794.52')
-    expect(prompt).toContain('projected_close: €982')
+    expect(prompt).toContain('projected_close: €732.39')
     expect(prompt).toContain('income_this_month: €3,250.00')
     expect(prompt).toContain('recurring: Netflix: €13.99 a month')
   })
@@ -62,7 +61,7 @@ describe('chat system prompt — figures', () => {
 
   it('names the all-time figure as logged net when present', () => {
     const prompt = build({
-      facts: { ...facts, net_of_everything_logged: '€3,482.16', projected_close_basis: 'net_of_everything_logged' },
+      facts: { ...facts, net_of_everything_logged: '€3,482.16' },
     })
     expect(prompt).toContain('net_of_everything_logged: €3,482.16')
     expect(prompt).toContain("net of everything you've logged in Truffle")

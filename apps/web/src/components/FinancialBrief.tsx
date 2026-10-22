@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react'
 import { computeStatement } from '@/lib/forecast'
-import { formatMoney } from '@/lib/money'
 import { SkeletonPulse } from './PageMotion'
 import { LeaderRow, MINUS, Rule } from './Tally'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
@@ -14,10 +13,13 @@ interface FinancialBriefProps {
   userId: string
 }
 
-/** The daily statement: net logged, this month's run-rate and where it lands. */
+/**
+ * The daily statement: net logged, then this month's income, spend and
+ * run-rate, and where the month closes (income − projected spend).
+ */
 export function FinancialBrief({ userId }: FinancialBriefProps) {
   const { t, locale } = useLanguage()
-  const { formatAmount, currency } = useCurrency()
+  const { formatAmount } = useCurrency()
   const { data, isLoading } = useTransactionsQuery(userId)
 
   const now = useMemo(() => new Date(), [])
@@ -28,7 +30,6 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
         : null,
     [data?.transactions, data?.totals, now]
   )
-  const formatWhole = (n: number) => formatMoney(n, currency, { whole: true })
 
   const dateLocale = toDateLocale(locale)
   const stamp = `${now.toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short' })} · ${now.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}`
@@ -62,19 +63,23 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
         </span>
         <Rule className="mt-1.5" />
         <LeaderRow className="text-truffle-text2" left={t.dashboard.spentThisMonth} right="—" />
-        <LeaderRow className="text-truffle-text2" left={t.dashboard.forecast} right={t.dashboard.forecastAfter} />
+        <LeaderRow className="text-truffle-text2" left={t.dashboard.projectedSpend} right={t.dashboard.forecastAfter} />
         <Rule />
         <p className="font-grotesk text-[15px] leading-[1.45]">{t.dashboard.emptyStatement}</p>
       </section>
     )
   }
 
+  const lastMonthName = statement.lastMonth.toLocaleDateString(dateLocale, { month: 'long' })
   const paceNote =
     statement.pace === null
       ? t.dashboard.paceFirst
-      : (statement.pace === 'ahead' ? t.dashboard.paceAhead : t.dashboard.paceBehind)(
-          statement.lastMonth.toLocaleDateString(dateLocale, { month: 'long' })
-        )
+      : statement.pace === 'even'
+        ? t.dashboard.paceEven(lastMonthName)
+        : (statement.pace === 'ahead' ? t.dashboard.paceAhead : t.dashboard.paceBehind)(
+            formatAmount(statement.paceDelta),
+            lastMonthName
+          )
 
   return (
     <section
@@ -91,6 +96,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
       </span>
       <span className="text-[44px] font-bold leading-none break-all">{signed(statement.balance)}</span>
       <Rule className="mt-1.5" />
+      <LeaderRow strong left={t.dashboard.incomeThisMonth} right={formatAmount(statement.incomeThisMonth)} />
       <LeaderRow strong left={t.dashboard.spentThisMonth} right={formatAmount(statement.spentThisMonth)} />
       <LeaderRow
         strong
@@ -99,18 +105,18 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
       />
       <LeaderRow
         strong
-        left={t.dashboard.forecastOn(
+        left={t.dashboard.projectedSpendOn(
           statement.monthEnd.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })
         )}
         right={formatAmount(statement.forecastMonthSpend)}
       />
       <Rule />
-      <div className="flex justify-between font-bold text-[15px] uppercase">
-        <span>{t.dashboard.projectedClose}</span>
-        <span>
-          {statement.projectedClose < 0 ? MINUS : ''}
-          {formatWhole(statement.projectedClose)}
-        </span>
+      <div className="flex flex-col">
+        <div className="flex justify-between font-bold text-[15px] uppercase">
+          <span>{t.dashboard.projectedClose}</span>
+          <span>{signed(statement.projectedClose)}</span>
+        </div>
+        <span className="text-[11px] text-truffle-text2 uppercase">{t.dashboard.projectedCloseHow}</span>
       </div>
       <p className="font-grotesk text-sm text-truffle-text2">{paceNote}</p>
     </section>

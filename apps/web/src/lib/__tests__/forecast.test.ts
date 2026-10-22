@@ -112,7 +112,8 @@ describe('computeStatement', () => {
     const s = computeStatement([makeTx(-210, '2026-10-05')], today, 3482.16)!
     expect(s.balance).toBe(3482.16)
     expect(s.balanceIsAllTime).toBe(true)
-    expect(s.projectedClose).toBeCloseTo(3482.16 - 100) // €10/day × 10 days left
+    // Close is this month's income − projected spend, not the all-time figure.
+    expect(s.projectedClose).toBeCloseTo(0 - 310) // €10/day × 31 days
   })
 
   it('reports income, spend and net for the month', () => {
@@ -123,6 +124,14 @@ describe('computeStatement', () => {
     expect(s.incomeThisMonth).toBe(3250)
     expect(s.spentThisMonth).toBe(1455.48)
     expect(s.netThisMonth).toBeCloseTo(1794.52)
+    // Card arithmetic: projected close = income − projected spend, to the cent.
+    expect(s.projectedClose).toBeCloseTo(s.incomeThisMonth - s.forecastMonthSpend, 10)
+  })
+
+  it('projected spend is the daily rate over the whole month', () => {
+    const s = computeStatement([makeTx(-1705.48, '2026-10-12')], today)!
+    expect(s.dailyRate).toBeCloseTo(81.2133, 4)
+    expect(s.forecastMonthSpend).toBeCloseTo(2517.61, 2)
   })
 
   it('returns null when nothing is logged this month', () => {
@@ -142,8 +151,14 @@ describe('computeStatement', () => {
     const base = [makeTx(-100, '2026-10-03')]
     const ahead = computeStatement([...base, makeTx(-150, '2026-09-04'), makeTx(-900, '2026-09-25')], today)!
     expect(ahead.pace).toBe('ahead') // 100 vs 150 (the 25 Sep spend is after day 21)
+    expect(ahead.paceDelta).toBe(50)
     const behind = computeStatement([...base, makeTx(-50, '2026-09-04')], today)!
     expect(behind.pace).toBe('behind')
-    expect(computeStatement(base, today)!.pace).toBeNull()
+    expect(behind.paceDelta).toBe(50)
+    const even = computeStatement([...base, makeTx(-100.4, '2026-09-04')], today)!
+    expect(even.pace).toBe('even')
+    const first = computeStatement(base, today)!
+    expect(first.pace).toBeNull()
+    expect(first.paceDelta).toBe(0)
   })
 })

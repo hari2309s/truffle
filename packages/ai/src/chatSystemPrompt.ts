@@ -67,13 +67,12 @@ export interface FinancialFacts {
   daily_rate: string
   forecast_month_spend: string
   days_remaining: number
-  /** Where the user ends the month at the current daily rate; null with nothing logged recently. */
+  /** Income this month − forecast_month_spend; null with nothing logged this month. */
   projected_close: string | null
-  /** What projected_close is measured from. */
-  projected_close_basis: 'net_of_everything_logged' | 'net_this_month'
   /** Net of every transaction the user has ever logged — not a bank balance. */
   net_of_everything_logged: string | null
-  pace_vs_last_month: 'spending less than last month' | 'spending more than last month' | null
+  /** e.g. "spent €140.12 less than by this point last month". */
+  pace_vs_last_month: string | null
   /** e.g. "Netflix: €13.99 a month". */
   recurring: string[]
 }
@@ -88,17 +87,13 @@ function buildFactsContext(f: FinancialFacts): string {
     `forecast_month_spend: ${f.forecast_month_spend} (total spending by month end at the daily rate)`,
     `days_remaining: ${f.days_remaining}`,
     f.projected_close
-      ? `projected_close: ${f.projected_close} (${
-          f.projected_close_basis === 'net_this_month'
-            ? 'net this month at month end'
-            : 'net of everything logged, at month end'
-        }, if spending continues at the daily rate)`
+      ? `projected_close: ${f.projected_close} (income_this_month minus forecast_month_spend — where this month closes if spending continues at the daily rate)`
       : 'projected_close: not available (not enough logged yet)',
   ]
   if (f.net_of_everything_logged) {
     lines.push(`net_of_everything_logged: ${f.net_of_everything_logged} (all income minus all spending ever logged in Truffle)`)
   }
-  if (f.pace_vs_last_month) lines.push(`pace_vs_last_month: ${f.pace_vs_last_month} at this point`)
+  if (f.pace_vs_last_month) lines.push(`pace_vs_last_month: ${f.pace_vs_last_month}`)
   lines.push(
     f.recurring.length
       ? `recurring: ${f.recurring.map((r) => sanitize(r, 80)).join('; ')}`
@@ -378,9 +373,9 @@ Response guidelines:
 - If an earlier message in this conversation gave a figure that differs from FINANCIAL FACTS, FINANCIAL FACTS is right — use it.
 
 Register to aim for:
-- Flat, avoid this: "Income ${symbol}3,500.00. Spending ${symbol}1,199.50. Net ${symbol}2,300.50. Projected close ${symbol}98."
+- Flat, avoid this: "Income ${symbol}3,500.00. Spending ${symbol}1,199.50. Net ${symbol}2,300.50. Projected close ${symbol}97.63."
 - Wrong, never this: "You've got about ${symbol}2,300 left in the bank." (Truffle doesn't know their bank balance, and the figure is rounded.)
-- Warm, aim for this: "Honestly? You're in good shape. You've spent ${symbol}1,199.50 of the ${symbol}3,500.00 that came in, so you're ${symbol}2,300.50 net this month — and at this pace you'd close the month at ${symbol}98 net."
+- Warm, aim for this: "Honestly? You're in good shape. You've spent ${symbol}1,199.50 of the ${symbol}3,500.00 that came in, so you're ${symbol}2,300.50 net this month — and at this pace you'd close the month at ${symbol}97.63 net."
 
 ${toolRules}`
 }

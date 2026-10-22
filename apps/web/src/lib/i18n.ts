@@ -106,12 +106,15 @@ export interface Translations {
     spentThisMonth: string
     dailyRate: string
     perDay: string
-    forecast: string
-    forecastOn: (date: string) => string
+    incomeThisMonth: string
+    projectedSpend: string
+    projectedSpendOn: (date: string) => string
     forecastAfter: string
     projectedClose: string
-    paceAhead: (month: string) => string
-    paceBehind: (month: string) => string
+    projectedCloseHow: string
+    paceAhead: (amount: string, month: string) => string
+    paceBehind: (amount: string, month: string) => string
+    paceEven: (month: string) => string
     paceFirst: string
     emptyStatement: string
     welcome: (name: string) => string
@@ -710,12 +713,16 @@ export const translations: Record<Locale, Translations> = {
       spentThisMonth: 'Spent this month',
       dailyRate: 'Daily rate',
       perDay: '/day',
-      forecast: 'Forecast',
-      forecastOn: (date) => `Forecast ${date}`,
+      incomeThisMonth: 'Income this month',
+      projectedSpend: 'Projected spend',
+      projectedSpendOn: (date) => `Projected spend · ${date}`,
       forecastAfter: 'after 3 days',
       projectedClose: 'Projected close',
-      paceAhead: (month) => `That’s a little ahead of ${month}. Nicely done.`,
-      paceBehind: (month) => `Running a little above ${month}. Plenty of month left to ease off.`,
+      projectedCloseHow: 'Income − projected spend',
+      paceAhead: (amount, month) => `Spent ${amount} less than by this point in ${month}. Nicely done.`,
+      paceBehind: (amount, month) =>
+        `Spent ${amount} more than by this point in ${month}. Plenty of month left to ease off.`,
+      paceEven: (month) => `Right in line with ${month} so far.`,
       paceFirst: 'Your first month on the statement. It gets sharper as you log.',
       emptyStatement: 'Your statement is blank, and that’s fine. Log one thing and it starts printing.',
       welcome: (name) => (name ? `Welcome, ${name}.` : 'Welcome.'),

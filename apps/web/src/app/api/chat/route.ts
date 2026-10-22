@@ -229,16 +229,17 @@ export async function POST(request: NextRequest) {
       daily_rate: money(statement?.dailyRate ?? 0),
       forecast_month_spend: money(statement?.forecastMonthSpend ?? 0),
       days_remaining: daysInMonth - now.getDate(),
-      // Whole units, exactly as the Home card prints "Projected close".
-      projected_close: statement ? signed(statement.projectedClose, true) : null,
-      projected_close_basis: totals ? 'net_of_everything_logged' : 'net_this_month',
+      projected_close: statement ? signed(statement.projectedClose) : null,
       net_of_everything_logged: totals ? signed(totals.balance) : null,
+      // Same comparison and wording as the footer of the Home card.
       pace_vs_last_month:
         statement?.pace === 'ahead'
-          ? 'spending less than last month'
+          ? `spent ${money(statement.paceDelta)} less than by this point last month`
           : statement?.pace === 'behind'
-            ? 'spending more than last month'
-            : null,
+            ? `spent ${money(statement.paceDelta)} more than by this point last month`
+            : statement?.pace === 'even'
+              ? 'right in line with last month so far'
+              : null,
       recurring: detectSubscriptions(recentRows)
         .slice(0, 8)
         .map((sub) => `${sub.displayName}: ${money(sub.monthlyAmount)} a month`),
