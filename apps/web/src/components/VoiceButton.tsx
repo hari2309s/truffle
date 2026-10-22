@@ -1,8 +1,6 @@
 'use client'
 
-import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
-import { TRUFFLE_ICON } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 export type VoiceButtonStatus = 'idle' | 'recording' | 'transcribing' | 'speaking'
@@ -13,8 +11,6 @@ interface VoiceButtonProps {
   onStop: () => void
   /** Tap while Truffle is talking — cancels speech. Omit where Truffle never speaks. */
   onStopSpeaking?: () => void
-  /** Show the truffle mark on the idle key (Home). */
-  withIcon?: boolean
   /** Replaces "Hold · Speak" on the idle key. */
   idleLabel?: string
   /** Plain (not apricot) when idle — for a secondary voice key. */
@@ -31,7 +27,6 @@ export function VoiceButton({
   onStart,
   onStop,
   onStopSpeaking,
-  withIcon = false,
   idleLabel,
   quiet = false,
   className = 'h-[72px]',
@@ -115,9 +110,6 @@ export function VoiceButton({
       className={`key ${variant} w-full gap-2.5 text-sm uppercase touch-none select-none disabled:!opacity-100 disabled:cursor-wait ${className}`}
     >
       {isRecording && <span aria-hidden className="w-2.5 h-2.5 rounded-full bg-truffle-on-accent blink" />}
-      {status === 'idle' && withIcon && (
-        <Image src={TRUFFLE_ICON} alt="" width={28} height={28} draggable={false} />
-      )}
       {isSpeaking && <span aria-hidden>■</span>}
       <span>{label}</span>
     </button>

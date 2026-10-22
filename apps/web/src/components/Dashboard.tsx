@@ -187,7 +187,6 @@ export function Dashboard({ userId, name }: DashboardProps) {
               status={voiceStatus}
               onStart={voice.startRecording}
               onStop={voice.stopRecording}
-              withIcon
               className="h-16"
             />
           </div>

@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
-import { APP_URL, Line, TRUFFLE_ICON } from './Tally'
+import { APP_URL, Line } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 /** Print-in with the hero's stretched stagger (90ms a line). */
@@ -137,7 +136,6 @@ export default function Hero() {
           </div>
 
           <a href={APP_URL} className="key key-accent h-16 text-sm tracking-[.06em] uppercase">
-            <Image src={TRUFFLE_ICON} alt="" width={30} height={30} />
             {t.hero.holdToSpeak}
           </a>
         </div>
