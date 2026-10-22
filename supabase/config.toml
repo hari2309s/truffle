@@ -223,6 +223,10 @@ otp_expiry = 3600
 # sender_name = "Admin"
 
 # Truffle branded email templates
+[auth.email.template.confirmation]
+subject = "Confirm your Truffle account"
+content_path = "./supabase/templates/confirm-signup.html"
+
 [auth.email.template.magic_link]
 subject = "Your Truffle sign-in link"
 content_path = "./supabase/templates/magic-link.html"

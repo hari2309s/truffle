@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>Confirm your Truffle account</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+</head>
+<body style="margin:0;padding:0;background-color:#e9e5dd;color:#1b1a18;font-family:'Space Mono','Courier New',Courier,monospace;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#e9e5dd;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
+
+          <!-- Brand -->
+          <tr>
+            <td style="padding:0 4px 20px;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;padding-right:8px;">
+                    <img src="{{ .SiteURL }}/icons/truffle.png" alt="" width="28" height="28" style="display:block;" />
+                  </td>
+                  <td style="vertical-align:middle;font-size:15px;font-weight:700;letter-spacing:2.4px;text-transform:uppercase;">Truffle</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Slip -->
+          <tr>
+            <td style="background-color:#fffdf8;padding:22px 24px 26px;box-shadow:0 1px 2px rgba(27,26,24,.12);">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;color:#5c5851;text-transform:uppercase;">
+                <tr>
+                  <td>New account</td>
+                  <td align="right">#0001</td>
+                </tr>
+              </table>
+              <div style="border-top:2px dashed #cfc7b9;margin:14px 0 18px;line-height:0;font-size:0;">&nbsp;</div>
+
+              <p style="margin:0 0 10px;font-family:'Space Grotesk',-apple-system,'Segoe UI',Roboto,sans-serif;font-size:30px;font-weight:500;line-height:1.15;letter-spacing:-0.4px;color:#1b1a18;">One tap and you&rsquo;re in.</p>
+              <p style="margin:0 0 22px;font-family:'Space Grotesk',-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5;color:#5c5851;">Confirm this email to finish signing up. Then pick a name, a voice and a few budgets &mdash; it takes a minute.</p>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;">
+                <tr>
+                  <td style="padding:3px 0;white-space:nowrap;">Account</td>
+                  <td width="100%" style="padding:3px 6px;"><div style="border-bottom:2px dotted #cfc7b9;height:9px;">&nbsp;</div></td>
+                  <td align="right" style="padding:3px 0;white-space:nowrap;font-weight:700;">{{ .Email }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:3px 0;white-space:nowrap;">Link valid</td>
+                  <td width="100%" style="padding:3px 6px;"><div style="border-bottom:2px dotted #cfc7b9;height:9px;">&nbsp;</div></td>
+                  <td align="right" style="padding:3px 0;white-space:nowrap;font-weight:700;">1 hour</td>
+                </tr>
+                <tr>
+                  <td style="padding:3px 0;white-space:nowrap;">Cost</td>
+                  <td width="100%" style="padding:3px 6px;"><div style="border-bottom:2px dotted #cfc7b9;height:9px;">&nbsp;</div></td>
+                  <td align="right" style="padding:3px 0;white-space:nowrap;font-weight:700;">&euro;0.00</td>
+                </tr>
+              </table>
+              <div style="border-top:2px dashed #cfc7b9;margin:18px 0 22px;line-height:0;font-size:0;">&nbsp;</div>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="background-color:#f6bd87;border:2px solid #1b1a18;border-radius:10px;box-shadow:0 3px 0 #1b1a18;">
+                    <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=email"
+                       style="display:block;padding:16px 20px;font-family:'Space Mono','Courier New',Courier,monospace;font-size:14px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#1b1a18;text-decoration:none;">
+                      Confirm email &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:22px 0 0;font-size:11px;line-height:1.6;color:#5c5851;text-transform:uppercase;">Button not working? Paste this link:</p>
+              <p style="margin:4px 0 0;font-size:11px;line-height:1.6;word-break:break-all;">
+                <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=email" style="color:#a5500f;text-decoration:underline;">{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=email</a>
+              </p>
+            </td>
+          </tr>
+          <!-- Tear -->
+          <tr>
+            <td style="border-top:2px dashed #cfc7b9;line-height:0;font-size:0;height:0;">&nbsp;</td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 4px 0;font-size:11px;line-height:1.7;color:#5c5851;">
+              You&rsquo;re getting this because someone signed up for Truffle with this address.<br />
+              If it wasn't you, ignore this email &mdash; nothing happens.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
