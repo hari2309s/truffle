@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 
 const BASE_COLUMNS =
   'id, user_id, amount, currency, description, category, merchant, date, is_recurring, created_at'
-const NEW_COLUMNS = `${BASE_COLUMNS}, note, receipt_path, goal_id`
+const NEW_COLUMNS = `${BASE_COLUMNS}, note, goal_id`
 /** PostgREST returns at most 1,000 rows per request; page through. */
 const PAGE = 1000
 const MAX_PAGES = 50
@@ -360,15 +360,6 @@ export async function DELETE(request: NextRequest) {
     }
 
     const db = createServerClient()
-    // Note any attached receipt first so its file goes with the entry.
-    const { data: existing } = await db
-      .from('transactions')
-      .select('receipt_path')
-      .eq('id', transactionId)
-      .eq('user_id', userId)
-      .maybeSingle()
-    const receiptPath = (existing as { receipt_path?: string | null } | null)?.receipt_path
-
     const { error } = await db
       .from('transactions')
       .delete()
@@ -376,11 +367,6 @@ export async function DELETE(request: NextRequest) {
       .eq('user_id', userId)
 
     if (error) throw error
-
-    if (receiptPath) {
-      const { error: storageError } = await db.storage.from('receipts').remove([receiptPath])
-      if (storageError) console.error('Receipt file cleanup failed (non-fatal):', storageError)
-    }
 
     await recomputeSnapshot(userId, db)
     return NextResponse.json({ ok: true })

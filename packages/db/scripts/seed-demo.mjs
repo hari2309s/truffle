@@ -156,17 +156,6 @@ async function wipe(userId) {
     if (error) throw new Error(`wipe ${table}: ${error.message}`)
   }
 
-  // Receipts visitors attached to demo entries live in storage, outside the
-  // tables above. Only a missing bucket (migration not applied) means none.
-  const bucket = admin.storage.from('receipts')
-  for (let round = 0; round < 50; round++) {
-    const { data: files, error } = await bucket.list(userId, { limit: 100 })
-    if (error && /bucket not found/i.test(error.message)) break
-    if (error) throw new Error(`wipe receipts: ${error.message}`)
-    if (!files?.length) break
-    const { error: removeError } = await bucket.remove(files.map((f) => `${userId}/${f.name}`))
-    if (removeError) throw new Error(`wipe receipts: ${removeError.message}`)
-  }
 }
 
 function parseTransactions() {

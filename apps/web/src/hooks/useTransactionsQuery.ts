@@ -14,7 +14,6 @@ export function mapTransactionRow(row: Record<string, unknown>): Transaction {
     date: row.date as string,
     isRecurring: (row.is_recurring ?? row.isRecurring) as boolean,
     note: (row.note ?? null) as string | null,
-    receiptPath: (row.receipt_path ?? row.receiptPath ?? null) as string | null,
     // undefined (not null) when the API predates goal links, so callers can
     // tell "no goal" from "not tracked" and fall back to name matching.
     goalId: ('goal_id' in row ? row.goal_id : row.goalId) as string | null | undefined,

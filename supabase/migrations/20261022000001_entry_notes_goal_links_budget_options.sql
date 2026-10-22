@@ -1,4 +1,4 @@
--- Entry notes, receipt attachments, goal links, budget options and all-time
+-- Entry notes, goal links, budget options and all-time
 -- totals. Idempotent: safe to run more than once.
 
 -- ── Transactions ─────────────────────────────────────────────────────────────
@@ -8,10 +8,6 @@ alter table transactions
   drop constraint if exists transactions_note_length;
 alter table transactions
   add constraint transactions_note_length check (note is null or char_length(note) <= 500);
-
--- Storage path of an attached receipt image/PDF (bucket "receipts").
-alter table transactions
-  add column if not exists receipt_path text;
 
 -- Which savings goal a deposit/withdrawal belongs to (replaces name matching).
 alter table transactions
@@ -59,10 +55,3 @@ as $$
   where user_id = p_user_id;
 $$;
 revoke execute on function transaction_totals(uuid) from public, anon, authenticated;
-
--- ── Receipt storage ──────────────────────────────────────────────────────────
--- Private bucket; files are read and written only by the API (service role),
--- under "<user_id>/<transaction_id>.<ext>". No public or client policies.
-insert into storage.buckets (id, name, public)
-values ('receipts', 'receipts', false)
-on conflict (id) do nothing;

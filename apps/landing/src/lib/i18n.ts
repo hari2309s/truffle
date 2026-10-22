@@ -463,7 +463,7 @@ export const translations: Record<Locale, LandingTranslations> = {
               },
               {
                 title: 'Receipt images and PDFs',
-                desc: 'Uploaded for parsing. Extracted transaction data is saved; the original file is discarded unless you choose to attach it to an entry. Attached files are stored privately until you remove them, delete the entry, or delete your account.',
+                desc: 'Uploaded for parsing only. Extracted transaction data is saved; the original file is not retained.',
               },
               {
                 title: 'Usage analytics',

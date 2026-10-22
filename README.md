@@ -247,7 +247,7 @@ supabase/migrations/20260530000004_eval_logs_trace_id.sql       # links eval_log
 supabase/migrations/20260918000001_eval_logs_drop_dead_columns.sql  # drops expected_intent/actual_intent/judge_score/flagged — never populated; Langfuse is the source of truth for scores now
 
 # Entries, budgets, history
-supabase/migrations/20261022000001_entry_notes_receipts_goal_links_budget_options.sql  # entry notes, receipt attachments (private "receipts" bucket), goal links (+ backfill), budget rollover + heads-up threshold, transaction_totals RPC
+supabase/migrations/20261022000001_entry_notes_goal_links_budget_options.sql  # entry notes, goal links (+ backfill), budget rollover + heads-up threshold, transaction_totals RPC
 ```
 
 ### Run

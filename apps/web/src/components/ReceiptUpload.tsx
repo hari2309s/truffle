@@ -8,7 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useImportFlow, ImportSuccess } from '@/hooks/useImportFlow'
 import { useCamera } from '@/hooks/useCamera'
 import { CURRENCY_SYMBOLS } from '@/lib/currency'
-import { LeaderRow, MINUS, NoticeSlip, Rule, Sheet, Switch, Tallying } from './Tally'
+import { LeaderRow, MINUS, NoticeSlip, Rule, Sheet, Tallying } from './Tally'
 
 interface ParsedTransaction {
   date: string
@@ -48,9 +48,6 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
   const [preview, setPreview] = useState<{ file: File; objectUrl: string } | null>(null)
   const [parsed, setParsed] = useState<ParsedTransaction[] | null>(null)
   const [receipt, setReceipt] = useState<ParsedReceipt | null>(null)
-  // Off by default: scans are read and discarded unless you choose to keep it.
-  const [keepPhoto, setKeepPhoto] = useState(false)
-  const [attachFailed, setAttachFailed] = useState(false)
   const flow = useImportFlow()
 
   const camera = useCamera(!preview && !parsed && !flow.imported)
@@ -132,17 +129,6 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
         }),
       })
       if (!res.ok) throw new Error('Import failed')
-      const saved = (await res.json().catch(() => ({}))) as { transactions?: { id: string }[] }
-
-      // Attaching is best-effort: the entry is saved either way.
-      const savedId = saved.transactions?.[0]?.id
-      if (keepPhoto && preview && savedId && parsed.length === 1) {
-        const body = new FormData()
-        body.append('transactionId', savedId)
-        body.append('file', preview.file)
-        const attach = await fetch('/api/transactions/receipt', { method: 'POST', body }).catch(() => null)
-        if (!attach?.ok) setAttachFailed(true)
-      }
 
       await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
 
@@ -161,7 +147,6 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
     setPreview(null)
     setParsed(null)
     setReceipt(null)
-    setAttachFailed(false)
     flow.reset()
     if (fileRef.current) fileRef.current.value = ''
     if (cameraRef.current) cameraRef.current.value = ''
@@ -188,11 +173,7 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
     return (
       <Sheet title={t.receiptUpload.title} onClose={onClose} closeLabel={t.common.close}>
         <ImportSuccess
-          message={
-            attachFailed
-              ? `${t.receiptUpload.imported(parsed?.length ?? 0)} · ${t.receiptUpload.attachFailed}`
-              : t.receiptUpload.imported(parsed?.length ?? 0)
-          }
+          message={t.receiptUpload.imported(parsed?.length ?? 0)}
           doneLabel={t.receiptUpload.done}
           onDone={onClose}
         />
@@ -303,14 +284,6 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
             <span className="truncate max-w-[50%]">{preview?.file.name}</span>
           </div>
         </div>
-        {single && preview && (
-          <div className="mx-4 mt-3 px-1 flex gap-2.5 items-center min-h-11 text-[13px]">
-            <Switch checked={keepPhoto} onChange={setKeepPhoto} labelledBy="keep-photo-label" />
-            <span id="keep-photo-label" className="font-grotesk text-sm leading-[1.4]">
-              {t.receiptUpload.keepPhoto}
-            </span>
-          </div>
-        )}
         {single && (
           <div className="mx-4 mt-4 px-1 flex gap-1.5 items-center min-h-11 text-[13px]">
             <label htmlFor="scan-category" className="text-truffle-text2">

@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
@@ -41,53 +41,6 @@ export function TransactionDetailSheet({
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [splitting, setSplitting] = useState(false)
-  const [receiptBusy, setReceiptBusy] = useState(false)
-  const [receiptError, setReceiptError] = useState<string | null>(null)
-  const [viewer, setViewer] = useState<{ url: string; isPdf: boolean } | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
-
-  const receiptRequest = async (init: RequestInit, query = '') => {
-    setReceiptBusy(true)
-    setReceiptError(null)
-    try {
-      const res = await fetch(`/api/transactions/receipt${query}`, init)
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error ?? d.receiptError)
-      return json
-    } catch (e) {
-      setReceiptError(e instanceof Error ? e.message : d.receiptError)
-      return null
-    } finally {
-      setReceiptBusy(false)
-    }
-  }
-
-  const attachReceipt = async (file: File) => {
-    const body = new FormData()
-    body.append('transactionId', tx.id)
-    body.append('file', file)
-    if (await receiptRequest({ method: 'POST', body })) {
-      await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
-      onClose()
-    }
-  }
-
-  const openReceipt = async () => {
-    const json = await receiptRequest({}, `?transactionId=${encodeURIComponent(tx.id)}`)
-    if (json?.url) setViewer({ url: json.url, isPdf: Boolean(json.isPdf) })
-  }
-
-  const removeReceipt = async () => {
-    const json = await receiptRequest(
-      { method: 'DELETE' },
-      `?transactionId=${encodeURIComponent(tx.id)}`
-    )
-    if (json) {
-      setViewer(null)
-      await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
-      onClose()
-    }
-  }
 
   const d = t.entryDetail
   const isIncome = tx.amount > 0
@@ -246,9 +199,12 @@ export function TransactionDetailSheet({
                 { glyph: '✎', label: d.edit, onClick: () => setEditing(true) },
                 { glyph: '⫽', label: d.split, onClick: () => setSplitting(true) },
                 {
-                  glyph: '▤',
-                  label: tx.receiptPath ? d.receipt : d.attach,
-                  onClick: () => (tx.receiptPath ? void openReceipt() : fileRef.current?.click()),
+                  glyph: '?',
+                  label: d.ask,
+                  onClick: () => {
+                    setChatHandoff(askQuestion)
+                    router.push('/chat')
+                  },
                 },
               ] as const
             ).map((key) => (
@@ -256,32 +212,15 @@ export function TransactionDetailSheet({
                 key={key.label}
                 type="button"
                 onClick={key.onClick}
-                disabled={receiptBusy && key.glyph === '▤'}
                 className="key key-plain h-[60px] flex-col !gap-0 text-[11px] uppercase"
               >
                 <span aria-hidden className="text-base">
                   {key.glyph}
                 </span>
-                {receiptBusy && key.glyph === '▤' ? d.working : key.label}
+                {key.label}
               </button>
             ))}
           </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) void attachReceipt(file)
-              e.target.value = ''
-            }}
-          />
-          {receiptError && (
-            <p role="alert" className="mx-4 mt-3 text-[11px] font-bold uppercase text-truffle-negative">
-              ■ {receiptError}
-            </p>
-          )}
 
           <button
             type="button"
@@ -307,44 +246,6 @@ export function TransactionDetailSheet({
             onClose={() => setSplitting(false)}
             onDone={onClose}
           />
-        )}
-        {viewer && (
-          <Sheet
-            key="receipt"
-            title={d.receipt}
-            onClose={() => setViewer(null)}
-            closeLabel={t.common.close}
-            closeGlyph="←"
-            footer={
-              <div className="grid grid-cols-2 gap-2">
-                <a
-                  href={viewer.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="key key-plain h-14 text-[13px] uppercase"
-                >
-                  {d.openFull}
-                </a>
-                <button
-                  type="button"
-                  onClick={removeReceipt}
-                  disabled={receiptBusy}
-                  className="key key-danger h-14 text-[13px] uppercase"
-                >
-                  ✕ {d.removeReceipt}
-                </button>
-              </div>
-            }
-          >
-            <div className="flex-1 mx-4 mt-3 mb-2 grid place-items-center paper overflow-hidden">
-              {viewer.isPdf ? (
-                <iframe src={viewer.url} title={d.receipt} className="w-full h-full min-h-[60vh] border-0" />
-              ) : (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={viewer.url} alt={d.receipt} className="max-w-full max-h-[70vh] object-contain" />
-              )}
-            </div>
-          </Sheet>
         )}
       </AnimatePresence>
     </Sheet>

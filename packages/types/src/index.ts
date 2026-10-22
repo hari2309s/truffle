@@ -12,8 +12,6 @@ export interface Transaction {
   createdAt?: string
   /** Free-text note (≤ 500 chars). */
   note?: string | null
-  /** Storage path of an attached receipt, if any. */
-  receiptPath?: string | null
   /** The savings goal a deposit/withdrawal belongs to. */
   goalId?: string | null
 }

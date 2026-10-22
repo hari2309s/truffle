@@ -189,13 +189,7 @@ export interface Translations {
     deleting: string
     deleteError: string
     split: string
-    receipt: string
-    attach: string
-    working: string
     note: string
-    openFull: string
-    removeReceipt: string
-    receiptError: string
   }
   split: {
     title: string
@@ -390,8 +384,6 @@ export interface Translations {
     blurryBody: (total: string) => string
     saveTotal: string
     totalOnly: string
-    keepPhoto: string
-    attachFailed: string
   }
   weeklySummary: {
     title: string
@@ -794,13 +786,7 @@ export const translations: Record<Locale, Translations> = {
       deleting: 'Tearing off…',
       deleteError: 'Couldn’t delete that. Please try again.',
       split: 'Split',
-      receipt: 'Receipt',
-      attach: 'Attach',
-      working: 'Working…',
       note: 'Note',
-      openFull: 'Open full size',
-      removeReceipt: 'Remove',
-      receiptError: 'Couldn’t handle the receipt. Please try again.',
     },
     split: {
       title: 'Split entry',
@@ -1018,8 +1004,6 @@ export const translations: Record<Locale, Translations> = {
         `I could read the total (${total}) but not the items. Save just the total, or retake it in better light?`,
       saveTotal: 'Save total',
       totalOnly: 'Total only',
-      keepPhoto: 'Keep the photo with this entry (you can remove it any time)',
-      attachFailed: 'photo not attached',
     },
     weeklySummary: {
       title: 'Weekly summary',
