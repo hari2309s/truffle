@@ -3,6 +3,8 @@
  * per user) and are posted to /api/transactions when the connection comes
  * back. Sign-out clears every queue, so nothing can post to another account.
  */
+import { MAX_BATCH, parseNewTransaction } from './transactionInput'
+
 const PREFIX = 'truffle_offline_queue'
 export const QUEUE_EVENT = 'truffle-queue-change'
 
@@ -67,31 +69,69 @@ export interface FlushResult {
 let flushing: Promise<FlushResult> | null = null
 
 /**
- * Posts the user's queue in one request. Network errors, 5xx and 401 keep
- * the entries for the next try; any other 4xx drops the batch.
+ * Posts the user's queue, MAX_BATCH entries at a time, until it's empty or a
+ * request fails. Entries the API would reject are dropped up front (checked
+ * with the API's own validator), so one bad entry can't sink a batch.
+ * Network errors, 5xx and 401 keep entries for the next try. An unexpected
+ * 400 falls back to one request per entry so only the bad ones are dropped;
+ * any other 4xx drops the batch.
  */
 export function flushQueue(userId: string): Promise<FlushResult> {
   if (flushing) return flushing
   flushing = (async () => {
-    const items = readQueue(userId)
-    if (items.length === 0) return { saved: 0, dropped: 0 }
+    const total = { saved: 0, dropped: 0 }
     try {
-      const res = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions: items }),
-      })
-      if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 401)) {
-        // Keep anything queued while the request was in flight.
-        writeQueue(userId, readQueue(userId).slice(items.length))
-        return res.ok ? { saved: items.length, dropped: 0 } : { saved: 0, dropped: items.length }
+      for (;;) {
+        const step = await flushBatch(userId)
+        total.saved += step.saved
+        total.dropped += step.dropped
+        if (!step.done || readQueue(userId).length === 0) return total
       }
-      return { saved: 0, dropped: 0 }
-    } catch {
-      return { saved: 0, dropped: 0 }
     } finally {
       flushing = null
     }
   })()
   return flushing
+}
+
+const post = (batch: QueuedTransaction[]) =>
+  fetch('/api/transactions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transactions: batch }),
+  })
+
+/** One batch. `done`: the batch left the queue (saved or dropped), so the next may follow. */
+async function flushBatch(userId: string): Promise<FlushResult & { done: boolean }> {
+  const items = readQueue(userId).slice(0, MAX_BATCH)
+  if (items.length === 0) return { saved: 0, dropped: 0, done: false }
+  // `keep`: entries that stay queued for the next try.
+  const settle = (saved: number, dropped: number, keep: QueuedTransaction[] = []) => {
+    // Anything queued while the requests were in flight stays too.
+    writeQueue(userId, [...keep, ...readQueue(userId).slice(items.length)])
+    return { saved, dropped, done: keep.length === 0 }
+  }
+  const valid = items.filter((item) => parseNewTransaction(item).ok)
+  const invalid = items.length - valid.length
+  if (valid.length === 0) return settle(0, invalid)
+  try {
+    const res = await post(valid)
+    if (res.ok) return settle(valid.length, invalid)
+    if (res.status === 400) {
+      let saved = 0
+      let dropped = invalid
+      const keep: QueuedTransaction[] = []
+      for (const item of valid) {
+        const one = await post([item]).catch(() => null)
+        if (one?.ok) saved++
+        else if (one?.status === 400) dropped++
+        else keep.push(item) // network / server trouble — try again later
+      }
+      return settle(saved, dropped, keep)
+    }
+    if (res.status > 400 && res.status < 500 && res.status !== 401) return settle(0, items.length)
+    return { saved: 0, dropped: 0, done: false }
+  } catch {
+    return { saved: 0, dropped: 0, done: false }
+  }
 }

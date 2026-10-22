@@ -336,6 +336,8 @@ export interface Translations {
     imported: (n: number) => string
     done: string
     importFailed: string
+    /** Some chunks saved, then one failed. */
+    importPartial: (saved: number, total: number) => string
     rows: (n: number) => string
     mapping: string
     fields: Record<'date' | 'description' | 'amount' | 'category' | 'merchant', string>
@@ -369,6 +371,8 @@ export interface Translations {
     noTransactions: string
     parseError: string
     importFailed: string
+    /** Some chunks saved, then one failed. */
+    importPartial: (saved: number, total: number) => string
     somethingWrong: string
     resultTitle: string
     retake: string
@@ -975,6 +979,8 @@ export const translations: Record<Locale, Translations> = {
       imported: (n) => `${n} transaction${n !== 1 ? 's' : ''} imported`,
       done: 'Done',
       importFailed: 'Import failed. Please try again.',
+      importPartial: (saved, total) =>
+        `Saved ${saved} of ${total}, then the rest failed. Try again to import the rest.`,
       rows: (n) => `${n} row${n !== 1 ? 's' : ''}`,
       mapping: 'Your column → Truffle field',
       fields: {
@@ -1015,6 +1021,8 @@ export const translations: Record<Locale, Translations> = {
       noTransactions: 'No transactions found. Make sure the receipt or statement is legible.',
       parseError: 'Could not parse the file. Try a clearer image.',
       importFailed: 'Import failed. Please try again.',
+      importPartial: (saved, total) =>
+        `Saved ${saved} of ${total}, then the rest failed. Try again to import the rest.`,
       somethingWrong: 'Something went wrong. Please try again.',
       resultTitle: 'Read from photo',
       retake: 'Retake',

@@ -8,6 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useImportFlow, ImportSuccess } from '@/hooks/useImportFlow'
 import { useCamera } from '@/hooks/useCamera'
 import { CURRENCY_SYMBOLS } from '@/lib/currency'
+import { PartialImportError, postTransactions } from '@/lib/postTransactions'
 import { LeaderRow, MINUS, NoticeSlip, Rule, Sheet, Tallying } from './Tally'
 
 interface ParsedTransaction {
@@ -117,26 +118,22 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
     if (!parsed) return
     flow.startLoading()
     try {
-      const res = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transactions: parsed.map((tx) => ({
-            ...tx,
-            merchant: tx.description,
-            isRecurring: false,
-          })),
-        }),
-      })
-      if (!res.ok) throw new Error('Import failed')
-
+      await postTransactions(parsed.map((tx) => ({ ...tx, merchant: tx.description, isRecurring: false })))
       await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
 
       posthog.capture('receipt_imported', { transaction_count: parsed.length })
 
       flow.markImported()
-    } catch {
-      flow.setError(t.receiptUpload.importFailed)
+    } catch (e) {
+      const saved = e instanceof PartialImportError ? e.saved : 0
+      if (saved > 0) {
+        // Chunks go in order: keep only the unsaved rows so a retry can't double them.
+        setParsed(parsed.slice(saved))
+        await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
+      }
+      flow.setError(
+        saved > 0 ? t.receiptUpload.importPartial(saved, parsed.length) : t.receiptUpload.importFailed
+      )
     } finally {
       flow.stopLoading()
     }

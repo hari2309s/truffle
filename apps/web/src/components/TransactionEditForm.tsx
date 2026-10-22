@@ -60,7 +60,8 @@ export function EditForm({
           description: form.description.trim(),
           amount: amt,
           category: form.category,
-          merchant: form.merchant.trim() || undefined,
+          // null (not undefined, which JSON drops) so clearing the field clears it.
+          merchant: form.merchant.trim() || null,
           date: form.date,
           note: form.note.trim() || null,
         }),

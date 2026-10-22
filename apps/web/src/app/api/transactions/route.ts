@@ -8,6 +8,7 @@ import { CATEGORY_EMOJI } from '@/lib/categories'
 import { DEFAULT_ALERT_PCT, effectiveLimit, previousMonth } from '@/lib/budgets'
 import { requireUser } from '@/lib/supabase-server'
 import { sanitizeForLog } from '@/lib/log'
+import { parseNewTransactions, parseTransactionEdit } from '@/lib/transactionInput'
 
 export const runtime = 'nodejs'
 
@@ -119,18 +120,16 @@ export async function POST(request: NextRequest) {
     if (errorResponse) return errorResponse
     const userId = user.id
 
-    const body = await request.json()
-    const { transactions }: { transactions: Omit<Transaction, 'id' | 'embedding'>[] } = body
-
-    if (!transactions?.length) {
-      return NextResponse.json({ error: 'transactions required' }, { status: 400 })
-    }
+    const parsed = parseNewTransactions(await request.json().catch(() => null))
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
+    const transactions = parsed.value
 
     const db = createServerClient()
 
     // Assign IDs upfront so embeddings and DB rows share the same ID
     const txsWithIds: Transaction[] = transactions.map((tx) => ({
       ...tx,
+      merchant: tx.merchant ?? undefined,
       id: crypto.randomUUID(),
       userId,
     }))
@@ -164,7 +163,7 @@ export async function POST(request: NextRequest) {
           currency: tx.currency,
           description: tx.description,
           category: tx.category,
-          merchant: tx.merchant,
+          merchant: tx.merchant ?? null,
           date: tx.date,
           is_recurring: tx.isRecurring,
           embedding: embeddings[i]!.length > 0 ? embeddings[i] : null,
@@ -286,32 +285,22 @@ export async function PATCH(request: NextRequest) {
     if (errorResponse) return errorResponse
     const userId = user.id
 
-    const body = await request.json()
-    const { transactionId, description, amount, category, merchant, date, note } = body as {
-      transactionId: string
-      description: string
-      amount: number
-      category: string
-      merchant?: string
-      date: string
-      note?: string | null
-    }
-
-    if (!transactionId) {
+    const body = (await request.json().catch(() => null)) as Record<string, unknown> | null
+    if (!body || typeof body.transactionId !== 'string' || !body.transactionId) {
       return NextResponse.json({ error: 'transactionId required' }, { status: 400 })
     }
+    const { transactionId, note } = body as { transactionId: string; note?: string | null }
+    const fields = parseTransactionEdit(body)
+    if (!fields.ok) return NextResponse.json({ error: fields.error }, { status: 400 })
     if (note !== undefined && note !== null && (typeof note !== 'string' || note.length > 500)) {
       return NextResponse.json({ error: 'note must be a string up to 500 characters' }, { status: 400 })
     }
 
-    const update: Record<string, unknown> = {
-      description,
-      amount,
-      category,
-      merchant: merchant || null,
-      date,
-    }
+    const update: Record<string, unknown> = { ...fields.value }
     if (note !== undefined) update.note = note?.trim() ? note.trim() : null
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: 'nothing to update' }, { status: 400 })
+    }
 
     const db = createServerClient()
     const { data, error } = await db

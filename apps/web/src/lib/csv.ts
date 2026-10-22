@@ -123,18 +123,61 @@ export function hasRequired(columns: CsvColumns): boolean {
   return REQUIRED_FIELDS.every((f) => columns[f] !== -1)
 }
 
-/** Builds rows from records with the given mapping; skips unparseable amounts. */
+const YMD = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/
+const DMY_OR_MDY = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})\b/
+
+/**
+ * Whether a file's numeric dates are day-first or month-first. One date with
+ * a first part over 12 means day-first; a second part over 12, month-first;
+ * otherwise day-first (most of Truffle's banks are European).
+ */
+export function dateOrder(raws: string[]): 'dmy' | 'mdy' {
+  for (const raw of raws) {
+    const m = raw.trim().match(DMY_OR_MDY)
+    if (m && Number(m[1]) > 12) return 'dmy'
+    if (m && Number(m[2]) > 12) return 'mdy'
+  }
+  return 'dmy'
+}
+
+/** A bank date ("2026-10-20", "20/10/2026", "10/20/26", "20 Oct 2026") as YYYY-MM-DD, or null. */
+export function toIsoDate(raw: string, order: 'dmy' | 'mdy'): string | null {
+  const text = raw.trim()
+  let y: number, mo: number, d: number
+  const ymd = text.match(YMD)
+  const numeric = ymd ? null : text.match(DMY_OR_MDY)
+  if (ymd) [y, mo, d] = [Number(ymd[1]), Number(ymd[2]), Number(ymd[3])]
+  else if (numeric) {
+    const [a, b, yy] = [Number(numeric[1]), Number(numeric[2]), numeric[3]!]
+    ;[d, mo] = order === 'dmy' ? [a, b] : [b, a]
+    y = yy.length === 2 ? 2000 + Number(yy) : Number(yy)
+  } else {
+    // Month names ("20 Oct 2026", "Oct 20, 2026") — only when a year is present.
+    if (!/\d{4}/.test(text) || !/[a-z]/i.test(text)) return null
+    const parsed = new Date(text)
+    if (isNaN(parsed.getTime())) return null
+    ;[y, mo, d] = [parsed.getFullYear(), parsed.getMonth() + 1, parsed.getDate()]
+  }
+  const date = new Date(y, mo - 1, d)
+  if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) return null
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
+/** Builds rows from records with the given mapping; skips unreadable amounts and dates. */
 export function rowsFrom(records: string[][], columns: CsvColumns): ParsedRow[] {
   if (!hasRequired(columns)) return []
+  const order = dateOrder(records.map((cols) => cols[columns.date] ?? ''))
   const rows: ParsedRow[] = []
   for (const cols of records) {
     const amount = parseAmount(cols[columns.amount])
     if (isNaN(amount)) continue
+    const date = toIsoDate(cols[columns.date] ?? '', order)
+    if (!date) continue
     const description = cols[columns.description] ?? ''
     const rawCategory = columns.category !== -1 ? cols[columns.category] : undefined
     const merchant = columns.merchant !== -1 ? cols[columns.merchant] : undefined
     rows.push({
-      date: (cols[columns.date] ?? '').slice(0, 10),
+      date,
       description,
       amount,
       category: guessCategory(description, rawCategory),

@@ -19,6 +19,7 @@ import {
   type CsvField,
 } from '@/lib/csv'
 import { LeaderRow, MINUS, NoticeSlip, Sheet } from './Tally'
+import { PartialImportError, postTransactions } from '@/lib/postTransactions'
 
 interface CSVImportProps {
   userId: string
@@ -52,8 +53,12 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
     () => new Set((txData?.transactions ?? []).map(duplicateKey)),
     [txData]
   )
-  const isDuplicate = (i: number) => existing.has(duplicateKey(rows[i]!))
-  const isSelected = (i: number) => overrides.get(i) ?? !isDuplicate(i)
+  // Rows saved by an import that then failed part-way — never sent again,
+  // whatever is ticked (the server may store them under a different key).
+  const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set())
+  const isSaved = (i: number) => savedKeys.has(duplicateKey(rows[i]!))
+  const isDuplicate = (i: number) => isSaved(i) || existing.has(duplicateKey(rows[i]!))
+  const isSelected = (i: number) => !isSaved(i) && (overrides.get(i) ?? !isDuplicate(i))
   const selectedRows = rows.filter((_, i) => isSelected(i))
   const duplicateCount = rows.filter((_, i) => isDuplicate(i) && !isSelected(i)).length
 
@@ -105,28 +110,28 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
     if (selectedRows.length === 0) return
     flow.startLoading()
     try {
-      const res = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transactions: selectedRows.map((row) => ({
-            description: row.description,
-            amount: row.amount,
-            currency,
-            category: row.category,
-            date: row.date,
-            merchant: row.merchant,
-            isRecurring: false,
-          })),
-        }),
-      })
-      if (!res.ok) throw new Error('Import failed')
-
+      await postTransactions(
+        selectedRows.map((row) => ({
+          description: row.description,
+          amount: row.amount,
+          currency,
+          category: row.category,
+          date: row.date,
+          merchant: row.merchant,
+          isRecurring: false,
+        }))
+      )
       await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
       await queryClient.invalidateQueries({ queryKey: ['insights', userId] })
       flow.markImported()
-    } catch {
-      flow.setError(c.importFailed)
+    } catch (e) {
+      const saved = e instanceof PartialImportError ? e.saved : 0
+      if (saved > 0) {
+        // Chunks go in order, so the first `saved` selected rows are in.
+        setSavedKeys((prev) => new Set([...prev, ...selectedRows.slice(0, saved).map(duplicateKey)]))
+        await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
+      }
+      flow.setError(saved > 0 ? c.importPartial(saved, selectedRows.length) : c.importFailed)
     } finally {
       flow.stopLoading()
     }
