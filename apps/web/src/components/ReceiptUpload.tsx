@@ -8,7 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useImportFlow, ImportSuccess } from '@/hooks/useImportFlow'
 import { useCamera } from '@/hooks/useCamera'
 import { CURRENCY_SYMBOLS } from '@/lib/currency'
-import { LeaderRow, MINUS, NoticeSlip, Rule, Sheet, Tallying } from './Tally'
+import { LeaderRow, MINUS, NoticeSlip, Rule, Sheet, Switch, Tallying } from './Tally'
 
 interface ParsedTransaction {
   date: string
@@ -16,6 +16,15 @@ interface ParsedTransaction {
   amount: number
   currency: 'EUR' | 'GBP' | 'USD'
   category: TransactionCategory
+}
+
+interface ParsedReceipt {
+  merchant: string
+  date: string
+  currency: 'EUR' | 'GBP' | 'USD'
+  total: number
+  items: { name: string; amount: number }[]
+  itemsLegible: boolean
 }
 
 interface ReceiptUploadProps {
@@ -38,6 +47,10 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
   const cameraRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<{ file: File; objectUrl: string } | null>(null)
   const [parsed, setParsed] = useState<ParsedTransaction[] | null>(null)
+  const [receipt, setReceipt] = useState<ParsedReceipt | null>(null)
+  // Off by default: scans are read and discarded unless you choose to keep it.
+  const [keepPhoto, setKeepPhoto] = useState(false)
+  const [attachFailed, setAttachFailed] = useState(false)
   const flow = useImportFlow()
 
   const camera = useCamera(!preview && !parsed && !flow.imported)
@@ -95,6 +108,7 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
       })
 
       setParsed(json.transactions as ParsedTransaction[])
+      setReceipt((json.receipt as ParsedReceipt | undefined) ?? null)
     } catch {
       flow.setError(t.receiptUpload.somethingWrong)
     } finally {
@@ -118,6 +132,17 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
         }),
       })
       if (!res.ok) throw new Error('Import failed')
+      const saved = (await res.json().catch(() => ({}))) as { transactions?: { id: string }[] }
+
+      // Attaching is best-effort: the entry is saved either way.
+      const savedId = saved.transactions?.[0]?.id
+      if (keepPhoto && preview && savedId && parsed.length === 1) {
+        const body = new FormData()
+        body.append('transactionId', savedId)
+        body.append('file', preview.file)
+        const attach = await fetch('/api/transactions/receipt', { method: 'POST', body }).catch(() => null)
+        if (!attach?.ok) setAttachFailed(true)
+      }
 
       await queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
 
@@ -135,6 +160,8 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
     if (preview?.objectUrl) URL.revokeObjectURL(preview.objectUrl)
     setPreview(null)
     setParsed(null)
+    setReceipt(null)
+    setAttachFailed(false)
     flow.reset()
     if (fileRef.current) fileRef.current.value = ''
     if (cameraRef.current) cameraRef.current.value = ''
@@ -161,7 +188,11 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
     return (
       <Sheet title={t.receiptUpload.title} onClose={onClose} closeLabel={t.common.close}>
         <ImportSuccess
-          message={t.receiptUpload.imported(parsed?.length ?? 0)}
+          message={
+            attachFailed
+              ? `${t.receiptUpload.imported(parsed?.length ?? 0)} · ${t.receiptUpload.attachFailed}`
+              : t.receiptUpload.imported(parsed?.length ?? 0)
+          }
           doneLabel={t.receiptUpload.done}
           onDone={onClose}
         />
@@ -201,11 +232,20 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
               disabled={flow.isLoading}
               className="key key-accent h-14 text-sm uppercase"
             >
-              {flow.isLoading ? t.receiptUpload.importing : `✓ ${t.receiptUpload.import(parsed.length)}`}
+              {flow.isLoading
+                ? t.receiptUpload.importing
+                : receipt && !receipt.itemsLegible
+                  ? `✓ ${t.receiptUpload.saveTotal}`
+                  : `✓ ${t.receiptUpload.import(parsed.length)}`}
             </button>
           </div>
         }
       >
+        {receipt && !receipt.itemsLegible && (
+          <NoticeSlip tone="warning" title={t.receiptUpload.blurryTitle} className="mx-4 mt-3">
+            {t.receiptUpload.blurryBody(fmt(receipt.currency, receipt.total))}
+          </NoticeSlip>
+        )}
         <div className="slip mx-4 mt-3 px-[18px] pt-[18px] pb-8 flex flex-col gap-1.5 text-[13px]">
           {single ? (
             <>
@@ -220,32 +260,57 @@ export function ReceiptUpload({ userId, onClose }: ReceiptUploadProps) {
             </div>
           )}
           <Rule className="my-1.5" />
-          {parsed.map((tx, i) => (
-            <div key={i} className="print-in" style={{ animationDelay: `${i * 60}ms` }}>
-              <LeaderRow
-                baseline
-                left={single ? (t.categories[tx.category] ?? tx.category) : tx.description}
-                right={<b>{fmt(tx.currency, tx.amount)}</b>}
-              />
-              {!single && (
+          {receipt ? (
+            // A receipt: its printed line items (if readable), then the total.
+            receipt.itemsLegible &&
+            receipt.items.map((item, i) => (
+              <div key={i} className="print-in" style={{ animationDelay: `${i * 60}ms` }}>
+                <LeaderRow
+                  baseline
+                  left={item.name}
+                  right={<b>{fmt(receipt.currency, Math.abs(item.amount))}</b>}
+                />
+              </div>
+            ))
+          ) : (
+            parsed.map((tx, i) => (
+              <div key={i} className="print-in" style={{ animationDelay: `${i * 60}ms` }}>
+                <LeaderRow baseline left={tx.description} right={<b>{fmt(tx.currency, tx.amount)}</b>} />
                 <div className="text-[11px] text-truffle-text2">
                   {tx.date} · {t.categories[tx.category] ?? tx.category}
                 </div>
-              )}
-            </div>
-          ))}
-          <Rule className="my-1.5" />
+              </div>
+            ))
+          )}
+          {(!receipt || receipt.itemsLegible) && <Rule className="my-1.5" />}
           {currencies.size === 1 && (
-            <div className="flex justify-between text-lg font-bold uppercase">
+            <div
+              className="flex justify-between text-lg font-bold uppercase print-in"
+              style={{ animationDelay: `${(receipt?.items.length ?? parsed.length) * 60}ms` }}
+            >
               <span>{t.receiptUpload.total}</span>
               <span>{fmt(parsed[0]!.currency, total)}</span>
             </div>
           )}
           <div className="flex justify-between text-[11px] text-truffle-text2 uppercase">
-            <span>{t.receiptUpload.items(parsed.length)}</span>
-            <span>{preview?.file.name}</span>
+            <span>
+              {receipt
+                ? receipt.itemsLegible
+                  ? t.receiptUpload.items(receipt.items.length)
+                  : t.receiptUpload.totalOnly
+                : t.receiptUpload.items(parsed.length)}
+            </span>
+            <span className="truncate max-w-[50%]">{preview?.file.name}</span>
           </div>
         </div>
+        {single && preview && (
+          <div className="mx-4 mt-3 px-1 flex gap-2.5 items-center min-h-11 text-[13px]">
+            <Switch checked={keepPhoto} onChange={setKeepPhoto} labelledBy="keep-photo-label" />
+            <span id="keep-photo-label" className="font-grotesk text-sm leading-[1.4]">
+              {t.receiptUpload.keepPhoto}
+            </span>
+          </div>
+        )}
         {single && (
           <div className="mx-4 mt-4 px-1 flex gap-1.5 items-center min-h-11 text-[13px]">
             <label htmlFor="scan-category" className="text-truffle-text2">

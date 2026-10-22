@@ -8,6 +8,8 @@ function mapBudget(row: Record<string, unknown>): CategoryBudget {
     category: row.category as TransactionCategory,
     amount: Number(row.amount),
     createdAt: (row.created_at ?? row.createdAt) as string,
+    rollover: (row.rollover as boolean | undefined) ?? false,
+    alertPct: row.alertPct === undefined ? 80 : (row.alertPct as number | null),
   }
 }
 

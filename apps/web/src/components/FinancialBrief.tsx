@@ -21,8 +21,11 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
 
   const now = useMemo(() => new Date(), [])
   const statement = useMemo(
-    () => (data?.transactions ? computeStatement(data.transactions, now) : null),
-    [data?.transactions, now]
+    () =>
+      data?.transactions
+        ? computeStatement(data.transactions, now, data.totals?.balance ?? null)
+        : null,
+    [data?.transactions, data?.totals, now]
   )
   const formatWhole = useMemo(() => {
     const f = new Intl.NumberFormat(undefined, {
@@ -89,7 +92,9 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
         <span>{stamp}</span>
       </div>
       <Rule />
-      <span className="text-xs text-truffle-text2 uppercase">{t.dashboard.balance}</span>
+      <span className="text-xs text-truffle-text2 uppercase">
+        {statement.balanceIsAllTime ? t.dashboard.balance : t.dashboard.netThisMonth}
+      </span>
       <span className="text-[44px] font-bold leading-none break-all">{signed(statement.balance)}</span>
       <Rule className="mt-1.5" />
       <LeaderRow strong left={t.dashboard.spentThisMonth} right={formatAmount(statement.spentThisMonth)} />

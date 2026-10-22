@@ -2,10 +2,14 @@
 
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { SkeletonPulse } from './PageMotion'
 import { useTransactionFilters } from '@/hooks/useTransactionFilters'
-import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
+import {
+  monthTransactionsQuery,
+  useTransactionsQuery,
+  type TransactionsResult,
+} from '@/hooks/useTransactionsQuery'
 import { TransactionFilterPanel } from './TransactionFilterPanel'
 import { LeaderRow, MINUS } from './Tally'
 import { exportToCSV } from '@/lib/exportCsv'
@@ -15,6 +19,19 @@ import { TransactionDetailSheet } from './TransactionDetailSheet'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
+
+/**
+ * Merges the older-month queries. Module-level so its reference is stable —
+ * TanStack re-runs `combine` whenever the function identity changes.
+ */
+function combineOlderMonths(results: UseQueryResult<TransactionsResult>[]) {
+  return {
+    transactions: results.flatMap((r) => r.data?.transactions ?? []),
+    loading: results.some((r) => r.isLoading),
+    // Whether anything exists before the oldest month loaded so far.
+    hasOlder: results.length ? (results[results.length - 1]?.data?.hasOlder ?? true) : null,
+  }
+}
 
 interface TransactionListProps {
   userId: string
@@ -31,28 +48,52 @@ export function TransactionList({ userId }: TransactionListProps) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [detail, setDetail] = useState<Transaction | null>(null)
 
-  const allTransactions = data?.transactions ?? []
   const [visibleMonthCount, setVisibleMonthCount] = useState(1)
-
-  const filters = useTransactionFilters(allTransactions)
-  const { filtered, isFiltered, clearFilters } = filters
 
   const cutoffDate = useMemo(() => {
     const now = new Date()
-    return new Date(now.getFullYear(), now.getMonth() - (visibleMonthCount - 1), 1)
-      .toISOString()
-      .slice(0, 10)
+    const d = new Date(now.getFullYear(), now.getMonth() - (visibleMonthCount - 1), 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
   }, [visibleMonthCount])
+
+  // Months the user has paged back to beyond the default 12-month window are
+  // fetched one at a time from the server.
+  const windowFrom = data?.from ?? null
+  const olderMonths = useMemo(() => {
+    if (!windowFrom || cutoffDate >= windowFrom) return []
+    const months: string[] = []
+    const [y, m] = windowFrom.split('-').map(Number)
+    for (let d = new Date(y!, m! - 2, 1); ; d = new Date(d.getFullYear(), d.getMonth() - 1, 1)) {
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (`${ym}-01` < cutoffDate) break
+      months.push(ym)
+    }
+    return months
+  }, [windowFrom, cutoffDate])
+  const older = useQueries({
+    queries: olderMonths.map((month) => monthTransactionsQuery(userId, month)),
+    combine: combineOlderMonths,
+  })
+
+  const allTransactions = useMemo(
+    () => [...(data?.transactions ?? []), ...older.transactions],
+    [data?.transactions, older.transactions]
+  )
+  const loadingOlder = older.loading
+
+  const filters = useTransactionFilters(allTransactions)
+  const { filtered, isFiltered, clearFilters } = filters
 
   const windowed = useMemo(
     () => allTransactions.filter((tx) => tx.date >= cutoffDate),
     [allTransactions, cutoffDate]
   )
 
-  const hasMore = useMemo(
-    () => !isFiltered && allTransactions.some((tx) => tx.date < cutoffDate),
-    [isFiltered, allTransactions, cutoffDate]
-  )
+  const hasMore = useMemo(() => {
+    if (isFiltered) return false
+    if (allTransactions.some((tx) => tx.date < cutoffDate)) return true
+    return older.hasOlder ?? Boolean(data?.hasOlder)
+  }, [isFiltered, allTransactions, cutoffDate, older.hasOlder, data?.hasOlder])
 
   const nextMonthLabel = useMemo(() => {
     const now = new Date()
@@ -287,7 +328,7 @@ export function TransactionList({ userId }: TransactionListProps) {
           onClick={() => setVisibleMonthCount((n) => n + 1)}
           className="key key-line key-3 h-11 mt-3 mb-1 text-xs uppercase"
         >
-          {t.transactions.loadMonth(nextMonthLabel)}
+          {loadingOlder ? t.transactions.loadingMonth : t.transactions.loadMonth(nextMonthLabel)}
         </button>
       )}
       <AnimatePresence>

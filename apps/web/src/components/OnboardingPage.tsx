@@ -13,7 +13,7 @@ import { getPersona } from '@/lib/voices'
 import { LanguagePicker } from './LanguagePicker'
 import { VoicePicker } from './VoicePicker'
 import { CurrencyPicker } from './CurrencyPicker'
-import { LeaderRow, MINUS, Rule } from './Tally'
+import { LeaderRow, MINUS, Rule, Switch } from './Tally'
 
 const CSVImport = dynamic(() => import('./CSVImport').then((m) => m.CSVImport))
 const ReceiptUpload = dynamic(() => import('./ReceiptUpload').then((m) => m.ReceiptUpload))
@@ -47,6 +47,7 @@ export function OnboardingPage({ userId, onComplete }: OnboardingPageProps) {
   const [stepIndex, setStepIndex] = useState(0)
   const [importer, setImporter] = useState<'scan' | 'csv' | null>(null)
   const [limits, setLimits] = useState<Record<string, number> | null>(null)
+  const [headsUp, setHeadsUp] = useState(true)
 
   const o = t.onboarding
   const step = STEPS[stepIndex]!
@@ -94,7 +95,13 @@ export function OnboardingPage({ userId, onComplete }: OnboardingPageProps) {
             fetch('/api/budgets', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId, category: s.category, amount: limitFor(s.category, s.value) }),
+              body: JSON.stringify({
+                userId,
+                category: s.category,
+                amount: limitFor(s.category, s.value),
+                // Heads-up on is the default; only send it when switched off.
+                ...(headsUp ? {} : { alertPct: null }),
+              }),
             })
           )
         )
@@ -351,12 +358,12 @@ export function OnboardingPage({ userId, onComplete }: OnboardingPageProps) {
                   <span>{o.perMonth(formatWhole(totalLimit))}</span>
                 </div>
               </div>
-              <p className="mx-4 mt-3.5 px-1 flex gap-2.5 items-center font-grotesk text-sm leading-[1.4]">
-                <span aria-hidden className="text-truffle-positive font-mono font-bold">
-                  ●
+              <div className="mx-4 mt-3.5 px-1 flex gap-2.5 items-center">
+                <Switch checked={headsUp} onChange={setHeadsUp} labelledBy="headsup-label" />
+                <span id="headsup-label" className="font-grotesk text-sm leading-[1.4]">
+                  {o.headsUpNote}
                 </span>
-                {o.headsUpNote}
-              </p>
+              </div>
             </>
           )}
         </motion.div>

@@ -10,9 +10,9 @@ import { useBudgetsQuery } from '@/hooks/useBudgetsQuery'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
-import { currentYearMonth } from '@/lib/date'
 import { setChatHandoff } from '@/lib/chatHandoff'
 import { KEYS, pressKey } from '@/lib/keypad'
+import { budgetView, DEFAULT_ALERT_PCT } from '@/lib/budgets'
 import { enqueueTransaction, isOfflineError } from '@/lib/offlineQueue'
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
@@ -67,19 +67,18 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
   const amount = parseFloat(form.amount)
   const validAmount = !isNaN(amount) && amount > 0
 
-  // Gentle heads-up when this entry pushes its category to 80%+ of budget.
+  // Gentle heads-up when this entry pushes its category past the budget's
+  // heads-up threshold (unless that budget's heads-up is switched off).
   const budgetNote = useMemo(() => {
     if (!form.isExpense || !validAmount) return null
     const budget = budgets.find((b) => b.category === form.category)
     if (!budget || budget.amount <= 0) return null
-    const prefix = currentYearMonth()
-    const spent = (txData?.transactions ?? [])
-      .filter((tx) => tx.category === form.category && tx.amount < 0 && tx.date.startsWith(prefix))
-      .reduce((s, tx) => s - tx.amount, 0)
+    const view = budgetView(budget, txData?.transactions ?? [])
     const category = t.categories[form.category] ?? form.category
-    if (spent >= budget.amount) return t.addTransaction.overBudget(category, formatAmount(amount))
-    const pct = Math.round(((spent + amount) / budget.amount) * 100)
-    return pct >= 80 ? t.addTransaction.nearBudget(category, pct) : null
+    if (view.status === 'over') return t.addTransaction.overBudget(category, formatAmount(amount))
+    const pct = Math.round(((view.spent + amount) / view.limit) * 100)
+    const threshold = budget.alertPct === undefined ? DEFAULT_ALERT_PCT : budget.alertPct
+    return threshold !== null && pct >= threshold ? t.addTransaction.nearBudget(category, pct) : null
   }, [budgets, txData, form.category, form.isExpense, amount, validAmount, t, formatAmount])
 
   const categories = showAllCategories

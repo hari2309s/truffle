@@ -13,7 +13,7 @@ import { VoicePicker } from './VoicePicker'
 import { CurrencyPicker } from './CurrencyPicker'
 import { LeaderRow, Rule } from './Tally'
 import { exportToCSV } from '@/lib/exportCsv'
-import type { Transaction } from '@truffle/types'
+import { fetchAllTransactions } from '@/hooks/useTransactionsQuery'
 import { supabase } from '@/lib/supabase'
 
 interface SettingsSheetProps {
@@ -67,7 +67,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
     setIsExporting(true)
     try {
       const [txRes, goalsRes, budgetsRes, habitsRes] = await Promise.all([
-        fetch('/api/transactions'),
+        fetch('/api/transactions?all=1'),
         fetch('/api/goals'),
         fetch('/api/budgets'),
         fetch('/api/habits'),
@@ -102,11 +102,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   const handleExportCsv = async () => {
     setIsExporting(true)
     try {
-      const res = await fetch('/api/transactions')
-      const json = await res.json()
-      exportToCSV(
-        ((json.transactions ?? []) as Transaction[]).map((tx) => ({ ...tx, amount: Number(tx.amount) }))
-      )
+      exportToCSV(await fetchAllTransactions())
     } finally {
       setIsExporting(false)
     }

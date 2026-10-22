@@ -102,6 +102,40 @@ export function NoticeSlip({
   )
 }
 
+/** The design's pill switch (44×26): ink track when on, apricot knob. */
+export function Switch({
+  checked,
+  onChange,
+  labelledBy,
+  label,
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  labelledBy?: string
+  label?: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-labelledby={labelledBy}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative flex-none w-11 h-[26px] rounded-full transition-colors ${
+        checked ? 'bg-truffle-text' : 'bg-truffle-surface border border-truffle-border'
+      }`}
+    >
+      <span
+        aria-hidden
+        className={`absolute top-[3px] w-5 h-5 rounded-full transition-all ${
+          checked ? 'right-[3px] bg-truffle-accent' : 'left-[3px] bg-truffle-text2'
+        }`}
+      />
+    </button>
+  )
+}
+
 /** "Tallying..." — Truffle is thinking. */
 export function Tallying({ label = 'TALLYING' }: { label?: string }) {
   return (
@@ -155,6 +189,9 @@ export function Sheet({
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // Sheets can stack (split / receipt over an entry); only the top one listens.
+      const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]')
+      if (dialogs[dialogs.length - 1] !== ref.current) return
       if (e.key === 'Escape') {
         onCloseRef.current()
         return

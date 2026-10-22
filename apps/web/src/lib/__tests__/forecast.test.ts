@@ -108,6 +108,13 @@ describe('computeStatement', () => {
     expect(s.balance).toBe(-210)
   })
 
+  it('uses the server’s all-time balance when given', () => {
+    const s = computeStatement([makeTx(-210, '2026-10-05')], today, 3482.16)!
+    expect(s.balance).toBe(3482.16)
+    expect(s.balanceIsAllTime).toBe(true)
+    expect(s.projectedClose).toBeCloseTo(3482.16 - 100) // €10/day × 10 days left
+  })
+
   it('returns null when nothing is logged this month', () => {
     expect(computeStatement([makeTx(-50, '2026-09-04')], today)).toBeNull()
   })

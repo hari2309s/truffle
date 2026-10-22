@@ -14,6 +14,7 @@ interface EditFormState {
   category: TransactionCategory
   merchant: string
   date: string
+  note: string
 }
 
 export type EditFocus = 'amount' | 'category'
@@ -39,7 +40,9 @@ export function EditForm({
     category: tx.category,
     merchant: tx.merchant ?? '',
     date: tx.date,
+    note: tx.note ?? '',
   })
+  const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,12 +62,17 @@ export function EditForm({
           category: form.category,
           merchant: form.merchant.trim() || undefined,
           date: form.date,
+          note: form.note.trim() || null,
         }),
       })
-      if (!res.ok) throw new Error('Failed to save')
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        throw new Error(json.error ?? t.transactions.saveError)
+      }
       onSave()
-    } catch {
+    } catch (e) {
       // Keep form open on error
+      setError(e instanceof Error ? e.message : t.transactions.saveError)
     } finally {
       setIsSaving(false)
     }
@@ -133,6 +141,20 @@ export function EditForm({
         aria-label={t.transactions.merchantPlaceholder}
         className="field h-11"
       />
+      <textarea
+        value={form.note}
+        onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+        placeholder={t.transactions.notePlaceholder}
+        aria-label={t.transactions.notePlaceholder}
+        maxLength={500}
+        rows={2}
+        className="field h-auto py-2.5 resize-none font-grotesk text-sm"
+      />
+      {error && (
+        <p role="alert" className="text-[11px] font-bold uppercase text-truffle-negative">
+          ■ {error}
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-2 pt-1 pb-1">
         <button type="button" onClick={onCancel} className="key key-line key-3 h-11 text-xs uppercase">
           {t.transactions.cancel}

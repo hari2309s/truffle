@@ -10,6 +10,12 @@ export interface Transaction {
   isRecurring: boolean
   embedding?: number[] // @xenova/transformers embedding
   createdAt?: string
+  /** Free-text note (≤ 500 chars). */
+  note?: string | null
+  /** Storage path of an attached receipt, if any. */
+  receiptPath?: string | null
+  /** The savings goal a deposit/withdrawal belongs to. */
+  goalId?: string | null
 }
 
 export type TransactionCategory =
@@ -168,4 +174,8 @@ export interface CategoryBudget {
   category: TransactionCategory
   amount: number // monthly spending limit in EUR
   createdAt: string
+  /** Carry last month's unused amount into this month's limit. */
+  rollover?: boolean
+  /** Heads-up threshold in percent; null = off. Defaults to 80. */
+  alertPct?: number | null
 }

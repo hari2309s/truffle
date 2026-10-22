@@ -50,14 +50,18 @@ export function GoalDetailSheet({
   const done = goal.savedAmount >= goal.targetAmount
   const filled = Math.floor(pct / 10)
 
-  // Deposits are the "Saved to: …" / "Withdrawn from: …" transactions the
-  // goals API records, matched on the goal's name.
+  // Deposits/withdrawals the goals API records, linked by goal_id. Before the
+  // goal-link migration (goalId undefined) fall back to matching the name.
   const deposits = useMemo(
     () =>
       (txData?.transactions ?? [])
-        .filter((tx) => tx.category === 'savings' && tx.merchant === goal.name)
+        .filter((tx) =>
+          tx.goalId !== undefined
+            ? tx.goalId === goal.id
+            : tx.category === 'savings' && tx.merchant === goal.name
+        )
         .slice(0, 12),
-    [txData, goal.name]
+    [txData, goal.id, goal.name]
   )
 
   const weeksLeft = goal.deadline

@@ -62,3 +62,23 @@ export async function recomputeSnapshot(userId: string, db: ReturnType<typeof cr
       { onConflict: 'user_id,month' }
     )
 }
+
+/**
+ * True when Postgres/PostgREST rejected a query because a column or function
+ * doesn't exist yet — i.e. the latest migration hasn't been applied. Callers
+ * fall back to the previous behaviour instead of failing.
+ */
+export function isMissingSchema(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false
+  return (
+    error.code === '42703' || // undefined_column
+    error.code === '42883' || // undefined_function
+    error.code === 'PGRST204' || // column not in schema cache
+    error.code === 'PGRST202' // function not in schema cache
+  )
+}
+
+export const MIGRATION_NEEDED = {
+  error: 'This needs a database update (supabase/migrations/20261022000001). Please apply it.',
+  code: 'MIGRATION_REQUIRED',
+} as const

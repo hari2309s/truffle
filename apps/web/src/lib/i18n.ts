@@ -102,6 +102,7 @@ export interface Translations {
     settingsLabel: string
     statement: string
     balance: string
+    netThisMonth: string
     spentThisMonth: string
     dailyRate: string
     perDay: string
@@ -187,6 +188,25 @@ export interface Translations {
     tapAgain: string
     deleting: string
     deleteError: string
+    split: string
+    receipt: string
+    attach: string
+    working: string
+    note: string
+    openFull: string
+    removeReceipt: string
+    receiptError: string
+  }
+  split: {
+    title: string
+    part: (n: number) => string
+    remove: (n: number) => string
+    addPart: string
+    left: string
+    over: string
+    balanced: string
+    save: (n: number) => string
+    error: string
   }
   goalDetail: {
     title: string
@@ -239,6 +259,8 @@ export interface Translations {
     lastThree: string
     soFar: (month: string) => string
     headsUpAt: string
+    off: string
+    rollover: string
     save: (amount: string) => string
     error: string
   }
@@ -285,6 +307,7 @@ export interface Translations {
     noMatching: string
     noThisMonth: string
     loadMonth: (label: string) => string
+    loadingMonth: string
     deleteConfirm: string
     cancel: string
     delete: string
@@ -298,6 +321,8 @@ export interface Translations {
     editCategory: string
     matchesFor: (query: string) => string
     noMatchesHint: string
+    notePlaceholder: string
+    saveError: string
   }
   csvImport: {
     title: string
@@ -361,6 +386,12 @@ export interface Translations {
     pdf: string
     lineUp: string
     startingCamera: string
+    blurryTitle: string
+    blurryBody: (total: string) => string
+    saveTotal: string
+    totalOnly: string
+    keepPhoto: string
+    attachFailed: string
   }
   weeklySummary: {
     title: string
@@ -488,6 +519,8 @@ export interface Translations {
     statusOver: string
     statusHeadsUp: string
     statusOnTrack: string
+    rolledOver: (amount: string) => string
+    alertsOff: string
   }
   cookieBanner: {
     message: string
@@ -666,7 +699,8 @@ export const translations: Record<Locale, Translations> = {
       signOut: 'Sign out',
       settingsLabel: 'Settings',
       statement: 'Statement',
-      balance: 'Net this month',
+      balance: 'Balance',
+      netThisMonth: 'Net this month',
       spentThisMonth: 'Spent this month',
       dailyRate: 'Daily rate',
       perDay: '/day',
@@ -759,6 +793,25 @@ export const translations: Record<Locale, Translations> = {
       tapAgain: 'Tap again to tear off',
       deleting: 'Tearing off…',
       deleteError: 'Couldn’t delete that. Please try again.',
+      split: 'Split',
+      receipt: 'Receipt',
+      attach: 'Attach',
+      working: 'Working…',
+      note: 'Note',
+      openFull: 'Open full size',
+      removeReceipt: 'Remove',
+      receiptError: 'Couldn’t handle the receipt. Please try again.',
+    },
+    split: {
+      title: 'Split entry',
+      part: (n) => `Part ${n}`,
+      remove: (n) => `Remove part ${n}`,
+      addPart: 'Add part',
+      left: 'Left to split',
+      over: 'Over by',
+      balanced: 'Balanced',
+      save: (n) => `Split into ${n}`,
+      error: 'Couldn’t split that. Please try again.',
     },
     goalDetail: {
       title: 'Goal',
@@ -811,6 +864,8 @@ export const translations: Record<Locale, Translations> = {
       lastThree: 'Last 3 months',
       soFar: (month) => `${month} so far`,
       headsUpAt: 'Heads-up at',
+      off: 'Off',
+      rollover: 'Roll unused into next month',
       save: (amount) => `Save ${amount} limit`,
       error: 'Couldn’t save the limit. Please try again.',
     },
@@ -870,6 +925,7 @@ export const translations: Record<Locale, Translations> = {
       noMatching: 'No matching transactions.',
       noThisMonth: 'No transactions this month yet.',
       loadMonth: (label) => `Load ${label}`,
+      loadingMonth: 'Printing…',
       deleteConfirm: 'Tear this one off?',
       cancel: 'Cancel',
       delete: 'Delete',
@@ -883,6 +939,8 @@ export const translations: Record<Locale, Translations> = {
       editCategory: 'Category',
       matchesFor: (query) => `Matches for “${query}”`,
       noMatchesHint: 'Nothing here. Try another month, or ask Truffle out loud.',
+      notePlaceholder: 'Note (optional)',
+      saveError: 'Couldn’t save that. Please try again.',
     },
     csvImport: {
       title: 'Import',
@@ -955,6 +1013,13 @@ export const translations: Record<Locale, Translations> = {
       pdf: 'PDF',
       lineUp: 'Hold steady · line it up in the frame',
       startingCamera: 'Starting the camera…',
+      blurryTitle: 'Scan · too blurry',
+      blurryBody: (total) =>
+        `I could read the total (${total}) but not the items. Save just the total, or retake it in better light?`,
+      saveTotal: 'Save total',
+      totalOnly: 'Total only',
+      keepPhoto: 'Keep the photo with this entry (you can remove it any time)',
+      attachFailed: 'photo not attached',
     },
     weeklySummary: {
       title: 'Weekly summary',
@@ -1091,6 +1156,8 @@ export const translations: Record<Locale, Translations> = {
       statusOver: 'Over',
       statusHeadsUp: 'Heads-up',
       statusOnTrack: 'On track',
+      rolledOver: (amount) => `↻ ${amount} rolled over`,
+      alertsOff: 'Heads-up off',
     },
     cookieBanner: {
       message:

@@ -2,7 +2,7 @@ import LegalPage, { type LegalSection } from '@/components/LegalPage'
 import { LegalItem, LegalList, MailLink, readMinutes } from '@/components/LegalParts'
 import { translations } from '@/lib/i18n'
 
-const LAST_UPDATED = 'May 2025'
+const LAST_UPDATED = 'October 2026'
 const CONTACT_EMAIL = 'hello@truffle.finance'
 
 // Server Component — the page is static legal text; LegalPage is the only

@@ -7,10 +7,11 @@ import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
-import { LeaderRow, Sheet } from './Tally'
+import { LeaderRow, Sheet, Switch } from './Tally'
+import { budgetStatus, DEFAULT_ALERT_PCT, effectiveLimit } from '@/lib/budgets'
 
 const STEP = 10
-const HEADS_UP = 80
+const ALERT_OPTIONS = [50, 70, 80, 90] as const
 const round10 = (n: number) => Math.max(STEP, Math.round(n / STEP) * STEP)
 
 /** Edit one category's monthly limit against what it actually costs. */
@@ -28,6 +29,10 @@ export function BudgetEditSheet({
   const queryClient = useQueryClient()
   const { data: txData } = useTransactionsQuery(userId)
   const [limit, setLimit] = useState(budget.amount)
+  const [rollover, setRollover] = useState(budget.rollover ?? false)
+  const [alertPct, setAlertPct] = useState<number | null>(
+    budget.alertPct === undefined ? DEFAULT_ALERT_PCT : budget.alertPct
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -58,17 +63,27 @@ export function BudgetEditSheet({
   }, [txData, budget.category, b, locale])
 
   const spentNow = months[2]!.spent
-  const pctAt = (l: number) => (l > 0 ? Math.round((spentNow / l) * 100) : 0)
-  const statusAt = (l: number) => {
-    const pct = pctAt(l)
-    return pct > 100
+  const lastSpent = months[1]!.spent
+  // The limit this month at base `l`, with the rollover setting applied.
+  const limitAt = (l: number, roll = rollover) =>
+    effectiveLimit({ amount: l, rollover: roll, createdAt: budget.createdAt }, lastSpent)
+  const pctAt = (l: number, roll = rollover) => {
+    const eff = limitAt(l, roll)
+    return eff > 0 ? Math.round((spentNow / eff) * 100) : 0
+  }
+  const statusAt = (l: number, roll = rollover, threshold = alertPct) => {
+    const state = budgetStatus(spentNow, limitAt(l, roll), threshold)
+    return state === 'over'
       ? { glyph: '■', word: t.monthlyBudgets.statusOver, color: 'text-truffle-negative', bar: 'bg-truffle-negative' }
-      : pct >= HEADS_UP
+      : state === 'headsUp'
         ? { glyph: '▲', word: t.monthlyBudgets.statusHeadsUp, color: 'text-truffle-warning', bar: 'bg-truffle-warning' }
         : { glyph: '●', word: t.monthlyBudgets.statusOnTrack, color: 'text-truffle-positive', bar: 'bg-truffle-positive' }
   }
-  const nowStatus = statusAt(budget.amount)
+  const originalAlert = budget.alertPct === undefined ? DEFAULT_ALERT_PCT : budget.alertPct
+  const nowStatus = statusAt(budget.amount, budget.rollover ?? false, originalAlert)
   const newStatus = statusAt(limit)
+  const changed =
+    limit !== budget.amount || rollover !== (budget.rollover ?? false) || alertPct !== originalAlert
 
   // Quick picks around what the category really costs.
   const history = months.map((m) => m.spent).filter((s) => s > 0)
@@ -84,13 +99,24 @@ export function BudgetEditSheet({
       const res = await fetch('/api/budgets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, category: budget.category, amount: limit }),
+        // Only send the options when they changed, so a plain limit edit keeps
+        // working before the budget-options migration.
+        body: JSON.stringify({
+          userId,
+          category: budget.category,
+          amount: limit,
+          ...(rollover !== (budget.rollover ?? false) ? { rollover } : {}),
+          ...(alertPct !== originalAlert ? { alertPct } : {}),
+        }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        throw new Error(json.error ?? b.error)
+      }
       await queryClient.invalidateQueries({ queryKey: ['budgets', userId] })
       onClose()
-    } catch {
-      setError(b.error)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : b.error)
     } finally {
       setBusy(false)
     }
@@ -137,7 +163,7 @@ export function BudgetEditSheet({
           <button
             type="button"
             onClick={save}
-            disabled={busy || limit === budget.amount}
+            disabled={busy || !changed}
             className="key key-accent h-14 text-sm uppercase"
           >
             {busy ? t.common.saving : b.save(whole(limit))}
@@ -195,17 +221,19 @@ export function BudgetEditSheet({
             className={`h-full transition-[width] duration-300 ${newStatus.bar}`}
             style={{ width: `${Math.min(100, pctAt(limit))}%` }}
           />
-          <div
-            aria-hidden
-            className="absolute -top-1 -bottom-1 w-0.5 bg-truffle-text"
-            style={{ left: `${HEADS_UP}%` }}
-          />
+          {alertPct !== null && (
+            <div
+              aria-hidden
+              className="absolute -top-1 -bottom-1 w-0.5 bg-truffle-text"
+              style={{ left: `${alertPct}%` }}
+            />
+          )}
         </div>
         <div className="flex justify-between text-[11px] font-bold uppercase">
           <span className={newStatus.color}>
             {newStatus.glyph} {b.atLimit(whole(limit), pctAt(limit))}
           </span>
-          <span className="text-truffle-text2">| {HEADS_UP}%</span>
+          {alertPct !== null && <span className="text-truffle-text2">| {alertPct}%</span>}
         </div>
         <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${chips.length}, minmax(0, 1fr))` }}>
           {chips.map((c) => (
@@ -234,9 +262,33 @@ export function BudgetEditSheet({
         ))}
       </div>
 
-      <div className="mx-4 mt-3.5 px-1 flex justify-between items-center min-h-12 text-[13px]">
-        <span>{b.headsUpAt}</span>
-        <span className="font-bold">{HEADS_UP}%</span>
+      <div className="mx-4 mt-3.5 px-1 flex flex-col text-[13px]">
+        <label className="flex justify-between items-center min-h-12 gap-3">
+          <span>{b.headsUpAt}</span>
+          <select
+            value={alertPct === null ? 'off' : String(alertPct)}
+            onChange={(e) => setAlertPct(e.target.value === 'off' ? null : Number(e.target.value))}
+            className="bg-transparent font-bold text-right focus:outline-none"
+          >
+            {ALERT_OPTIONS.map((p) => (
+              <option key={p} value={p}>
+                {p}%
+              </option>
+            ))}
+            <option value="off">{b.off}</option>
+          </select>
+        </label>
+        <div className="flex justify-between items-center min-h-12 gap-3 rule-soft">
+          <span id="rollover-label">
+            {b.rollover}
+            {rollover && limitAt(limit) > limit && (
+              <span className="block text-[11px] text-truffle-text2 uppercase">
+                {t.monthlyBudgets.rolledOver(whole(limitAt(limit) - limit))}
+              </span>
+            )}
+          </span>
+          <Switch checked={rollover} onChange={setRollover} labelledBy="rollover-label" />
+        </div>
       </div>
       {error && (
         <p role="alert" className="mx-4 text-[11px] font-bold uppercase text-truffle-negative">

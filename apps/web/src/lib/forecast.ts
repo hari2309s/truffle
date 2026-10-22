@@ -45,18 +45,18 @@ export function computeForecast(
 
 export interface Statement {
   /**
-   * Net of this month's transactions (income minus spend). Deliberately not
-   * all-time: the client only holds the newest 500 transactions, so an
-   * all-time sum would be silently wrong for long-standing users.
+   * All-time net when the server supplies it (`allTimeBalance`); otherwise
+   * this month's net. `balanceIsAllTime` says which.
    */
   balance: number
+  balanceIsAllTime: boolean
   /** Money out so far this calendar month (positive number). */
   spentThisMonth: number
   /** Average spend per elapsed day this month (positive number). */
   dailyRate: number
   /** Spend projected for the whole month at the current daily rate. */
   forecastMonthSpend: number
-  /** This month's net at month end if spending continues at the daily rate. */
+  /** `balance` at month end if spending continues at the daily rate. */
   projectedClose: number
   /** Last day of the current month (for the "Forecast 31 Oct" line). */
   monthEnd: Date
@@ -75,7 +75,8 @@ export interface Statement {
  */
 export function computeStatement(
   transactions: { amount: number | string; date: string }[],
-  today: Date = new Date()
+  today: Date = new Date(),
+  allTimeBalance: number | null = null
 ): Statement | null {
   if (transactions.length === 0) return null
 
@@ -112,12 +113,14 @@ export function computeStatement(
   const dailyRate = spentThisMonth / dayOfMonth
   const daysRemaining = daysInMonth - dayOfMonth
 
+  const shownBalance = allTimeBalance ?? balance
   return {
-    balance,
+    balance: shownBalance,
+    balanceIsAllTime: allTimeBalance !== null,
     spentThisMonth,
     dailyRate,
     forecastMonthSpend: spentThisMonth + dailyRate * daysRemaining,
-    projectedClose: balance - dailyRate * daysRemaining,
+    projectedClose: shownBalance - dailyRate * daysRemaining,
     monthEnd: new Date(y, m, daysInMonth),
     pace: hasLastMonth ? (spentThisMonth <= spentLastMonthToDate ? 'ahead' : 'behind') : null,
     lastMonth: lastMonthDate,

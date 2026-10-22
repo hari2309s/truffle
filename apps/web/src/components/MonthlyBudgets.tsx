@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import type { CategoryBudget, Transaction, TransactionCategory } from '@truffle/types'
 import { TRANSACTION_CATEGORIES } from '@truffle/types'
 import { SkeletonPulse } from './PageMotion'
 import { LeaderRow } from './Tally'
+import { budgetView, type BudgetView } from '@/lib/budgets'
 import { BudgetEditSheet } from './BudgetEditSheet'
 import { useBudgetsQuery } from '@/hooks/useBudgetsQuery'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -18,25 +19,6 @@ interface MonthlyBudgetsProps {
   transactions: Transaction[]
 }
 
-function currentYearMonth() {
-  return new Date().toISOString().slice(0, 7)
-}
-
-/** Single pass over transactions building a category -> spend map, instead of
- * filtering+reducing the full array once per budget on every render. */
-function useSpendByCategory(transactions: Transaction[]): Partial<Record<TransactionCategory, number>> {
-  return useMemo(() => {
-    const prefix = currentYearMonth()
-    const map: Partial<Record<TransactionCategory, number>> = {}
-    for (const tx of transactions) {
-      if (tx.amount < 0 && tx.date.startsWith(prefix)) {
-        map[tx.category] = (map[tx.category] ?? 0) + Math.abs(tx.amount)
-      }
-    }
-    return map
-  }, [transactions])
-}
-
 export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
   const { t } = useLanguage()
   const queryClient = useQueryClient()
@@ -44,7 +26,6 @@ export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [editing, setEditing] = useState<CategoryBudget | null>(null)
-  const spendByCategory = useSpendByCategory(transactions)
 
   const { data: budgets = [], isLoading } = useBudgetsQuery(userId)
 
@@ -84,7 +65,7 @@ export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
           <BudgetRow
             key={budget.id}
             budget={budget}
-            spent={spendByCategory[budget.category] ?? 0}
+            view={budgetView(budget, transactions)}
             onDelete={() => handleDelete(budget.id)}
             isDeleting={deletingId === budget.id}
             isConfirmingDelete={confirmDeleteId === budget.id}
@@ -111,7 +92,7 @@ export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
 
 function BudgetRow({
   budget,
-  spent,
+  view,
   onDelete,
   isDeleting,
   isConfirmingDelete,
@@ -120,7 +101,7 @@ function BudgetRow({
   onOpen,
 }: {
   budget: CategoryBudget
-  spent: number
+  view: BudgetView
   onDelete: () => void
   isDeleting: boolean
   isConfirmingDelete: boolean
@@ -130,20 +111,25 @@ function BudgetRow({
 }) {
   const { t } = useLanguage()
   const { formatAmount } = useCurrency()
-  const rawPct = budget.amount > 0 ? (spent / budget.amount) * 100 : 0
-  const remaining = Math.max(0, budget.amount - spent)
-  const isOver = spent > budget.amount
-  const isHeadsUp = !isOver && rawPct >= 80
+  const { spent, limit, rolledOver, pct: rawPct, status: state } = view
+  const remaining = Math.max(0, limit - spent)
+  const isOver = state === 'over'
 
   const status = isOver
     ? { glyph: '■', word: t.monthlyBudgets.statusOver, color: 'text-truffle-negative', fill: 'bg-truffle-negative border-truffle-negative' }
-    : isHeadsUp
+    : state === 'headsUp'
       ? { glyph: '▲', word: t.monthlyBudgets.statusHeadsUp, color: 'text-truffle-warning', fill: 'bg-truffle-warning border-truffle-warning' }
       : { glyph: '●', word: t.monthlyBudgets.statusOnTrack, color: 'text-truffle-positive', fill: 'bg-truffle-positive border-truffle-positive' }
   const filled = Math.min(10, Math.round(rawPct / 10))
-  const note = isOver
-    ? t.monthlyBudgets.over(formatAmount(spent - budget.amount))
-    : t.monthlyBudgets.left(formatAmount(remaining))
+  const note = [
+    isOver
+      ? t.monthlyBudgets.over(formatAmount(spent - limit))
+      : t.monthlyBudgets.left(formatAmount(remaining)),
+    rolledOver > 0 ? t.monthlyBudgets.rolledOver(formatAmount(rolledOver)) : '',
+    budget.alertPct === null ? t.monthlyBudgets.alertsOff : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <div
@@ -158,7 +144,7 @@ function BudgetRow({
         >
           <LeaderRow
             left={<span className="underline-offset-2 hover:underline">{t.categories[budget.category] ?? budget.category}</span>}
-            right={`${formatAmount(spent)}/${formatAmount(budget.amount)} →`}
+            right={`${formatAmount(spent)}/${formatAmount(limit)} →`}
           />
         </button>
         <button

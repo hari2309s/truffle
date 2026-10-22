@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import type { SavingsGoal } from '@truffle/types'
-import { recomputeSnapshot } from '@/lib/server-db'
+import { isMissingSchema, recomputeSnapshot } from '@/lib/server-db'
 import { sendGoalMilestoneNudge, sendGoalAtRiskNudge } from '@/lib/proactive-nudge'
 import { requireUser } from '@/lib/supabase-server'
 
@@ -212,7 +212,7 @@ export async function PATCH(request: NextRequest) {
     // Insert a transaction to deduct the deposit from balance
     if (depositAmount > 0) {
       const today = new Date().toISOString().slice(0, 10)
-      const { error: txError } = await db.from('transactions').insert({
+      const { error: txError } = await insertGoalTransaction(db, {
         id: crypto.randomUUID(),
         user_id: userId,
         amount: -depositAmount,
@@ -223,6 +223,7 @@ export async function PATCH(request: NextRequest) {
         date: today,
         is_recurring: false,
         embedding: null,
+        goal_id: goalId,
       })
 
       if (txError) {
@@ -475,7 +476,7 @@ async function withdrawFromGoal(userId: string, body: Record<string, unknown>) {
     return NextResponse.json({ error: 'Concurrent update detected, please retry' }, { status: 409 })
   }
 
-  const { error: txError } = await db.from('transactions').insert({
+  const { error: txError } = await insertGoalTransaction(db, {
     id: crypto.randomUUID(),
     user_id: userId,
     amount,
@@ -486,6 +487,7 @@ async function withdrawFromGoal(userId: string, body: Record<string, unknown>) {
     date: new Date().toISOString().slice(0, 10),
     is_recurring: false,
     embedding: null,
+    goal_id: goalId,
   })
   if (txError) {
     const { data: rollbackData, error: rollbackError } = await db
@@ -512,4 +514,20 @@ async function withdrawFromGoal(userId: string, body: Record<string, unknown>) {
     console.error('Snapshot recompute failed (non-fatal):', e)
   }
   return NextResponse.json({ goal: data })
+}
+
+/**
+ * Inserts a goal deposit/withdrawal linked by goal_id; before the migration
+ * adds that column, falls back to the unlinked row (matched by name).
+ */
+async function insertGoalTransaction(
+  db: ReturnType<typeof createServerClient>,
+  row: Record<string, unknown>
+) {
+  const result = await db.from('transactions').insert(row)
+  if (result.error && isMissingSchema(result.error)) {
+    const { goal_id: _goalId, ...withoutGoal } = row
+    return db.from('transactions').insert(withoutGoal)
+  }
+  return result
 }

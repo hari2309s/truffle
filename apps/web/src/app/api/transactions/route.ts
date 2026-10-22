@@ -2,35 +2,121 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import { embedTransaction, upsertTransaction } from '@truffle/ai'
 import type { Transaction, Anomaly } from '@truffle/types'
-import { recomputeSnapshot } from '@/lib/server-db'
+import { isMissingSchema, MIGRATION_NEEDED, recomputeSnapshot } from '@/lib/server-db'
 import { sendAnomalyNudge, sendBudgetNudge } from '@/lib/proactive-nudge'
 import { CATEGORY_EMOJI } from '@/lib/categories'
+import { DEFAULT_ALERT_PCT, effectiveLimit, previousMonth } from '@/lib/budgets'
 import { requireUser } from '@/lib/supabase-server'
 import { sanitizeForLog } from '@/lib/log'
 
 export const runtime = 'nodejs'
 
+const BASE_COLUMNS =
+  'id, user_id, amount, currency, description, category, merchant, date, is_recurring, created_at'
+const NEW_COLUMNS = `${BASE_COLUMNS}, note, receipt_path, goal_id`
+/** PostgREST returns at most 1,000 rows per request; page through. */
+const PAGE = 1000
+const MAX_PAGES = 50
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/
+
+/** First day of the month `monthsBack` months before today, as YYYY-MM-DD. */
+function monthStart(monthsBack: number): string {
+  const now = new Date()
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsBack, 1))
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * GET /api/transactions
+ *   default      — the last 12 months (plus this one), newest first
+ *   ?month=YYYY-MM — just that month (older history, loaded on demand)
+ *   ?all=1       — everything (exports)
+ * Always includes all-time `totals` and whether older rows exist (`hasOlder`).
+ */
 export async function GET(request: NextRequest) {
   try {
     const { user, errorResponse } = await requireUser(request)
     if (errorResponse) return errorResponse
     const userId = user.id
+    const params = request.nextUrl.searchParams
+    const month = params.get('month')
+    const all = params.get('all') === '1'
+    if (month && !MONTH_RE.test(month)) {
+      return NextResponse.json({ error: 'month must be YYYY-MM' }, { status: 400 })
+    }
+
+    let from: string | null = null
+    let to: string | null = null
+    if (month) {
+      const [y, m] = month.split('-').map(Number)
+      from = `${month}-01`
+      to = new Date(Date.UTC(y!, m!, 1)).toISOString().slice(0, 10) // exclusive
+    } else if (!all) {
+      from = monthStart(12)
+    }
 
     const db = createServerClient()
-    const { data, error } = await db
-      .from('transactions')
-      .select(
-        'id, user_id, amount, currency, description, category, merchant, date, is_recurring, created_at'
-      )
-      .eq('user_id', userId)
-      .order('date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(500)
 
-    if (error) throw error
+    const fetchPage = (columns: string, page: number) => {
+      let q = db
+        .from('transactions')
+        .select(columns)
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
+        // Batch inserts share created_at; id makes page boundaries stable.
+        .order('id', { ascending: false })
+        .range(page * PAGE, page * PAGE + PAGE - 1)
+      if (from) q = q.gte('date', from)
+      if (to) q = q.lt('date', to)
+      return q
+    }
+
+    // New columns first; before the migration, fall back to the old set.
+    let columns = NEW_COLUMNS
+    const rows: Record<string, unknown>[] = []
+    for (let page = 0; page < MAX_PAGES; page++) {
+      let { data, error } = await fetchPage(columns, page)
+      if (error && page === 0 && isMissingSchema(error)) {
+        columns = BASE_COLUMNS
+        ;({ data, error } = await fetchPage(columns, page))
+      }
+      if (error) throw error
+      const batch = (data ?? []) as unknown as Record<string, unknown>[]
+      rows.push(...batch)
+      if (batch.length < PAGE) break
+    }
+
+    // Does anything older than this window exist? (drives "Load <month>")
+    let hasOlder = false
+    if (from) {
+      const { data: older, error: olderError } = await db
+        .from('transactions')
+        .select('id')
+        .eq('user_id', userId)
+        .lt('date', from)
+        .limit(1)
+      if (olderError) throw olderError
+      hasOlder = (older ?? []).length > 0
+    }
+
+    // All-time totals via SQL; null until the migration adds the function.
+    let totals: { balance: number; count: number } | null = null
+    const { data: totalRows, error: totalsError } = await db.rpc('transaction_totals', {
+      p_user_id: userId,
+    })
+    if (totalsError && !isMissingSchema(totalsError)) {
+      console.warn('transaction_totals failed (non-fatal):', totalsError.message)
+    }
+    const totalRow = (Array.isArray(totalRows) ? totalRows[0] : totalRows) as
+      | { balance: number | string; transaction_count: number | string }
+      | undefined
+    if (totalRow) {
+      totals = { balance: Number(totalRow.balance), count: Number(totalRow.transaction_count) }
+    }
 
     return NextResponse.json(
-      { transactions: data },
+      { transactions: rows, from, hasOlder, totals },
       { headers: { 'Cache-Control': 'private, no-cache' } }
     )
   } catch (error) {
@@ -142,36 +228,49 @@ export async function POST(request: NextRequest) {
         console.error('Anomaly detection failed:', e)
       }
 
-      // Check budget thresholds and fire nudges when a category hits 80% or 100% (non-fatal)
+      // Check budget thresholds and fire nudges at each budget's heads-up
+      // threshold (default 80%, or off) and at 100% (non-fatal).
       try {
         const currentMonth = new Date().toISOString().slice(0, 7)
-        const { data: budgets } = await db
-          .from('monthly_budgets')
-          .select('category, amount')
-          .eq('user_id', userId)
+        const lastMonth = previousMonth(currentMonth)
+        // select('*') so this keeps working before the rollover/alert_pct migration.
+        const { data: budgets } = await db.from('monthly_budgets').select('*').eq('user_id', userId)
         if (budgets?.length) {
-          const { data: monthTxs } = await db
+          const { data: recentTxs } = await db
             .from('transactions')
-            .select('category, amount')
+            .select('category, amount, date')
             .eq('user_id', userId)
-            .like('date', `${currentMonth}%`)
+            .gte('date', `${lastMonth}-01`)
             .lt('amount', '0')
-          const spendByCategory: Record<string, number> = {}
-          for (const tx of (monthTxs ?? []) as { category: string; amount: number }[]) {
-            spendByCategory[tx.category] =
-              (spendByCategory[tx.category] ?? 0) + Math.abs(Number(tx.amount))
+          const spendThis: Record<string, number> = {}
+          const spendLast: Record<string, number> = {}
+          for (const tx of (recentTxs ?? []) as { category: string; amount: number; date: string }[]) {
+            const bucket = String(tx.date).startsWith(currentMonth) ? spendThis : spendLast
+            bucket[tx.category] = (bucket[tx.category] ?? 0) + Math.abs(Number(tx.amount))
           }
-          for (const b of budgets as { category: string; amount: number }[]) {
-            const spent = spendByCategory[b.category] ?? 0
-            const pct = (spent / b.amount) * 100
-            if (pct >= 80) {
+          for (const b of budgets as {
+            category: string
+            amount: number
+            rollover?: boolean
+            alert_pct?: number | null
+            created_at?: string
+          }[]) {
+            const spent = spendThis[b.category] ?? 0
+            const limit = effectiveLimit(
+              { amount: Number(b.amount), rollover: b.rollover, createdAt: b.created_at },
+              spendLast[b.category] ?? 0
+            )
+            const pct = (spent / limit) * 100
+            const threshold = b.alert_pct === undefined ? DEFAULT_ALERT_PCT : b.alert_pct
+            const shouldNudge = pct >= 100 || (threshold !== null && pct >= threshold)
+            if (shouldNudge) {
               try {
                 await sendBudgetNudge({
                   userId,
                   category: b.category,
                   categoryEmoji: CATEGORY_EMOJI[b.category as keyof typeof CATEGORY_EMOJI] ?? '📦',
                   spentAmount: spent,
-                  budgetAmount: b.amount,
+                  budgetAmount: limit,
                   percentUsed: pct,
                   month: currentMonth,
                 })
@@ -200,34 +299,44 @@ export async function PATCH(request: NextRequest) {
     const userId = user.id
 
     const body = await request.json()
-    const { transactionId, description, amount, category, merchant, date } = body as {
+    const { transactionId, description, amount, category, merchant, date, note } = body as {
       transactionId: string
       description: string
       amount: number
       category: string
       merchant?: string
       date: string
+      note?: string | null
     }
 
     if (!transactionId) {
       return NextResponse.json({ error: 'transactionId required' }, { status: 400 })
     }
+    if (note !== undefined && note !== null && (typeof note !== 'string' || note.length > 500)) {
+      return NextResponse.json({ error: 'note must be a string up to 500 characters' }, { status: 400 })
+    }
+
+    const update: Record<string, unknown> = {
+      description,
+      amount,
+      category,
+      merchant: merchant || null,
+      date,
+    }
+    if (note !== undefined) update.note = note?.trim() ? note.trim() : null
 
     const db = createServerClient()
     const { data, error } = await db
       .from('transactions')
-      .update({
-        description,
-        amount,
-        category,
-        merchant: merchant || null,
-        date,
-      })
+      .update(update)
       .eq('id', transactionId)
       .eq('user_id', userId)
       .select()
       .single()
 
+    if (error && note !== undefined && isMissingSchema(error)) {
+      return NextResponse.json(MIGRATION_NEEDED, { status: 503 })
+    }
     if (error) throw error
 
     await recomputeSnapshot(userId, db)
@@ -251,6 +360,15 @@ export async function DELETE(request: NextRequest) {
     }
 
     const db = createServerClient()
+    // Note any attached receipt first so its file goes with the entry.
+    const { data: existing } = await db
+      .from('transactions')
+      .select('receipt_path')
+      .eq('id', transactionId)
+      .eq('user_id', userId)
+      .maybeSingle()
+    const receiptPath = (existing as { receipt_path?: string | null } | null)?.receipt_path
+
     const { error } = await db
       .from('transactions')
       .delete()
@@ -258,6 +376,11 @@ export async function DELETE(request: NextRequest) {
       .eq('user_id', userId)
 
     if (error) throw error
+
+    if (receiptPath) {
+      const { error: storageError } = await db.storage.from('receipts').remove([receiptPath])
+      if (storageError) console.error('Receipt file cleanup failed (non-fatal):', storageError)
+    }
 
     await recomputeSnapshot(userId, db)
     return NextResponse.json({ ok: true })
