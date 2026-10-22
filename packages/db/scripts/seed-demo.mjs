@@ -156,7 +156,18 @@ async function wipe(userId) {
     if (error) throw new Error(`wipe ${table}: ${error.message}`)
   }
 
+  // A visitor's "not recurring" / regrouping choices must not outlive the
+  // reset. The table arrives with migration 20261022000002 — skip until then.
+  const { error: overridesErr } = await admin.from('recurring_overrides').delete().eq('user_id', userId)
+  if (overridesErr && !isMissingTable(overridesErr)) {
+    throw new Error(`wipe recurring_overrides: ${overridesErr.message}`)
+  }
+
 }
+
+/** Postgres / PostgREST codes for a table or column the database doesn't have yet. */
+const isMissingTable = (error) => ['42P01', 'PGRST205'].includes(error?.code)
+const isMissingColumn = (error) => ['42703', 'PGRST204'].includes(error?.code)
 
 function parseTransactions() {
   const csv = readFileSync(join(ROOT, 'transactions.csv'), 'utf8').trim()
@@ -267,6 +278,14 @@ function dateInMonths(months) {
   return d.toISOString().slice(0, 10)
 }
 
+/** The 1st of the month `monthsAgo` months back (0 = this month), as YYYY-MM-DD. */
+function firstOfMonthAgo(monthsAgo) {
+  const now = new Date()
+  return toIsoDate(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsAgo, 1))
+}
+
+const daysAgo = (days) => toIsoDate(Date.now() - days * DAY_MS)
+
 // Must match apps/web/src/lib/habits.ts getCurrentPeriod('weekly') exactly, or
 // the seeded habit_contributions won't line up with the streak/period logic in
 // the app (wrong streak count, or a past week read as "already logged").
@@ -299,34 +318,71 @@ async function applyDemoData(userId) {
   if (txErr) throw new Error(`insert transactions: ${txErr.message}`)
   console.log(`→ inserted ${txs.length} transactions`)
 
-  const snapshot = buildSnapshot(txs)
-  const { error: snapErr } = await admin
-    .from('monthly_snapshots')
-    .upsert(
-      { user_id: userId, month: snapshot.month, data: snapshot },
-      { onConflict: 'user_id,month' }
-    )
-  if (snapErr) throw new Error(`upsert snapshot: ${snapErr.message}`)
-  console.log(`→ snapshot for ${snapshot.month}`)
-
-  const { error: goalErr } = await admin.from('savings_goals').insert([
+  // Each goal is backdated and its saved amount is the sum of real deposits,
+  // so the detail sheet lists them and the status shows both states:
+  //   Japan trip     — set 6 months ago, due in 5: 6 × €350 = €2,100 of €3,500
+  //                    (60%, ahead of the ~55% even pace) → ● on track
+  //   Emergency fund — set 12 months ago, due in 6: €4,600 + 8 × €200 = €6,200
+  //                    of €10,000 (62%, behind the ~67% even pace) → ▲ behind
+  const goalSpecs = [
     {
-      user_id: userId,
       name: 'Japan trip',
-      target_amount: 3500,
-      saved_amount: 1400,
+      target: 3500,
       emoji: '🏯',
-      deadline: dateInMonths(5),
+      createdMonthsAgo: 6,
+      dueInMonths: 5,
+      deposits: [5, 4, 3, 2, 1, 0].map((m) => ({ date: firstOfMonthAgo(m), amount: 350 })),
     },
     {
-      user_id: userId,
       name: 'Emergency fund',
-      target_amount: 10000,
-      saved_amount: 6200,
+      target: 10000,
       emoji: '🛟',
+      createdMonthsAgo: 12,
+      dueInMonths: 6,
+      deposits: [
+        { date: firstOfMonthAgo(12), amount: 4600 },
+        ...[7, 6, 5, 4, 3, 2, 1, 0].map((m) => ({ date: firstOfMonthAgo(m), amount: 200 })),
+      ],
     },
-  ])
+  ]
+  const { data: goals, error: goalErr } = await admin
+    .from('savings_goals')
+    .insert(
+      goalSpecs.map((g) => ({
+        user_id: userId,
+        name: g.name,
+        target_amount: g.target,
+        saved_amount: g.deposits.reduce((s, d) => s + d.amount, 0),
+        emoji: g.emoji,
+        deadline: dateInMonths(g.dueInMonths),
+        created_at: new Date(Date.parse(firstOfMonthAgo(g.createdMonthsAgo))).toISOString(),
+      }))
+    )
+    .select('id, name')
   if (goalErr) throw new Error(`insert goals: ${goalErr.message}`)
+
+  // Deposits as the goals API records them: a 'savings' entry named after the
+  // goal, linked by goal_id (without it before migration 20261022000001).
+  const depositRows = goalSpecs.flatMap((g) =>
+    g.deposits.map((d) => ({
+      user_id: userId,
+      amount: -d.amount,
+      currency: DEMO_CURRENCY,
+      description: `Saved to: ${g.name}`,
+      category: 'savings',
+      merchant: g.name,
+      date: d.date,
+      is_recurring: false,
+      goal_id: goals.find((row) => row.name === g.name).id,
+    }))
+  )
+  let { error: depositErr } = await admin.from('transactions').insert(depositRows)
+  if (depositErr && isMissingColumn(depositErr)) {
+    ;({ error: depositErr } = await admin
+      .from('transactions')
+      .insert(depositRows.map(({ goal_id: _goalId, ...row }) => row)))
+  }
+  if (depositErr) throw new Error(`insert goal deposits: ${depositErr.message}`)
 
   const { error: budgetErr } = await admin.from('monthly_budgets').insert([
     { user_id: userId, category: 'food_groceries', amount: 400 },
@@ -351,11 +407,37 @@ async function applyDemoData(userId) {
     .single()
   if (habitErr) throw new Error(`insert habit: ${habitErr.message}`)
 
-  const { error: contribErr } = await admin.from('habit_contributions').insert([
-    { habit_id: habit.id, user_id: userId, period: weeksAgoPeriod(2), amount: 25 },
-    { habit_id: habit.id, user_id: userId, period: weeksAgoPeriod(1), amount: 25 },
-  ])
+  // Six of the last eight weeks logged — a gap four weeks back, a 3-week
+  // streak, and this week still open so the Log button shows. Each log also
+  // records the 'savings' entry the habits API writes.
+  const loggedWeeksAgo = [7, 6, 5, 3, 2, 1]
+  const { error: contribErr } = await admin.from('habit_contributions').insert(
+    loggedWeeksAgo.map((w) => ({ habit_id: habit.id, user_id: userId, period: weeksAgoPeriod(w), amount: 25 }))
+  )
   if (contribErr) throw new Error(`insert contributions: ${contribErr.message}`)
+  const habitRows = loggedWeeksAgo.map((w) => ({
+    user_id: userId,
+    amount: -25,
+    currency: DEMO_CURRENCY,
+    description: 'Savings — Weekly top-up',
+    category: 'savings',
+    date: daysAgo(w * 7),
+    is_recurring: true,
+  }))
+  const { error: habitTxErr } = await admin.from('transactions').insert(habitRows)
+  if (habitTxErr) throw new Error(`insert habit entries: ${habitTxErr.message}`)
+
+  // Last, so this month's summary includes the goal deposits and habit logs.
+  const snapshot = buildSnapshot([...txs, ...depositRows, ...habitRows])
+  const { error: snapErr } = await admin
+    .from('monthly_snapshots')
+    .upsert(
+      { user_id: userId, month: snapshot.month, data: snapshot },
+      { onConflict: 'user_id,month' }
+    )
+  if (snapErr) throw new Error(`upsert snapshot: ${snapErr.message}`)
+  console.log(`→ snapshot for ${snapshot.month}`)
+  console.log(`→ ${goals.length} goals with ${depositRows.length} deposits, habit with ${habitRows.length} logs`)
 }
 
 async function main() {

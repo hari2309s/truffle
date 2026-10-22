@@ -34,6 +34,8 @@ interface RawTransaction {
   merchant?: string | null
   date: string
   category?: string
+  /** Set on goal deposits and withdrawals. */
+  goalId?: string | null
 }
 
 /** No matching charge for this long (or 1.5 cycles, if longer) means it has stopped. */
@@ -66,6 +68,13 @@ const FIXED =
   /\b(rent|miete|hausverwaltung|landlord|mortgage|insurance|versicherung\w*|allianz|huk|ergo|axa|council tax|strom|electric\w*|broadband|internet|vattenfall|vodafone|telekom|o2)\b/i
 const SUBSCRIPTION =
   /\b(netflix|spotify|disney\+?|prime video|amazon prime|icloud|youtube|google one|adobe|microsoft 365|office 365|chatgpt|openai|dropbox|notion|patreon|audible|deezer|dazn|gym|fitness|fitx|mcfit|urban sports\w*|membership|mitglied\w*|abo|subscription|deutschlandticket)\b/i
+/**
+ * Entries Truffle writes itself when you add to a goal or log a habit (see
+ * api/goals and api/habits). They're your own goals and habits, shown in
+ * their sections — not a standing order — so they never count as recurring.
+ */
+const TRUFFLE_SAVINGS = /^(Saved to: |Withdrawn from: |Savings — )/
+
 /** Spending that repeats by habit, not by contract — never more than "possibly". */
 const SHOPPING = new Set(['shopping', 'food_groceries', 'food_delivery', 'entertainment'])
 
@@ -179,7 +188,7 @@ export function detectRecurring(
   const from = recurringSince(today)
   const merchants = new Map<string, RawTransaction[]>()
   for (const tx of transactions) {
-    if (Number(tx.amount) >= 0 || tx.date < from) continue
+    if (Number(tx.amount) >= 0 || tx.date < from || tx.goalId || TRUFFLE_SAVINGS.test(tx.description)) continue
     const key = merchantKey(tx)
     merchants.set(key, [...(merchants.get(key) ?? []), tx])
   }

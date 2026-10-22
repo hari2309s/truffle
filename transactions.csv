@@ -16,6 +16,7 @@ date,description,amount,category,merchant
 2026-01-13,Aldi Einkauf,-27.34,food_groceries,Aldi
 2026-01-14,Erkaeltungsmittel,-18.45,health,Apotheke am Kollwitzplatz
 2026-01-15,Netflix Abo,-13.99,subscriptions,Netflix
+2026-01-15,ETF Sparplan FTSE All-World,-250.00,savings,Scalable Capital
 2026-01-16,ETF Sparplan MSCI World,-300.00,savings,Trade Republic
 2026-01-18,Einzelfahrschein,-3.80,transport,BVG
 2026-01-20,Wasser Abschlag,-24.00,utilities,Berliner Wasserbetriebe
@@ -40,6 +41,7 @@ date,description,amount,category,merchant
 2026-02-14,Valentinstag Dinner,-78.40,entertainment,Nobelhart und Schmutzig
 2026-02-15,Netflix Abo,-13.99,subscriptions,Netflix
 2026-02-15,Steuererstattung 2025,412.30,income,Finanzamt Berlin
+2026-02-15,ETF Sparplan FTSE All-World,-250.00,savings,Scalable Capital
 2026-02-16,Uber Fahrt,-14.80,transport,Uber
 2026-02-16,ETF Sparplan MSCI World,-300.00,savings,Trade Republic
 2026-02-18,Drogerieartikel,-22.15,shopping,dm drogerie markt
@@ -49,7 +51,6 @@ date,description,amount,category,merchant
 2026-02-24,Spende,-20.00,other,Aerzte ohne Grenzen
 2026-02-25,Physiotherapie,-30.00,health,Physiopraxis Mitte
 2026-02-27,Gehalt,3500.00,income,Tech GmbH
-2026-02-27,Tagesgeld Uebertrag,-250.00,savings,Scalable Capital
 2026-03-01,Deutschlandticket,-49.00,transport,BVG
 2026-03-02,Miete Wohnung Prenzlauer Berg,-800.00,housing,Hausverwaltung Krause
 2026-03-03,Urban Sports Club Mitgliedschaft,-59.00,health,Urban Sports Club
@@ -65,6 +66,7 @@ date,description,amount,category,merchant
 2026-03-14,Museumsinsel Eintritt,-19.00,entertainment,Staatliche Museen Berlin
 2026-03-15,Netflix Abo,-13.99,subscriptions,Netflix
 2026-03-15,Disney Plus Abo,-9.99,subscriptions,Disney Plus
+2026-03-15,ETF Sparplan FTSE All-World,-250.00,savings,Scalable Capital
 2026-03-16,ETF Sparplan MSCI World,-300.00,savings,Trade Republic
 2026-03-17,Kaffee und Kuchen,-9.80,food_delivery,Cafe Anna Blume
 2026-03-19,Bio Company Einkauf,-38.20,food_groceries,Bio Company
@@ -88,6 +90,7 @@ date,description,amount,category,merchant
 2026-04-13,Uniqlo Shirts,-49.90,shopping,Uniqlo
 2026-04-15,Netflix Abo,-13.99,subscriptions,Netflix
 2026-04-15,Deutsche Bahn Hamburg,-56.90,transport,Deutsche Bahn
+2026-04-15,ETF Sparplan FTSE All-World,-250.00,savings,Scalable Capital
 2026-04-16,Audible Abo,-9.95,subscriptions,Audible
 2026-04-16,ETF Sparplan MSCI World,-300.00,savings,Trade Republic
 2026-04-18,Wochenmarkt Gemuese,-21.30,food_groceries,Markt am Kollwitzplatz
@@ -98,7 +101,6 @@ date,description,amount,category,merchant
 2026-04-26,Doener XXL,-8.00,food_delivery,Mustafas Gemuesekebap
 2026-04-28,PayPal an Freund,-25.00,other,PayPal
 2026-04-30,Gehalt,3500.00,income,Tech GmbH
-2026-04-30,Tagesgeld Uebertrag,-250.00,savings,Scalable Capital
 2026-05-01,Deutschlandticket,-49.00,transport,BVG
 2026-05-02,Miete Wohnung Prenzlauer Berg,-800.00,housing,Hausverwaltung Krause
 2026-05-03,Urban Sports Club Mitgliedschaft,-59.00,health,Urban Sports Club
@@ -112,6 +114,7 @@ date,description,amount,category,merchant
 2026-05-13,Decathlon Laufschuhe,-79.99,shopping,Decathlon
 2026-05-15,Netflix Abo,-13.99,subscriptions,Netflix
 2026-05-15,Flixbus Dresden,-14.99,transport,Flixbus
+2026-05-15,ETF Sparplan FTSE All-World,-250.00,savings,Scalable Capital
 2026-05-16,GitHub Copilot,-10.00,subscriptions,GitHub
 2026-05-16,ETF Sparplan MSCI World,-300.00,savings,Trade Republic
 2026-05-18,Alnatura Einkauf,-41.60,food_groceries,Alnatura
@@ -135,6 +138,7 @@ date,description,amount,category,merchant
 2026-06-13,IKEA Regal und Deko,-96.50,shopping,IKEA
 2026-06-15,Netflix Abo,-13.99,subscriptions,Netflix
 2026-06-15,ShareNow Carsharing,-18.40,transport,ShareNow
+2026-06-15,ETF Sparplan FTSE All-World,-250.00,savings,Scalable Capital
 2026-06-16,Notion Abo,-8.00,subscriptions,Notion
 2026-06-16,ETF Sparplan MSCI World,-300.00,savings,Trade Republic
 2026-06-18,Markt Einkauf Gemuese,-28.90,food_groceries,Markt am Maybachufer
@@ -159,6 +163,7 @@ date,description,amount,category,merchant
 2026-07-13,Sommerkleidung,-74.85,shopping,Zalando
 2026-07-15,Netflix Abo,-13.99,subscriptions,Netflix
 2026-07-15,Flughafen Express BER,-4.40,transport,Deutsche Bahn
+2026-07-15,ETF Sparplan FTSE All-World,-250.00,savings,Scalable Capital
 2026-07-16,NYT Digital Abo,-4.00,subscriptions,New York Times
 2026-07-16,ETF Sparplan MSCI World,-300.00,savings,Trade Republic
 2026-07-18,Edeka Einkauf,-58.70,food_groceries,Edeka
@@ -169,7 +174,6 @@ date,description,amount,category,merchant
 2026-07-26,Kaffee und Kuchen,-8.40,food_delivery,Cafe Anna Blume
 2026-07-28,Bargeldabhebung,-80.00,other,Sparkasse Geldautomat
 2026-07-31,Gehalt,3500.00,income,Tech GmbH
-2026-07-31,Tagesgeld Uebertrag,-300.00,savings,Scalable Capital
 2026-08-01,Miete Wohnung Prenzlauer Berg,-800.00,housing,Hausverwaltung Krause
 2026-08-01,Deutschlandticket,-49.00,transport,BVG
 2026-08-03,Urban Sports Club Mitgliedschaft,-59.00,health,Urban Sports Club
@@ -183,6 +187,7 @@ date,description,amount,category,merchant
 2026-08-13,Saturn Kopfhoerer,-59.00,shopping,Saturn
 2026-08-15,Netflix Abo,-13.99,subscriptions,Netflix
 2026-08-15,Bolt Fahrt,-11.90,transport,Bolt
+2026-08-15,ETF Sparplan FTSE All-World,-250.00,savings,Scalable Capital
 2026-08-16,1Password Abo,-3.99,subscriptions,1Password
 2026-08-16,ETF Sparplan MSCI World,-300.00,savings,Trade Republic
 2026-08-18,Alnatura Einkauf,-44.10,food_groceries,Alnatura

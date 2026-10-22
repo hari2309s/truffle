@@ -64,6 +64,18 @@ describe('detectRecurring', () => {
     expect(recurringTotals(items).total).toBe(0)
   })
 
+  it('leaves out goal deposits and habit logs — they’re Truffle’s own goals and habits', () => {
+    const items = detectRecurring(
+      [
+        ...monthly('Japan trip', -350, 'savings', 1, 'Saved to: Japan trip'),
+        ...monthly('', -25, 'savings', 3, 'Savings — Weekly top-up'),
+        ...monthly('Emergency fund', -200, 'savings', 1).map((t) => ({ ...t, goalId: 'g1' })),
+      ],
+      TODAY
+    )
+    expect(items).toEqual([])
+  })
+
   it('ignores income, one-off months and charges that have stopped', () => {
     expect(
       detectRecurring(
