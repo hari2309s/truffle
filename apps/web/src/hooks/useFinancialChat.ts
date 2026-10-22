@@ -11,6 +11,8 @@ export type ChatMetadata = {
   traceId?: string
   speechTone?: SpeechTone
   proactive?: boolean
+  /** A proactive nudge the user hadn't seen before this visit. */
+  unread?: boolean
   createdAt?: string
 }
 

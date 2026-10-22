@@ -158,6 +158,8 @@ export interface HabitWithStats extends SavingsHabit {
   streak: number
   currentPeriodLogged: boolean
   totalSaved: number
+  /** Most recent contributions, newest first (up to 8). */
+  history?: { period: string; amount: number }[]
 }
 
 export interface CategoryBudget {

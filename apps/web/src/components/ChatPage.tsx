@@ -12,9 +12,10 @@ import { HabitProposalCard } from './HabitProposalCard'
 import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
 import { BottomNav } from './BottomNav'
 import { TopBar } from './TopBar'
+import { OfflineBar } from './OfflineBar'
 import { PageEnter } from './PageMotion'
 import { ErrorBoundary } from './ErrorBoundary'
-import { LeaderRow, MINUS, NoticeSlip, Tallying } from './Tally'
+import { LeaderRow, Meter, MINUS, NoticeSlip, Tallying } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useVoicePreference } from '@/contexts/VoiceContext'
@@ -37,16 +38,37 @@ interface ProposalToolEntry<Args> {
   PendingCard: React.ComponentType<{
     proposal: Args
     userId: string
-    onResult: (confirmed: boolean) => void
+    onResult: (confirmed: boolean, queued?: boolean) => void
   }>
-  renderConfirmed: (args: Args, toolCallId: string, ctx: ProposalRenderCtx) => React.ReactNode
+  renderConfirmed: (
+    args: Args,
+    toolCallId: string,
+    ctx: ProposalRenderCtx,
+    output?: { queued?: boolean }
+  ) => React.ReactNode
 }
 
 /** The "printed" slip a confirmed proposal leaves behind in the conversation. */
-function PrintedSlip({ label, left, right }: { label: string; left: string; right: string }) {
+function PrintedSlip({
+  label,
+  left,
+  right,
+  queued = false,
+}: {
+  label: string
+  left: string
+  right: string
+  queued?: boolean
+}) {
   return (
-    <div className="self-start w-[84%] slip-sm print-in px-3.5 pt-3 pb-[22px] flex flex-col gap-1.5 text-[13px]">
-      <span className="text-[11px] font-bold uppercase text-truffle-positive">{label} ✓</span>
+    <div
+      className={`self-start w-[84%] slip-sm print-in px-3.5 pt-3 pb-[22px] flex flex-col gap-1.5 text-[13px] ${queued ? 'border-t-[6px] border-dashed border-truffle-text2' : ''}`}
+    >
+      <span
+        className={`text-[11px] font-bold uppercase ${queued ? 'text-truffle-text2' : 'text-truffle-positive'}`}
+      >
+        {queued ? `◌ ${label}` : `${label} ✓`}
+      </span>
       <LeaderRow left={left} right={<b>{right}</b>} />
     </div>
   )
@@ -68,10 +90,11 @@ const PROPOSAL_TOOLS: Record<string, ProposalToolEntry<any>> = {
   },
   proposeTransaction: {
     PendingCard: TransactionProposalCard,
-    renderConfirmed: (args, toolCallId, { t, formatAmount }) => (
+    renderConfirmed: (args, toolCallId, { t, formatAmount }, output) => (
       <PrintedSlip
         key={toolCallId}
-        label={t.proposals.transaction.logged}
+        queued={output?.queued}
+        label={output?.queued ? t.offline.queuedTitle : t.proposals.transaction.logged}
         left={args.description}
         right={`${args.amount < 0 ? MINUS : '+'}${formatAmount(args.amount)}`}
       />
@@ -92,6 +115,68 @@ const PROPOSAL_TOOLS: Record<string, ProposalToolEntry<any>> = {
       )
     },
   },
+}
+
+type ChatItem =
+  | { kind: 'message'; message: TruffleUIMessage; idx: number }
+  | { kind: 'notices'; messages: TruffleUIMessage[] }
+
+/** Runs of proactive nudges print together as one NOTICES slip. */
+function groupNotices(messages: TruffleUIMessage[]): ChatItem[] {
+  const items: ChatItem[] = []
+  messages.forEach((message, idx) => {
+    const isNotice =
+      message.role === 'assistant' &&
+      message.metadata?.proactive &&
+      !message.parts.some(isToolUIPart)
+    const last = items[items.length - 1]
+    if (isNotice && last?.kind === 'notices') last.messages.push(message)
+    else if (isNotice) items.push({ kind: 'notices', messages: [message] })
+    else items.push({ kind: 'message', message, idx })
+  })
+  return items
+}
+
+function NoticesSlip({
+  messages,
+  messageText,
+}: {
+  messages: TruffleUIMessage[]
+  messageText: (m: TruffleUIMessage) => string
+}) {
+  const { t } = useLanguage()
+  const unread = messages.filter((m) => m.metadata?.unread).length
+  return (
+    <div className="slip print-in px-4 pt-3.5 pb-6 flex flex-col gap-2">
+      <div className="flex justify-between text-xs font-bold uppercase">
+        <span>{t.chat.notices}</span>
+        {unread > 0 && <span>{t.chat.newCount(unread)}</span>}
+      </div>
+      {messages.map((m, i) => (
+        <div
+          key={m.id}
+          className="grid grid-cols-[20px_1fr] gap-2 rule-soft pt-2 print-in"
+          style={{ animationDelay: `${i * 40}ms` }}
+        >
+          <span aria-hidden className="text-[13px] text-truffle-accent-ink">
+            ✦
+          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="font-grotesk text-sm leading-[1.4]">{messageText(m)}</span>
+            {m.metadata?.createdAt && (
+              <span className="text-[11px] text-truffle-text2">
+                {new Date(m.metadata.createdAt).toLocaleString([], {
+                  weekday: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatPageProps) {
@@ -183,6 +268,7 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
           />
         </button>
       </header>
+      <OfflineBar userId={userId} />
 
       {/* Messages */}
       <ErrorBoundary>
@@ -209,7 +295,11 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
             </div>
           )}
 
-          {chat.messages.map((message, idx) => {
+          {groupNotices(chat.messages).map((item) => {
+            if (item.kind === 'notices') {
+              return <NoticesSlip key={item.messages[0]!.id} messages={item.messages} messageText={chat.messageText} />
+            }
+            const { message, idx } = item
             const isLastMessage = idx === chat.messages.length - 1
             const showError = isLastMessage && !!chat.error && message.role === 'user'
 
@@ -218,7 +308,10 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
             // Resolve a tool call locally without hitting the API again.
             // addToolResult() re-submits to /api/chat — a visible loader flash
             // and a risk of duplicate tool calls.
-            const resolveTool = (toolCallId: string, result: { confirmed: boolean }) => {
+            const resolveTool = (
+              toolCallId: string,
+              result: { confirmed: boolean; queued?: boolean }
+            ) => {
               chat.setMessages((prev) =>
                 prev.map((m) => {
                   if (m.id !== message.id) return m
@@ -262,15 +355,19 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
                         key={part.toolCallId}
                         proposal={part.input}
                         userId={userId}
-                        onResult={(c) => resolveTool(part.toolCallId, { confirmed: c })}
+                        onResult={(c, queued) =>
+                          resolveTool(part.toolCallId, { confirmed: c, queued })
+                        }
                       />
                     )
                   }
                   if (confirmed) {
-                    return renderer.renderConfirmed(part.input, part.toolCallId, {
-                      t,
-                      formatAmount,
-                    })
+                    return renderer.renderConfirmed(
+                      part.input,
+                      part.toolCallId,
+                      { t, formatAmount },
+                      part.output as { queued?: boolean } | undefined
+                    )
                   }
                   return null
                 })}
@@ -372,6 +469,15 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
           >
             {voice.error === MIC_UNAVAILABLE_ERROR ? t.voice.micOffBody : voice.error}
           </NoticeSlip>
+        )}
+
+        {chat.isSpeaking && (
+          <div className="paper px-3.5 py-2.5 flex items-center gap-2.5" aria-hidden>
+            <span className="text-[11px] font-bold uppercase whitespace-nowrap">
+              {t.chat.speaking(persona.name)}
+            </span>
+            <Meter />
+          </div>
         )}
 
         {voice.isRecording && (

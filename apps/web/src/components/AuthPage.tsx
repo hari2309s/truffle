@@ -67,7 +67,7 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
           <h1 className="text-[26px] font-bold tracking-[.2em] uppercase">Truffle</h1>
           <p className="text-xs text-truffle-text2 tracking-[.06em] uppercase">{t.auth.tagline}</p>
           <Rule className="w-full mt-1.5" />
-          <div className="w-full flex flex-col gap-1.5 text-sm">
+          <div className="w-full flex flex-col gap-1.5 text-sm print-lines">
             <LeaderRow strong left={t.auth.receiptTalk} right="✓" />
             <LeaderRow strong left={t.auth.receiptSee} right="✓" />
             <LeaderRow strong left={t.auth.receiptDread} right={formatAmount(0)} />

@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePostHog } from 'posthog-js/react'
 import { TRANSACTION_CATEGORIES, type TransactionCategory } from '@truffle/types'
@@ -10,6 +11,11 @@ import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { currentYearMonth } from '@/lib/date'
+import { setChatHandoff } from '@/lib/chatHandoff'
+import { KEYS, pressKey } from '@/lib/keypad'
+import { enqueueTransaction, isOfflineError } from '@/lib/offlineQueue'
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
+import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
 
 // The chips shown before "+ More" — the everyday ones first.
 const QUICK_CATEGORIES: TransactionCategory[] = [
@@ -40,6 +46,20 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
     merchant: '',
     isExpense: true,
   })
+
+  const router = useRouter()
+  const voice = useVoiceRecorder(userId)
+  // Spoken entries go to Chat, which proposes a slip to confirm.
+  useEffect(() => {
+    if (!voice.transcript) return
+    setChatHandoff(voice.transcript)
+    router.push('/chat')
+  }, [voice.transcript, router])
+  const voiceStatus: VoiceButtonStatus = voice.isRecording
+    ? 'recording'
+    : voice.isTranscribing
+      ? 'transcribing'
+      : 'idle'
 
   const { data: budgets = [] } = useBudgetsQuery(userId)
   const { data: txData } = useTransactionsQuery(userId)
@@ -102,6 +122,20 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
       await queryClient.invalidateQueries({ queryKey: ['insights', userId] })
       onClose()
     } catch (err) {
+      if (isOfflineError(err)) {
+        // No connection: keep it on this phone and save on reconnect.
+        enqueueTransaction(userId, {
+          description: form.description,
+          amount: amount * (form.isExpense ? -1 : 1),
+          currency,
+          category: form.category,
+          date: form.date,
+          merchant: form.merchant || null,
+          isRecurring: false,
+        })
+        onClose()
+        return
+      }
       console.error('Failed to add transaction:', err)
       setError(t.addTransaction.error)
     } finally {
@@ -115,16 +149,26 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
       onClose={onClose}
       closeLabel={t.common.close}
       footer={
-        <button
-          type="submit"
-          form="add-transaction"
-          disabled={isLoading || !validAmount || !form.description}
-          className="key key-accent w-full h-[60px] text-[15px] uppercase"
-        >
-          {isLoading
-            ? t.addTransaction.saving
-            : t.addTransaction.printLog(validAmount ? formatAmount(amount) : `${symbol}0`)}
-        </button>
+        <div className="grid grid-cols-[64px_1fr] gap-2">
+          <VoiceButton
+            status={voiceStatus}
+            onStart={voice.startRecording}
+            onStop={voice.stopRecording}
+            idleLabel={t.addTransaction.holdTalk}
+            quiet
+            className="h-[60px] !text-[11px] !gap-1 px-1 leading-tight"
+          />
+          <button
+            type="submit"
+            form="add-transaction"
+            disabled={isLoading || !validAmount || !form.description}
+            className="key key-accent h-[60px] text-[15px] uppercase"
+          >
+            {isLoading
+              ? t.addTransaction.saving
+              : t.addTransaction.printLog(validAmount ? formatAmount(amount) : `${symbol}0`)}
+          </button>
+        </div>
       }
     >
       <form
@@ -165,15 +209,17 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
           </label>
           <input
             id="tx-amount"
-            type="number"
-            inputMode="decimal"
+            type="text"
+            // The keypad below enters the amount; keep the phone keyboard down.
+            inputMode="none"
             placeholder="0.00"
             value={form.amount}
-            onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-            step="0.01"
-            min="0"
+            onChange={(e) => {
+              const v = e.target.value.replace(',', '.')
+              if (/^\d{0,6}(\.\d{0,2})?$/.test(v)) setForm((f) => ({ ...f, amount: v }))
+            }}
             required
-            autoFocus
+            autoComplete="off"
             className="min-w-0 w-full bg-transparent text-right text-[52px] font-bold leading-none caret-truffle-accent focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
         </div>
@@ -245,6 +291,29 @@ export function AddTransactionForm({ userId, onClose }: AddTransactionFormProps)
           </p>
         )}
       </form>
+
+      <div
+        role="group"
+        aria-label={t.addTransaction.amountLabel}
+        className="mt-auto grid grid-cols-3 gap-2 px-4 pt-5"
+      >
+        {KEYS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setForm((f) => ({ ...f, amount: pressKey(f.amount, key) }))}
+            aria-label={key === '⌫' ? t.addTransaction.backspace : key}
+            className="key key-plain key-3 h-14 text-[22px]"
+          >
+            {key}
+          </button>
+        ))}
+      </div>
+      {voice.error && (
+        <p role="alert" className="mx-4 mt-3 text-[11px] font-bold uppercase text-truffle-warning">
+          ▲ {voice.error}
+        </p>
+      )}
     </Sheet>
   )
 }

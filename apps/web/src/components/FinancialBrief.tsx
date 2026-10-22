@@ -52,7 +52,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
     return (
       <section
         aria-label={t.dashboard.statement}
-        className="slip print-in mx-4 mt-4 px-[18px] pt-[18px] pb-[30px] flex flex-col gap-2 text-sm"
+        className="slip print-lines mx-4 mt-4 px-[18px] pt-[18px] pb-[30px] flex flex-col gap-2 text-sm"
       >
         <div className="flex justify-between text-xs text-truffle-text2 uppercase">
           <span>{t.dashboard.statement} #0001</span>
@@ -82,7 +82,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
   return (
     <section
       aria-label={t.dashboard.statement}
-      className="slip print-in mx-4 mt-4 px-[18px] pt-[18px] pb-[30px] flex flex-col gap-2 text-sm"
+      className="slip print-lines mx-4 mt-4 px-[18px] pt-[18px] pb-[30px] flex flex-col gap-2 text-sm"
     >
       <div className="flex justify-between text-xs text-truffle-text2 uppercase">
         <span>{t.dashboard.statement}</span>

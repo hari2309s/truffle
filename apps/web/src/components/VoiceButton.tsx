@@ -15,6 +15,10 @@ interface VoiceButtonProps {
   onStopSpeaking?: () => void
   /** Show the truffle mark on the idle key (Home). */
   withIcon?: boolean
+  /** Replaces "Hold · Speak" on the idle key. */
+  idleLabel?: string
+  /** Plain (not apricot) when idle — for a secondary voice key. */
+  quiet?: boolean
   className?: string
 }
 
@@ -28,6 +32,8 @@ export function VoiceButton({
   onStop,
   onStopSpeaking,
   withIcon = false,
+  idleLabel,
+  quiet = false,
   className = 'h-[72px]',
 }: VoiceButtonProps) {
   const { t } = useLanguage()
@@ -75,7 +81,13 @@ export function VoiceButton({
     [stop]
   )
 
-  const variant = isSpeaking ? 'key-ink' : isTranscribing ? 'key-surface' : 'key-accent'
+  const variant = isSpeaking
+    ? 'key-ink'
+    : isTranscribing
+      ? 'key-surface'
+      : quiet && !isRecording
+        ? 'key-plain'
+        : 'key-accent'
   const timer = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 
   const label = isRecording
@@ -84,7 +96,7 @@ export function VoiceButton({
       ? t.voice.thinking
       : isSpeaking
         ? t.voice.tapToStop
-        : t.voice.holdSpeak
+        : (idleLabel ?? t.voice.holdSpeak)
 
   return (
     <button

@@ -13,6 +13,7 @@ import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
 import { useProposalCard } from './GoalProposalCard'
 import { LeaderRow, MINUS } from './Tally'
+import { enqueueTransaction } from '@/lib/offlineQueue'
 
 export interface TransactionProposal {
   description: string
@@ -25,7 +26,8 @@ export interface TransactionProposal {
 interface TransactionProposalCardProps {
   proposal: TransactionProposal
   userId: string
-  onResult: (confirmed: boolean) => void
+  /** `queued`: confirmed while offline — saved on this phone, not yet logged. */
+  onResult: (confirmed: boolean, queued?: boolean) => void
 }
 
 export const TransactionProposalCard = memo(function TransactionProposalCard({
@@ -91,6 +93,27 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
 
   // Return null on done/declined — ChatPage's inv.state === 'result' branch
   // renders the persistent confirmation, avoiding a double bubble.
+  const description = proposal.description.charAt(0).toUpperCase() + proposal.description.slice(1)
+
+  // Offline: keep the entry on this phone (saved on reconnect) instead of
+  // failing, and resolve the proposal as queued so it can't be confirmed twice.
+  const confirm = () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      enqueueTransaction(userId, {
+        description,
+        amount: proposal.amount,
+        currency,
+        category: proposal.category,
+        date: proposal.date,
+        merchant: proposal.merchant ?? null,
+        isRecurring: false,
+      })
+      onResult(true, true)
+      return
+    }
+    void handleYes()
+  }
+
   if (status === 'done' || status === 'declined') return null
 
   return (
@@ -123,7 +146,7 @@ export const TransactionProposalCard = memo(function TransactionProposalCard({
       <div className="grid grid-cols-2 gap-2 pt-1.5">
         <button
           type="button"
-          onClick={handleYes}
+          onClick={confirm}
           disabled={status === 'saving'}
           className="key key-accent h-12 text-[13px] uppercase"
         >

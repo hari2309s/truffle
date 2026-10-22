@@ -7,6 +7,7 @@ import type { CategoryBudget, Transaction, TransactionCategory } from '@truffle/
 import { TRANSACTION_CATEGORIES } from '@truffle/types'
 import { SkeletonPulse } from './PageMotion'
 import { LeaderRow } from './Tally'
+import { BudgetEditSheet } from './BudgetEditSheet'
 import { useBudgetsQuery } from '@/hooks/useBudgetsQuery'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
@@ -42,6 +43,7 @@ export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
   const { open: showAdd, setOpen: setShowAdd } = useSectionAddForm()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<CategoryBudget | null>(null)
   const spendByCategory = useSpendByCategory(transactions)
 
   const { data: budgets = [], isLoading } = useBudgetsQuery(userId)
@@ -88,9 +90,21 @@ export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
             isConfirmingDelete={confirmDeleteId === budget.id}
             onRequestDelete={() => setConfirmDeleteId(budget.id)}
             onCancelDelete={() => setConfirmDeleteId(null)}
+            onOpen={() => setEditing(budget)}
           />
         ))
       )}
+
+      <AnimatePresence>
+        {editing && (
+          <BudgetEditSheet
+            key={editing.id}
+            budget={editing}
+            userId={userId}
+            onClose={() => setEditing(null)}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }
@@ -103,6 +117,7 @@ function BudgetRow({
   isConfirmingDelete,
   onRequestDelete,
   onCancelDelete,
+  onOpen,
 }: {
   budget: CategoryBudget
   spent: number
@@ -111,6 +126,7 @@ function BudgetRow({
   isConfirmingDelete: boolean
   onRequestDelete: () => void
   onCancelDelete: () => void
+  onOpen: () => void
 }) {
   const { t } = useLanguage()
   const { formatAmount } = useCurrency()
@@ -134,11 +150,17 @@ function BudgetRow({
       className={`flex flex-col gap-[5px] transition-opacity ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
     >
       <div className="flex items-center gap-1">
-        <LeaderRow
-          className="flex-1 min-w-0"
-          left={t.categories[budget.category] ?? budget.category}
-          right={`${formatAmount(spent)}/${formatAmount(budget.amount)}`}
-        />
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={t.budgetEdit.open(t.categories[budget.category] ?? budget.category)}
+          className="flex-1 min-w-0 text-left"
+        >
+          <LeaderRow
+            left={<span className="underline-offset-2 hover:underline">{t.categories[budget.category] ?? budget.category}</span>}
+            right={`${formatAmount(spent)}/${formatAmount(budget.amount)} →`}
+          />
+        </button>
         <button
           type="button"
           onClick={() => (isConfirmingDelete ? onCancelDelete() : onRequestDelete())}

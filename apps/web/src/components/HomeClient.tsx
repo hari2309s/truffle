@@ -76,6 +76,7 @@ export function HomeClient() {
   if (state === 'onboarding' && userId) {
     return (
       <OnboardingPage
+        userId={userId}
         onComplete={async () => {
           // Re-fetch session so user_metadata is fresh
           const {

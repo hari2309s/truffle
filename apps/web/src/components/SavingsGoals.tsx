@@ -3,28 +3,17 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SkeletonPulse } from './PageMotion'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
+import { useGoalsQuery } from '@/hooks/useGoalsQuery'
 import { usePostHog } from 'posthog-js/react'
 import type { SavingsGoal } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useSectionAddForm } from '@/contexts/SectionAddFormContext'
 import { LeaderRow } from './Tally'
+import { GoalDetailSheet } from './GoalDetailSheet'
 
 const GOAL_EMOJIS = ['🎯', '✈️', '🏠', '🚗', '💻', '🎓', '💍', '🏖️', '🎸', '📱', '🏋️', '🌍']
-
-function mapGoal(row: Record<string, unknown>): SavingsGoal {
-  return {
-    id: row.id as string,
-    userId: (row.user_id ?? row.userId) as string,
-    name: row.name as string,
-    targetAmount: Number(row.target_amount ?? row.targetAmount),
-    savedAmount: Number(row.saved_amount ?? row.savedAmount),
-    deadline: (row.deadline as string | undefined) ?? undefined,
-    emoji: row.emoji as string,
-    createdAt: (row.created_at ?? row.createdAt) as string,
-  }
-}
 
 interface SavingsGoalsBodyProps {
   userId: string
@@ -39,17 +28,12 @@ function SavingsGoalsBody({ userId, showAdd, onShowAddChange }: SavingsGoalsBody
   const queryClient = useQueryClient()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)
   const [fundsError, setFundsError] = useState<string | null>(null)
 
-  const { data: goals = [], isLoading } = useQuery({
-    queryKey: ['goals', userId],
-    queryFn: async () => {
-      const res = await fetch('/api/goals')
-      if (!res.ok) throw new Error('Failed to fetch goals')
-      const json = await res.json()
-      return (json.goals ?? []).map(mapGoal) as SavingsGoal[]
-    },
-  })
+  const { data: goals = [], isLoading } = useGoalsQuery(userId)
+  // Look the open goal up by id so the sheet shows fresh data after edits.
+  const openGoal = goals.find((g) => g.id === openId) ?? null
 
   const handleAddFunds = async (goalId: string, currentSaved: number, deposit: number) => {
     setFundsError(null)
@@ -137,9 +121,21 @@ function SavingsGoalsBody({ userId, showAdd, onShowAddChange }: SavingsGoalsBody
             isConfirmingDelete={confirmDeleteId === goal.id}
             onRequestDelete={() => setConfirmDeleteId(goal.id)}
             onCancelDelete={() => setConfirmDeleteId(null)}
+            onOpen={() => setOpenId(goal.id)}
           />
         ))
       )}
+
+      <AnimatePresence>
+        {openGoal && (
+          <GoalDetailSheet
+            key={openGoal.id}
+            goal={openGoal}
+            userId={userId}
+            onClose={() => setOpenId(null)}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }
@@ -189,6 +185,7 @@ function GoalRow({
   isConfirmingDelete,
   onRequestDelete,
   onCancelDelete,
+  onOpen,
 }: {
   goal: SavingsGoal
   onAddFunds: (amount: number) => void
@@ -197,6 +194,7 @@ function GoalRow({
   isConfirmingDelete: boolean
   onRequestDelete: () => void
   onCancelDelete: () => void
+  onOpen: () => void
 }) {
   const { t } = useLanguage()
   const { formatAmount, symbol } = useCurrency()
@@ -216,15 +214,16 @@ function GoalRow({
       className={`flex flex-col gap-[5px] transition-opacity ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
     >
       <div className="flex items-center gap-1 text-sm">
-        <LeaderRow
-          className="flex-1 min-w-0"
-          left={
-            <b>
-              {goal.emoji} {goal.name}
-            </b>
-          }
-          right={<b>{Math.round(progress)}%</b>}
-        />
+        <button type="button" onClick={onOpen} className="flex-1 min-w-0 text-left">
+          <LeaderRow
+            left={
+              <b className="underline-offset-2 hover:underline">
+                {goal.emoji} {goal.name}
+              </b>
+            }
+            right={<b>{Math.round(progress)}% →</b>}
+          />
+        </button>
         {!done && (
           <button
             type="button"

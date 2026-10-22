@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         .from('anomalies')
         .select('id, transaction_id, type, severity, description, detected_at, dismissed')
         .eq('user_id', userId)
+        .eq('dismissed', false)
         .order('detected_at', { ascending: false })
         .limit(10)
       if (error) console.warn('Anomalies query error (non-fatal):', error.message)
@@ -111,5 +112,37 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Insights error:', error)
     return NextResponse.json({ error: 'Failed to get insights' }, { status: 500 })
+  }
+}
+
+/**
+ * Resolves a flagged charge ("It's mine"): marks the anomaly dismissed so it
+ * leaves "To review". Ownership is enforced by the user_id match.
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+
+    const { anomalyId } = await request.json()
+    if (typeof anomalyId !== 'string' || !anomalyId) {
+      return NextResponse.json({ error: 'anomalyId required' }, { status: 400 })
+    }
+
+    const db = createServerClient()
+    const { data, error } = await db
+      .from('anomalies')
+      .update({ dismissed: true })
+      .eq('id', anomalyId)
+      .eq('user_id', user.id)
+      .select('id')
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return NextResponse.json({ error: 'Anomaly not found' }, { status: 404 })
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('PATCH insights error:', error)
+    return NextResponse.json({ error: 'Failed to update anomaly' }, { status: 500 })
   }
 }

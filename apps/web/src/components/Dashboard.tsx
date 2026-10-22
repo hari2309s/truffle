@@ -13,6 +13,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { TopBar } from './TopBar'
 import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
 import { NoticeSlip } from './Tally'
+import { OfflineBar } from './OfflineBar'
 import { PageEnter } from './PageMotion'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { MIC_UNAVAILABLE_ERROR, useVoiceRecorder } from '@/hooks/useVoiceRecorder'
@@ -73,6 +74,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
         <TopBar.ThemeToggle />
         <TopBar.Settings userId={userId} />
       </TopBar>
+      <OfflineBar userId={userId} />
 
       <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <main className="flex-1 overflow-y-auto min-h-0 flex flex-col pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))]">
@@ -85,7 +87,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
             <FinancialBrief userId={userId} />
           </ErrorBoundary>
           <ErrorBoundary>
-            <WeeklySummary userId={userId} />
+            <WeeklySummary userId={userId} name={name} />
           </ErrorBoundary>
 
           {isEmpty ? (

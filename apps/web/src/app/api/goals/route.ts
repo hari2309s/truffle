@@ -129,7 +129,11 @@ export async function PATCH(request: NextRequest) {
     if (errorResponse) return errorResponse
     const userId = user.id
 
-    const { goalId, savedAmount, currency = 'EUR' } = await request.json()
+    const body = await request.json()
+    if (body?.action === 'edit') return await editGoal(userId, body)
+    if (body?.action === 'withdraw') return await withdrawFromGoal(userId, body)
+
+    const { goalId, savedAmount, currency = 'EUR' } = body
     if (typeof goalId !== 'string' || !goalId || savedAmount === undefined) {
       return NextResponse.json({ error: 'goalId and savedAmount required' }, { status: 400 })
     }
@@ -303,4 +307,209 @@ export async function DELETE(request: NextRequest) {
     console.error('DELETE goals error:', error)
     return NextResponse.json({ error: 'Failed to delete goal' }, { status: 500 })
   }
+}
+
+const ISO_DATE_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
+const VALID_CURRENCIES = ['EUR', 'GBP', 'USD']
+
+/** PATCH { action: 'edit', goalId, name?, targetAmount?, deadline?, emoji? } */
+async function editGoal(userId: string, body: Record<string, unknown>) {
+  const { goalId, name, targetAmount, deadline, emoji } = body
+  if (typeof goalId !== 'string' || !goalId) {
+    return NextResponse.json({ error: 'goalId required' }, { status: 400 })
+  }
+  const update: Record<string, unknown> = {}
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim() || name.length > 200) {
+      return NextResponse.json(
+        { error: 'name must be a non-empty string under 200 characters' },
+        { status: 400 }
+      )
+    }
+    update.name = name.trim()
+  }
+  if (targetAmount !== undefined) {
+    if (
+      typeof targetAmount !== 'number' ||
+      targetAmount <= 0 ||
+      !isFinite(targetAmount) ||
+      targetAmount > 1_000_000_000
+    ) {
+      return NextResponse.json(
+        { error: 'targetAmount must be a positive finite number up to 1,000,000,000' },
+        { status: 400 }
+      )
+    }
+    update.target_amount = targetAmount
+  }
+  if (deadline !== undefined) {
+    if (deadline !== null && (typeof deadline !== 'string' || !ISO_DATE_RE.test(deadline))) {
+      return NextResponse.json(
+        { error: 'deadline must be an ISO date (YYYY-MM-DD) or null' },
+        { status: 400 }
+      )
+    }
+    update.deadline = deadline
+  }
+  if (emoji !== undefined) {
+    if (typeof emoji !== 'string' || !emoji || emoji.length > 20) {
+      return NextResponse.json(
+        { error: 'emoji must be a string under 20 characters' },
+        { status: 400 }
+      )
+    }
+    update.emoji = emoji
+  }
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+  }
+
+  const db = createServerClient()
+  const { data: current, error: fetchError } = await db
+    .from('savings_goals')
+    .select('name, saved_amount')
+    .eq('id', goalId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (fetchError) throw fetchError
+  if (!current) return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
+  if (
+    update.target_amount !== undefined &&
+    Number(update.target_amount) < Number(current.saved_amount ?? 0)
+  ) {
+    return NextResponse.json(
+      { error: 'targetAmount cannot be below the amount already saved' },
+      { status: 400 }
+    )
+  }
+
+  let query = db.from('savings_goals').update(update).eq('id', goalId).eq('user_id', userId)
+  // Guard against a deposit landing between the check above and this write.
+  if (update.target_amount !== undefined) {
+    query = query.lte('saved_amount', Number(update.target_amount))
+  }
+  const { data, error } = await query.select().maybeSingle()
+  if (error) throw error
+  if (!data) {
+    return NextResponse.json(
+      { error: 'The goal changed while saving — please retry' },
+      { status: 409 }
+    )
+  }
+
+  // Deposits/withdrawals are recorded as savings transactions under the goal's
+  // name; carry them over so the goal's history survives a rename.
+  if (update.name !== undefined && update.name !== current.name) {
+    const oldName = String(current.name)
+    const newName = String(update.name)
+    const { error: renameError } = await db
+      .from('transactions')
+      .update({ merchant: newName })
+      .eq('user_id', userId)
+      .eq('category', 'savings')
+      .eq('merchant', oldName)
+    if (renameError) console.error('Goal rename: relabelling deposits failed (non-fatal):', renameError)
+    for (const prefix of ['Saved to: ', 'Withdrawn from: ']) {
+      const { error: descError } = await db
+        .from('transactions')
+        .update({ description: `${prefix}${newName}` })
+        .eq('user_id', userId)
+        .eq('category', 'savings')
+        .eq('description', `${prefix}${oldName}`)
+      if (descError) console.error('Goal rename: relabelling descriptions failed (non-fatal):', descError)
+    }
+  }
+
+  return NextResponse.json({ goal: data })
+}
+
+/**
+ * PATCH { action: 'withdraw', goalId, amount, currency? } — takes money back
+ * out of a goal and records it as income so the balance stays honest.
+ */
+async function withdrawFromGoal(userId: string, body: Record<string, unknown>) {
+  const { goalId, amount, currency = 'EUR' } = body
+  if (typeof goalId !== 'string' || !goalId) {
+    return NextResponse.json({ error: 'goalId required' }, { status: 400 })
+  }
+  if (typeof amount !== 'number' || amount <= 0 || !isFinite(amount) || amount > 1_000_000_000) {
+    return NextResponse.json(
+      { error: 'amount must be a positive finite number' },
+      { status: 400 }
+    )
+  }
+  if (typeof currency !== 'string' || !VALID_CURRENCIES.includes(currency)) {
+    return NextResponse.json({ error: 'Invalid currency' }, { status: 400 })
+  }
+
+  const db = createServerClient()
+  const { data: goal, error: fetchError } = await db
+    .from('savings_goals')
+    .select('id, name, saved_amount')
+    .eq('id', goalId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (fetchError) throw fetchError
+  if (!goal) return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
+
+  const currentSaved = Number(goal.saved_amount ?? 0)
+  if (Math.round(amount * 100) > Math.round(currentSaved * 100)) {
+    return NextResponse.json(
+      { error: 'Cannot withdraw more than has been saved' },
+      { status: 400 }
+    )
+  }
+  const nextSaved = Math.round((currentSaved - amount) * 100) / 100
+
+  // Optimistic lock on the current value, as for deposits.
+  const { data, error } = await db
+    .from('savings_goals')
+    .update({ saved_amount: nextSaved })
+    .eq('id', goalId)
+    .eq('user_id', userId)
+    .eq('saved_amount', currentSaved)
+    .select()
+    .maybeSingle()
+  if (error) throw error
+  if (!data) {
+    return NextResponse.json({ error: 'Concurrent update detected, please retry' }, { status: 409 })
+  }
+
+  const { error: txError } = await db.from('transactions').insert({
+    id: crypto.randomUUID(),
+    user_id: userId,
+    amount,
+    currency,
+    description: `Withdrawn from: ${goal.name}`,
+    category: 'savings',
+    merchant: goal.name,
+    date: new Date().toISOString().slice(0, 10),
+    is_recurring: false,
+    embedding: null,
+  })
+  if (txError) {
+    const { data: rollbackData, error: rollbackError } = await db
+      .from('savings_goals')
+      .update({ saved_amount: currentSaved })
+      .eq('id', goalId)
+      .eq('user_id', userId)
+      .eq('saved_amount', nextSaved)
+      .select('id')
+      .maybeSingle()
+    if (rollbackError || !rollbackData) {
+      console.error('Critical: goal withdraw rollback failed:', rollbackError)
+      return NextResponse.json(
+        { error: 'Data inconsistency — please contact support', code: 'ROLLBACK_FAILED' },
+        { status: 500 }
+      )
+    }
+    throw txError
+  }
+
+  try {
+    await recomputeSnapshot(userId, db)
+  } catch (e) {
+    console.error('Snapshot recompute failed (non-fatal):', e)
+  }
+  return NextResponse.json({ goal: data })
 }

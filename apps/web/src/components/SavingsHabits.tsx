@@ -1,12 +1,14 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
+import { useHabitsQuery } from '@/hooks/useHabitsQuery'
 import { getCurrentPeriod } from '@/lib/habits'
 import { staggerItemVariants, staggerListVariants } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
 import { LeaderRow } from './Tally'
+import { HabitDetailSheet } from './HabitDetailSheet'
 import type { HabitWithStats } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
@@ -21,18 +23,12 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
   const queryClient = useQueryClient()
   const [loggingId, setLoggingId] = useState<string | null>(null)
   const [logError, setLogError] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['habits', userId],
-    queryFn: async () => {
-      const res = await fetch('/api/habits')
-      if (!res.ok) throw new Error('Failed to fetch habits')
-      const json = await res.json()
-      return json.habits as HabitWithStats[]
-    },
-  })
+  const { data, isLoading } = useHabitsQuery(userId)
 
   const habits = data ?? []
+  const openHabit = habits.find((h) => h.id === openId) ?? null
 
   const handleLogContribution = async (habit: HabitWithStats) => {
     setLoggingId(habit.id)
@@ -88,9 +84,21 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
             habit={habit}
             isLogging={loggingId === habit.id}
             onLog={() => handleLogContribution(habit)}
+            onOpen={() => setOpenId(habit.id)}
           />
         </motion.div>
       ))}
+
+      <AnimatePresence>
+        {openHabit && (
+          <HabitDetailSheet
+            key={openHabit.id}
+            habit={openHabit}
+            userId={userId}
+            onClose={() => setOpenId(null)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
@@ -101,10 +109,12 @@ function HabitRow({
   habit,
   isLogging,
   onLog,
+  onOpen,
 }: {
   habit: HabitWithStats
   isLogging: boolean
   onLog: () => void
+  onOpen: () => void
 }) {
   const { t } = useLanguage()
   const { formatAmount } = useCurrency()
@@ -114,14 +124,16 @@ function HabitRow({
 
   return (
     <div className="flex flex-col gap-[5px]">
-      <LeaderRow
-        left={
-          <span>
-            {habit.emoji} {habit.name}
-          </span>
-        }
-        right={<b aria-label={t.savingsHabits.streak(habit.streak)}>×{habit.streak}</b>}
-      />
+      <button type="button" onClick={onOpen} className="text-left">
+        <LeaderRow
+          left={
+            <span className="underline-offset-2 hover:underline">
+              {habit.emoji} {habit.name}
+            </span>
+          }
+          right={<b aria-label={t.savingsHabits.streak(habit.streak)}>×{habit.streak} →</b>}
+        />
+      </button>
       <div className="flex items-center gap-[3px]">
         {Array.from({ length: STREAK_DOTS }, (_, i) => (
           <div

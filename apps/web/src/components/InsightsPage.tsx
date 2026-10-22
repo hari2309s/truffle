@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
+import { setChatHandoff } from '@/lib/chatHandoff'
 import type { Anomaly, Transaction } from '@truffle/types'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { detectSubscriptions } from '@/lib/subscriptions'
@@ -27,6 +29,18 @@ type SectionCode = (typeof SECTIONS)[number]
 
 const sectionId = (code: SectionCode) => `insights-${code}`
 
+/** The route returns raw rows (snake_case); the UI works with `Anomaly`. */
+function mapAnomaly(row: Record<string, unknown>): Anomaly {
+  return {
+    id: row.id as string,
+    transactionId: (row.transaction_id ?? row.transactionId) as string,
+    type: row.type as Anomaly['type'],
+    severity: row.severity as Anomaly['severity'],
+    description: row.description as string,
+    detectedAt: (row.detected_at ?? row.detectedAt) as string,
+  }
+}
+
 /**
  * Insights as one itemised statement. Section codes stick to the top and
  * jump between sections; the active code follows the scroll position.
@@ -41,10 +55,12 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   const { data: anomalyData, isLoading: anomalyLoading } = useQuery({
     queryKey: ['anomalies', userId],
     queryFn: async () => {
-      const res = await fetch(`/api/insights?userId=${userId}`)
+      // no-store: the route sets a short private cache, and a dismissed
+      // flag must disappear straight away.
+      const res = await fetch(`/api/insights?userId=${userId}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to fetch anomalies')
       const json = await res.json()
-      return (json.anomalies ?? []) as Anomaly[]
+      return ((json.anomalies ?? []) as Record<string, unknown>[]).map(mapAnomaly)
     },
   })
 
@@ -140,7 +156,12 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   </SkeletonPulse>
                 ) : anomalies.length ? (
                   anomalies.map((a) => (
-                    <AnomalyRow key={a.id} anomaly={a} transactions={transactions} />
+                    <AnomalyRow
+                      key={a.id}
+                      anomaly={a}
+                      transactions={transactions}
+                      userId={userId}
+                    />
                   ))
                 ) : (
                   <p className="font-grotesk text-sm text-truffle-text2">
@@ -290,21 +311,50 @@ const SEVERITY = {
   low: { glyph: '●', color: 'text-truffle-text2' },
 } as const
 
-function AnomalyRow({ anomaly, transactions }: { anomaly: Anomaly; transactions: Transaction[] }) {
+function AnomalyRow({
+  anomaly,
+  transactions,
+  userId,
+}: {
+  anomaly: Anomaly
+  transactions: Transaction[]
+  userId: string
+}) {
   const { t } = useLanguage()
   const { formatAmount } = useCurrency()
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const [busy, setBusy] = useState(false)
   const tx = transactions.find((x) => x.id === anomaly.transactionId)
   const severity = SEVERITY[anomaly.severity]
+  const label = tx ? tx.description : t.insights.anomalyTypes[anomaly.type]
+
+  const itsMine = async () => {
+    setBusy(true)
+    try {
+      const res = await fetch('/api/insights', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anomalyId: anomaly.id }),
+      })
+      if (res.ok) await queryClient.invalidateQueries({ queryKey: ['anomalies', userId] })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const notMe = () => {
+    setChatHandoff(
+      t.insights.notMePrompt(label, tx ? formatAmount(tx.amount) : '')
+    )
+    router.push('/chat')
+  }
 
   return (
     <div className="flex flex-col gap-1.5">
       <LeaderRow
         className="text-sm"
-        left={
-          <span className="block truncate">
-            ?? {tx ? tx.description : t.insights.anomalyTypes[anomaly.type]}
-          </span>
-        }
+        left={<span className="block truncate">?? {label}</span>}
         right={
           tx ? (
             <b>
@@ -319,6 +369,23 @@ function AnomalyRow({ anomaly, transactions }: { anomaly: Anomaly; transactions:
         {severity.glyph} {t.insights.severity[anomaly.severity]}
         {tx ? ` · ${t.insights.anomalyTypes[anomaly.type]}` : ''}
       </span>
+      <div className="grid grid-cols-2 gap-2 pt-1">
+        <button
+          type="button"
+          onClick={itsMine}
+          disabled={busy}
+          className="key key-ink key-3 h-11 text-xs uppercase"
+        >
+          {t.insights.itsMine}
+        </button>
+        <button
+          type="button"
+          onClick={notMe}
+          className="key key-line key-3 h-11 text-xs uppercase"
+        >
+          {t.insights.notMe}
+        </button>
+      </div>
     </div>
   )
 }

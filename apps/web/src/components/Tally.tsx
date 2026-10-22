@@ -1,7 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 /** The padded truffle mark the Tally Receipt design uses everywhere in-app. */
 export const TRUFFLE_ICON = '/web-app-manifest-512x512.png'
@@ -129,6 +130,7 @@ export function Sheet({
   right,
   footer,
   children,
+  dark = false,
 }: {
   title: string
   onClose: () => void
@@ -137,6 +139,8 @@ export function Sheet({
   right?: React.ReactNode
   footer?: React.ReactNode
   children: React.ReactNode
+  /** Always-dark chrome (the camera viewfinder), whatever the theme. */
+  dark?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -147,9 +151,7 @@ export function Sheet({
 
   // Focus the close key on open only — not on every re-render, or typing in
   // the sheet would lose focus whenever the parent re-renders.
-  useEffect(() => {
-    if (!ref.current?.contains(document.activeElement)) closeRef.current?.focus()
-  }, [])
+
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -176,13 +178,24 @@ export function Sheet({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  return (
+  // Portal to <body>: sheets open from inside animated (transformed)
+  // containers, which would otherwise trap `position: fixed`.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  // Focus the close key once, when the portal content first exists — not
+  // on later re-renders, or typing in the sheet would lose focus.
+  useEffect(() => {
+    if (mounted && !ref.current?.contains(document.activeElement)) closeRef.current?.focus()
+  }, [mounted])
+  if (!mounted) return null
+
+  return createPortal(
     <motion.div
       ref={ref}
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-50 mx-auto w-full max-w-lg bg-truffle-bg flex flex-col"
+      className={`fixed inset-0 z-50 mx-auto w-full max-w-lg flex flex-col ${dark ? 'bg-[#121211] text-[#efe9de]' : 'bg-truffle-bg'}`}
       initial={{ y: '100%' }}
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
@@ -207,6 +220,7 @@ export function Sheet({
           {footer}
         </div>
       )}
-    </motion.div>
+    </motion.div>,
+    document.body
   )
 }

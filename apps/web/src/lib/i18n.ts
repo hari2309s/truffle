@@ -36,21 +36,35 @@ export interface Translations {
     chooseVoice: (name: string) => string
     nowPlaying: (name: string) => string
     tapToHear: string
-  }
-  tour: {
-    steps: Array<{ emoji: string; title: string; body: string }>
     next: string
-    letsGo: string
     skip: string
-    sample: {
-      youSaid: string
-      quote: string
-      line: string
-      today: string
-      items: Array<{ name: string; amount: number; meta: string }>
-      notices: string
-      nudges: Array<{ title: string; body: string; tone: 'warning' | 'accent' }>
-    }
+    later: string
+    sayItTitle: string
+    sayItBody: string
+    sample: { youSaid: string; quote: string; line: string; today: string }
+    receiptsTitle: string
+    receiptsBody: string
+    receiptsScan: string
+    receiptsScanDesc: string
+    receiptsCsv: string
+    receiptsCsvDesc: string
+    receiptsFresh: string
+    receiptsFreshDesc: string
+    receiptsDone: (n: number) => string
+    private: string
+    privateNote: string
+    budgetsTitle: string
+    budgetsBody: string
+    budgetsBodyFromData: string
+    limitsLabel: string
+    suggested: string
+    lastMonth: (amount: string) => string
+    lower: (category: string) => string
+    raise: (category: string) => string
+    total: string
+    perMonth: (amount: string) => string
+    headsUpNote: string
+    printFirst: string
   }
   settings: {
     title: string
@@ -72,6 +86,8 @@ export interface Translations {
     voice: string
     voiceDesc: string
     exportFormat: string
+    exportCsv: string
+    exportJson: string
   }
   dashboard: {
     goodMorning: string
@@ -115,6 +131,116 @@ export interface Translations {
   }
   common: {
     close: string
+    cancel: string
+    saving: string
+  }
+  offline: {
+    offline: string
+    waiting: (n: number) => string
+    slips: (n: number) => string
+    retry: string
+    queuedTitle: string
+    storedHere: string
+    dropped: (n: number) => string
+    dismiss: string
+  }
+  recap: {
+    title: (week: number) => string
+    readBy: (name: string) => string
+    hi: (name: string) => string
+    spent: (amount: string) => string
+    spentVsUsual: (amount: string, diff: string, less: boolean) => string
+    busyLine: (category: string, amount: string, count: number, weekday: string) => string
+    income: (amount: string) => string
+    goal: (name: string, pct: number) => string
+    habit: (name: string, streak: number) => string
+    closing: string
+    cardSpent: (amount: string) => string
+    cardSpentVsUsual: (amount: string, diff: string, less: boolean) => string
+    cardBusy: (category: string) => string
+    spentLabel: string
+    vsUsual: string
+    play: string
+    pause: string
+    previousLine: string
+    nextLine: string
+    speed: string
+    holdToAsk: string
+    askPrefix: (question: string) => string
+  }
+  entryDetail: {
+    title: (code: string) => string
+    view: string
+    edit: string
+    ask: string
+    askAbout: string
+    askQuestion: (name: string) => string
+    charged: string
+    received: string
+    currency: string
+    recurring: string
+    yes: string
+    total: string
+    budget: string
+    swipeToTear: string
+    delete: string
+    tapAgain: string
+    deleting: string
+    deleteError: string
+  }
+  goalDetail: {
+    title: string
+    edit: string
+    target: (amount: string) => string
+    toGo: (amount: string) => string
+    weeksAt: (weeks: number, amount: string) => string
+    notePace: (perWeek: string, deadline: string) => string
+    noteNoDeadline: string
+    noteDone: string
+    deposits: string
+    noDeposits: string
+    deposit: string
+    withdrawal: string
+    addDeposit: string
+    withdraw: string
+    available: (amount: string) => string
+    confirmDeposit: (amount: string) => string
+    confirmWithdraw: (amount: string) => string
+    saveChanges: string
+    error: string
+  }
+  habitDetail: {
+    title: string
+    edit: string
+    save: string
+    since: (date: string) => string
+    inARow: (period: string) => string
+    totalSaved: string
+    history: string
+    noHistory: string
+    week: (n: number) => string
+    logThis: (period: string, amount: string) => string
+    loggedThis: (period: string) => string
+    icon: string
+    name: string
+    amountPer: (period: string) => string
+    stop: string
+    stopNote: string
+    error: string
+  }
+  budgetEdit: {
+    title: string
+    open: (category: string) => string
+    ofLimit: (spent: string, limit: string) => string
+    monthlyLimit: string
+    decrease: string
+    increase: string
+    atLimit: (limit: string, pct: number) => string
+    lastThree: string
+    soFar: (month: string) => string
+    headsUpAt: string
+    save: (amount: string) => string
+    error: string
   }
   nav: {
     home: string
@@ -143,6 +269,8 @@ export interface Translations {
     more: string
     less: string
     printLog: (amount: string) => string
+    holdTalk: string
+    backspace: string
     overBudget: (category: string, amount: string) => string
     nearBudget: (category: string, pct: number) => string
     error: string
@@ -168,6 +296,8 @@ export interface Translations {
     credit: string
     editAmount: string
     editCategory: string
+    matchesFor: (query: string) => string
+    noMatchesHint: string
   }
   csvImport: {
     title: string
@@ -192,6 +322,11 @@ export interface Translations {
     skipped: string
     couldntRead: string
     nothingImported: string
+    skip: string
+    mapColumn: (header: string) => string
+    needFields: (fields: string) => string
+    dup: string
+    duplicatesSkipped: string
   }
   receiptUpload: {
     title: string
@@ -220,6 +355,12 @@ export interface Translations {
     errorTitle: string
     shutter: string
     files: string
+    torch: string
+    mode: string
+    receipt: string
+    pdf: string
+    lineUp: string
+    startingCamera: string
   }
   weeklySummary: {
     title: string
@@ -291,6 +432,9 @@ export interface Translations {
     monthly: string
     subsEmpty: string
     severity: { high: string; medium: string; low: string }
+    itsMine: string
+    notMe: string
+    notMePrompt: (label: string, amount: string) => string
     anomalyTypes: Record<
       'unusual_amount' | 'forgotten_subscription' | 'category_spike' | 'new_merchant',
       string
@@ -373,6 +517,9 @@ export interface Translations {
     soundOff: string
     notice: string
     tallying: string
+    notices: string
+    newCount: (n: number) => string
+    speaking: (name: string) => string
   }
   proposals: {
     goal: {
@@ -448,44 +595,41 @@ export const translations: Record<Locale, Translations> = {
       chooseVoice: (name) => `Choose ${name}`,
       nowPlaying: (name) => `Now playing · ${name}`,
       tapToHear: 'Tap ▶ to hear one',
-    },
-    tour: {
-      steps: [
-        {
-          emoji: '💬',
-          title: 'Say it.\nTruffle prints it.',
-          body: 'Hold the key and say what you spent, or ask how you’re doing. You’ll get a slip to check before anything is saved.',
-        },
-        {
-          emoji: '💶',
-          title: 'Every euro, itemised.',
-          body: 'Every transaction is automatically categorised. Add by chat, CSV import, or snap a receipt.',
-        },
-        {
-          emoji: '🔔',
-          title: 'Gentle notices. Never a lecture.',
-          body: 'Truffle watches for budget overruns, unusual spends, and saving streaks — and tells you before things go sideways.',
-        },
-      ],
       next: 'Next →',
-      letsGo: 'Print my first statement',
       skip: 'Skip',
+      later: 'Later',
+      sayItTitle: 'Say it.\nTruffle prints it.',
+      sayItBody:
+        'Hold the key and say what you spent. You’ll get a slip to check before anything is saved.',
       sample: {
         youSaid: 'You said',
         quote: 'Forty-five at Lidl, groceries',
         line: 'Lidl · Groceries',
         today: 'Today',
-        items: [
-          { name: 'Lidl', amount: -45.2, meta: 'Groceries · Today' },
-          { name: 'Salary', amount: 3250, meta: 'Income · Mon 20 Oct' },
-          { name: 'Leap Card top-up', amount: -20, meta: 'Transport · Mon 20 Oct' },
-        ],
-        notices: 'Notices',
-        nudges: [
-          { title: 'Groceries at 80%', body: '€78 left with 10 days to go.', tone: 'warning' },
-          { title: '6-week streak', body: 'Save €25 every Friday is still going.', tone: 'accent' },
-        ],
       },
+      receiptsTitle: 'Bring your old receipts.',
+      receiptsBody: 'Pick how to start. You can always add more later.',
+      receiptsScan: 'Scan a PDF statement',
+      receiptsScanDesc: 'Any bank. We read the lines for you.',
+      receiptsCsv: 'Import a CSV',
+      receiptsCsvDesc: 'Exports from Revolut, AIB, Monzo, N26…',
+      receiptsFresh: 'Start fresh',
+      receiptsFreshDesc: 'Just talk. Your first slip prints today.',
+      receiptsDone: (n) => `${n} entr${n !== 1 ? 'ies' : 'y'} on your statement`,
+      private: 'Private',
+      privateNote: 'No bank login needed',
+      budgetsTitle: 'Set a soft limit or two.',
+      budgetsBody: 'A starting point to nudge. Change anything that feels off.',
+      budgetsBodyFromData: 'Based on your last month, here’s a starting point. Nudge anything that feels off.',
+      limitsLabel: 'Monthly limits · suggested',
+      suggested: 'Suggested',
+      lastMonth: (amount) => `Last month: ${amount}`,
+      lower: (category) => `Lower ${category} limit`,
+      raise: (category) => `Raise ${category} limit`,
+      total: 'Total',
+      perMonth: (amount) => `${amount} / mo`,
+      headsUpNote: 'Gentle heads-up at 80%. Never a scolding.',
+      printFirst: 'Print my first statement',
     },
     settings: {
       title: 'Preferences',
@@ -506,7 +650,9 @@ export const translations: Record<Locale, Translations> = {
       currency: 'Currency',
       voice: 'Voice',
       voiceDesc: 'The voice Truffle uses when reading replies aloud.',
-      exportFormat: 'JSON →',
+      exportFormat: 'CSV / JSON →',
+      exportCsv: 'Transactions · CSV',
+      exportJson: 'Everything · JSON',
     },
     dashboard: {
       goodMorning: 'Good morning',
@@ -554,6 +700,119 @@ export const translations: Record<Locale, Translations> = {
     },
     common: {
       close: 'Close',
+      cancel: 'Cancel',
+      saving: 'Saving…',
+    },
+    offline: {
+      offline: 'Offline',
+      waiting: (n) => `${n} slip${n !== 1 ? 's' : ''} waiting`,
+      slips: (n) => `${n} slip${n !== 1 ? 's' : ''} waiting`,
+      retry: 'Retry',
+      queuedTitle: 'Queued · saves when back online',
+      storedHere: 'Stored on this phone',
+      dropped: (n) => `${n} queued slip${n !== 1 ? 's' : ''} couldn’t be saved`,
+      dismiss: 'Dismiss',
+    },
+    recap: {
+      title: (week) => `Week ${week} recap`,
+      readBy: (name) => `Read by ${name}`,
+      hi: (name) => (name ? `Hi ${name}. Here’s your week.` : 'Here’s your week.'),
+      spent: (amount) => `You spent ${amount} this week.`,
+      spentVsUsual: (amount, diff, less) =>
+        `You spent ${amount}, about ${diff} ${less ? 'less' : 'more'} than a usual week.`,
+      busyLine: (category, amount, count, weekday) =>
+        `${category} was the busy line: ${amount} across ${count} ${count === 1 ? 'entry' : 'entries'}, mostly ${weekday}.`,
+      income: (amount) => `${amount} came in.`,
+      goal: (name, pct) => `${name} is at ${pct}%.`,
+      habit: (name, streak) => `${name} is on ${streak} in a row.`,
+      closing: 'That’s the week. Hold the key if you want to dig in.',
+      cardSpent: (amount) => `${amount} spent this week.`,
+      cardSpentVsUsual: (amount, diff, less) =>
+        `${amount} spent, ${diff} ${less ? 'under' : 'over'} a usual week.`,
+      cardBusy: (category) => `${category} was the busy line.`,
+      spentLabel: 'Spent',
+      vsUsual: 'vs usual',
+      play: 'Play',
+      pause: 'Pause',
+      previousLine: 'Previous line',
+      nextLine: 'Next line',
+      speed: 'Reading speed',
+      holdToAsk: 'Hold to ask about this week',
+      askPrefix: (question) => `About my week: ${question}`,
+    },
+    entryDetail: {
+      title: (code) => `Entry #${code}`,
+      view: 'View entry',
+      edit: 'Edit',
+      ask: 'Ask',
+      askAbout: 'Ask about this',
+      askQuestion: (name) => `How much have I spent at ${name} this year?`,
+      charged: 'Charged',
+      received: 'Received',
+      currency: 'Currency',
+      recurring: 'Recurring',
+      yes: 'Yes',
+      total: 'Total',
+      budget: 'Budget',
+      swipeToTear: 'Swipe to tear off',
+      delete: 'Delete entry',
+      tapAgain: 'Tap again to tear off',
+      deleting: 'Tearing off…',
+      deleteError: 'Couldn’t delete that. Please try again.',
+    },
+    goalDetail: {
+      title: 'Goal',
+      edit: 'Edit',
+      target: (amount) => `Target ${amount}`,
+      toGo: (amount) => `${amount} to go`,
+      weeksAt: (weeks, amount) => `≈ ${weeks} week${weeks !== 1 ? 's' : ''} at ${amount}`,
+      notePace: (perWeek, deadline) => `To land by ${deadline}, put away about ${perWeek} a week.`,
+      noteNoDeadline: 'No deadline yet. Add one and Truffle works out the weekly amount.',
+      noteDone: 'Goal reached. Lovely work.',
+      deposits: 'Deposits',
+      noDeposits: 'Nothing saved yet. Your first deposit prints here.',
+      deposit: 'Deposit',
+      withdrawal: 'Withdrawn',
+      addDeposit: 'Add deposit',
+      withdraw: 'Withdraw',
+      available: (amount) => `${amount} available`,
+      confirmDeposit: (amount) => `Save ${amount}`,
+      confirmWithdraw: (amount) => `Withdraw ${amount}`,
+      saveChanges: 'Save changes',
+      error: 'Couldn’t update the goal. Please try again.',
+    },
+    habitDetail: {
+      title: 'Habit',
+      edit: 'Edit',
+      save: 'Save habit',
+      since: (date) => `Since ${date}`,
+      inARow: (period) => `${period}s in a row`,
+      totalSaved: 'Total saved',
+      history: 'Recent saves',
+      noHistory: 'No saves logged yet.',
+      week: (n) => `Week ${n}`,
+      logThis: (period, amount) => `Log this ${period} · ${amount}`,
+      loggedThis: (period) => `Logged this ${period}`,
+      icon: 'Habit icon',
+      name: 'Habit name',
+      amountPer: (period) => `Amount each ${period}`,
+      stop: 'Stop habit',
+      stopNote: 'Stopping keeps everything you’ve saved; it just stops the reminders and the streak.',
+      error: 'Couldn’t update the habit. Please try again.',
+    },
+    budgetEdit: {
+      title: 'Budget',
+      open: (category) => `Edit ${category} budget`,
+      ofLimit: (spent, limit) => `${spent} of ${limit}`,
+      monthlyLimit: 'Monthly limit',
+      decrease: 'Lower the limit',
+      increase: 'Raise the limit',
+      atLimit: (limit, pct) => `At ${limit} you’d be at ${pct}%`,
+      lastThree: 'Last 3 months',
+      soFar: (month) => `${month} so far`,
+      headsUpAt: 'Heads-up at',
+      save: (amount) => `Save ${amount} limit`,
+      error: 'Couldn’t save the limit. Please try again.',
     },
     nav: {
       home: 'Home',
@@ -595,6 +854,8 @@ export const translations: Record<Locale, Translations> = {
       more: '+ More',
       less: '− Less',
       printLog: (amount) => `Print · Log ${amount}`,
+      holdTalk: 'Hold talk',
+      backspace: 'Delete last digit',
       overBudget: (category, amount) => `${category} is over budget · this adds ${amount}`,
       nearBudget: (category, pct) => `${category} would be at ${pct}% of budget`,
       error: 'Couldn’t save that. Please try again.',
@@ -620,6 +881,8 @@ export const translations: Record<Locale, Translations> = {
       credit: '+ Credit',
       editAmount: 'Amount',
       editCategory: 'Category',
+      matchesFor: (query) => `Matches for “${query}”`,
+      noMatchesHint: 'Nothing here. Try another month, or ask Truffle out loud.',
     },
     csvImport: {
       title: 'Import',
@@ -652,6 +915,11 @@ export const translations: Record<Locale, Translations> = {
       skipped: 'Not selected',
       couldntRead: 'Import · couldn’t read file',
       nothingImported: 'Nothing was imported.',
+      skip: 'Skip',
+      mapColumn: (header) => `Truffle field for column ${header}`,
+      needFields: (fields) => `Map ${fields} to continue`,
+      dup: 'already logged',
+      duplicatesSkipped: 'Duplicates skipped',
     },
     receiptUpload: {
       title: 'Scan',
@@ -681,6 +949,12 @@ export const translations: Record<Locale, Translations> = {
       errorTitle: 'Scan · couldn’t read',
       shutter: 'Take photo',
       files: 'Files',
+      torch: 'Torch',
+      mode: 'Scan type',
+      receipt: 'Receipt',
+      pdf: 'PDF',
+      lineUp: 'Hold steady · line it up in the frame',
+      startingCamera: 'Starting the camera…',
     },
     weeklySummary: {
       title: 'Weekly summary',
@@ -758,6 +1032,10 @@ export const translations: Record<Locale, Translations> = {
       monthly: 'Monthly',
       subsEmpty: 'I’ll spot subscriptions after the second time they’re charged.',
       severity: { high: 'Check soon', medium: 'Worth a look', low: 'FYI' },
+      itsMine: 'It’s mine',
+      notMe: 'Not me',
+      notMePrompt: (label, amount) =>
+        `I don’t recognise the ${amount ? `${amount} ` : ''}charge at ${label}. What should I do?`,
       anomalyTypes: {
         unusual_amount: 'Unusual amount',
         forgotten_subscription: 'Forgotten subscription',
@@ -847,6 +1125,9 @@ export const translations: Record<Locale, Translations> = {
       soundOff: 'Sound off',
       notice: 'Notice',
       tallying: 'Tallying',
+      notices: 'Notices',
+      newCount: (n) => `${n} new`,
+      speaking: (name) => `${name} · speaking`,
     },
     proposals: {
       goal: {

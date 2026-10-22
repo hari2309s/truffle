@@ -12,6 +12,8 @@ import { LanguagePicker } from './LanguagePicker'
 import { VoicePicker } from './VoicePicker'
 import { CurrencyPicker } from './CurrencyPicker'
 import { LeaderRow, Rule } from './Tally'
+import { exportToCSV } from '@/lib/exportCsv'
+import type { Transaction } from '@truffle/types'
 import { supabase } from '@/lib/supabase'
 
 interface SettingsSheetProps {
@@ -28,6 +30,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [showDelete, setShowDelete] = useState(false)
+  const [showExport, setShowExport] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
 
@@ -91,6 +94,19 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleExportCsv = async () => {
+    setIsExporting(true)
+    try {
+      const res = await fetch('/api/transactions')
+      const json = await res.json()
+      exportToCSV(
+        ((json.transactions ?? []) as Transaction[]).map((tx) => ({ ...tx, amount: Number(tx.amount) }))
+      )
     } finally {
       setIsExporting(false)
     }
@@ -185,10 +201,10 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
 
         <button
           type="button"
-          onClick={handleExport}
-          disabled={isExporting}
+          onClick={() => setShowExport((v) => !v)}
+          aria-expanded={showExport}
           aria-describedby="export-desc"
-          className="min-h-11 flex items-center text-left disabled:opacity-60"
+          className="min-h-11 flex items-center text-left"
         >
           <LeaderRow
             className="flex-1"
@@ -196,6 +212,26 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
             right={isExporting ? t.settings.preparing : t.settings.exportFormat}
           />
         </button>
+        {showExport && (
+          <div className="grid grid-cols-2 gap-2 print-in">
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={isExporting}
+              className="key key-plain key-3 h-11 text-xs uppercase"
+            >
+              {t.settings.exportCsv}
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={isExporting}
+              className="key key-plain key-3 h-11 text-xs uppercase"
+            >
+              {t.settings.exportJson}
+            </button>
+          </div>
+        )}
         <p id="export-desc" className="sr-only">
           {t.settings.downloadDataDesc}
         </p>

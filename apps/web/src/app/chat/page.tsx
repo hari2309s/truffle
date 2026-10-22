@@ -34,10 +34,11 @@ export default function Chat() {
   useEffect(() => {
     if (!userId) return
 
-    // Load history
+    // Load history, then mark unread nudges read — in that order, so the
+    // notices slip still knows which ones are new on this visit.
     supabase
       .from('chat_messages')
-      .select('id, role, content, created_at, is_proactive')
+      .select('id, role, content, created_at, is_proactive, read_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(50)
@@ -51,19 +52,19 @@ export default function Chat() {
             metadata: {
               createdAt: row.created_at as string,
               proactive: Boolean(row.is_proactive),
+              unread: Boolean(row.is_proactive) && !row.read_at,
             },
           }))
         )
-      })
 
-    // Mark all unread proactive messages as read
-    supabase
-      .from('chat_messages')
-      .update({ read_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .eq('is_proactive', true)
-      .is('read_at', null)
-      .then(() => {})
+        void supabase
+          .from('chat_messages')
+          .update({ read_at: new Date().toISOString() })
+          .eq('user_id', userId)
+          .eq('is_proactive', true)
+          .is('read_at', null)
+          .then(() => {})
+      })
   }, [userId])
 
   // Wait for both auth and history before mounting ChatPage so useChat

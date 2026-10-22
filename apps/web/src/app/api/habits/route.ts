@@ -41,10 +41,14 @@ export async function GET(request: NextRequest) {
 
     const contribMap: Record<string, string[]> = {}
     const totalMap: Record<string, number> = {}
+    // Newest first (query order) — the habit view lists the most recent few.
+    const historyMap: Record<string, { period: string; amount: number }[]> = {}
     for (const c of contributions ?? []) {
       if (!contribMap[c.habit_id]) contribMap[c.habit_id] = []
       contribMap[c.habit_id]!.push(c.period)
       totalMap[c.habit_id] = (totalMap[c.habit_id] ?? 0) + Number(c.amount)
+      const history = (historyMap[c.habit_id] ??= [])
+      if (history.length < 8) history.push({ period: c.period, amount: Number(c.amount) })
     }
 
     const habitsWithStats = habits.map((h) => {
@@ -63,6 +67,7 @@ export async function GET(request: NextRequest) {
         streak: computeStreak(frequency, periods),
         currentPeriodLogged: periods.includes(currentPeriod),
         totalSaved: totalMap[h.id] ?? 0,
+        history: historyMap[h.id] ?? [],
       }
     })
 
@@ -153,7 +158,10 @@ export async function PATCH(request: NextRequest) {
     if (errorResponse) return errorResponse
     const userId = user.id
 
-    const { habitId, period, amount, currency = 'EUR' } = await request.json()
+    const body = await request.json()
+    if (body?.action === 'edit') return await editHabit(userId, body)
+
+    const { habitId, period, amount, currency = 'EUR' } = body
     if (
       typeof habitId !== 'string' ||
       !habitId ||
@@ -303,5 +311,85 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('PATCH habits error:', error)
     return NextResponse.json({ error: 'Failed to log contribution' }, { status: 500 })
+  }
+}
+
+/** PATCH { action: 'edit', habitId, name?, amount?, emoji? } */
+async function editHabit(userId: string, body: Record<string, unknown>) {
+  const { habitId, name, amount, emoji } = body
+  if (typeof habitId !== 'string' || !habitId) {
+    return NextResponse.json({ error: 'habitId required' }, { status: 400 })
+  }
+  const update: Record<string, unknown> = {}
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim() || name.length > 200) {
+      return NextResponse.json(
+        { error: 'name must be a non-empty string under 200 characters' },
+        { status: 400 }
+      )
+    }
+    update.name = name.trim()
+  }
+  if (amount !== undefined) {
+    if (typeof amount !== 'number' || amount <= 0 || !isFinite(amount) || amount > 1_000_000) {
+      return NextResponse.json(
+        { error: 'amount must be a positive finite number up to 1,000,000' },
+        { status: 400 }
+      )
+    }
+    update.amount = amount
+  }
+  if (emoji !== undefined) {
+    if (typeof emoji !== 'string' || !emoji || emoji.length > 20) {
+      return NextResponse.json(
+        { error: 'emoji must be a string under 20 characters' },
+        { status: 400 }
+      )
+    }
+    update.emoji = emoji
+  }
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+  }
+
+  const db = createServerClient()
+  const { data, error } = await db
+    .from('savings_habits')
+    .update(update)
+    .eq('id', habitId)
+    .eq('user_id', userId)
+    .select()
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return NextResponse.json({ error: 'Habit not found' }, { status: 404 })
+  return NextResponse.json({ habit: data })
+}
+
+/**
+ * Stops a habit. Soft delete (is_active = false) so past contributions and
+ * their savings transactions stay intact.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const { user, errorResponse } = await requireUser(request)
+    if (errorResponse) return errorResponse
+
+    const habitId = request.nextUrl.searchParams.get('habitId')
+    if (!habitId) return NextResponse.json({ error: 'habitId required' }, { status: 400 })
+
+    const db = createServerClient()
+    const { data, error } = await db
+      .from('savings_habits')
+      .update({ is_active: false })
+      .eq('id', habitId)
+      .eq('user_id', user.id)
+      .select('id')
+      .maybeSingle()
+    if (error) throw error
+    if (!data) return NextResponse.json({ error: 'Habit not found' }, { status: 404 })
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('DELETE habits error:', error)
+    return NextResponse.json({ error: 'Failed to stop habit' }, { status: 500 })
   }
 }
