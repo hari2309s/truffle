@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
-import { streamText, tool, convertToModelMessages, type UIMessage } from 'ai'
+import { streamText, tool, convertToModelMessages, isToolUIPart, type UIMessage } from 'ai'
+import { normalizeHistory } from '@/lib/chatHistory'
 import { z } from 'zod'
 import { startObservation, propagateAttributes } from '@langfuse/tracing'
 import {
@@ -372,21 +373,7 @@ export async function POST(request: NextRequest) {
         locale,
       })
 
-      // Keep only text parts on assistant history and strip any leaked
-      // <function=…> XML. Tool parts are resolved locally on the client and
-      // never replayed to the server, so the model never sees a stale tool call.
-      const normalizedMessages: UIMessage[] = clientMessages.map((m) => {
-        if (m.role !== 'assistant') return m
-        const parts = (m.parts ?? [])
-          .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-          .map((p) => ({
-            ...p,
-            // Bounded to avoid polynomial backtracking on adversarial input —
-            // real tool-call bodies never approach this length.
-            text: p.text.replace(/<function=[^>]*>[\s\S]{0,5000}?<\/function>/g, '').trim(),
-          }))
-        return { ...m, parts }
-      })
+      const normalizedMessages = normalizeHistory(clientMessages)
 
       // If the previous assistant message was asking for a goal amount (mid-collection
       // flow), the user's reply (e.g. "20000 euros") won't match goal_setting keywords.
@@ -481,11 +468,10 @@ export async function POST(request: NextRequest) {
 
       const candidates = await candidatesPromise
 
-      // Drop assistant messages that had only tool calls (empty content after stripping
-      // toolInvocations). These are meaningless in history and some providers reject
+      // Drop assistant messages left with nothing — some providers reject
       // empty-content assistant messages, causing a 500 on follow-up turns.
       const filteredMessages = normalizedMessages.filter(
-        (m) => !(m.role === 'assistant' && !textOf(m).trim())
+        (m) => !(m.role === 'assistant' && !textOf(m).trim() && !m.parts.some(isToolUIPart))
       )
 
       // Bound history to prevent token bloat on long conversations.

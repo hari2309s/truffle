@@ -348,7 +348,10 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
                     part.state === 'output-available' &&
                     (part.output as { confirmed?: boolean } | undefined)?.confirmed
 
-                  if (isPending(part.state)) {
+                  // While the call is still streaming its input is partial (or
+                  // missing) — the card waits for the complete, validated input.
+                  if (part.state === 'input-streaming') return null
+                  if (part.state === 'input-available') {
                     const PendingCard = renderer.PendingCard
                     return (
                       <PendingCard
