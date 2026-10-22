@@ -573,6 +573,8 @@ export interface Translations {
       proposed: string
       created: string
       deadline: string
+      /** Said aloud when the user accepts the card. */
+      spoken: (name: string, amount: string) => string
     }
     transaction: {
       logThis: string
@@ -582,6 +584,7 @@ export interface Translations {
       error: string
       proposed: string
       logged: string
+      spoken: (description: string, amount: string, isIncome: boolean) => string
     }
     habit: {
       weeklyLabel: string
@@ -593,7 +596,14 @@ export interface Translations {
       error: string
       proposed: string
       started: string
+      spoken: (name: string, amount: string, period: string) => string
     }
+    /** Said aloud when the user turns a card down. */
+    declinedSpoken: string
+    /** Said aloud when a confirmed entry is kept on the phone until it's back online. */
+    queuedSpoken: string
+    /** Shown when the model's card couldn't be built. */
+    cardFailed: string
   }
 }
 
@@ -1225,6 +1235,7 @@ export const translations: Record<Locale, Translations> = {
         proposed: 'Proposed goal',
         created: 'Goal created',
         deadline: 'By',
+        spoken: (name, amount) => `Done. ${name} is on your goals, aiming for ${amount}.`,
       },
       transaction: {
         logThis: 'Log this transaction?',
@@ -1234,6 +1245,8 @@ export const translations: Record<Locale, Translations> = {
         error: 'Something went wrong — please try again.',
         proposed: 'Proposed entry',
         logged: 'Logged',
+        spoken: (description, amount, isIncome) =>
+          isIncome ? `Logged ${amount} in from ${description}.` : `Logged. ${description}, ${amount}.`,
       },
       habit: {
         weeklyLabel: 'Weekly saving habit',
@@ -1245,7 +1258,11 @@ export const translations: Record<Locale, Translations> = {
         error: 'Something went wrong — please try again.',
         proposed: 'Proposed habit',
         started: 'Habit started',
+        spoken: (name, amount, period) => `${name} is set. ${amount} every ${period}.`,
       },
+      declinedSpoken: 'No problem, I’ve left it out.',
+      queuedSpoken: 'You’re offline, so I’ve kept that on this phone. It’ll log when you’re back online.',
+      cardFailed: 'I couldn’t put that card together. Try saying it once more.',
     },
   },
 }

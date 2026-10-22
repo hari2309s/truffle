@@ -46,6 +46,8 @@ interface ProposalToolEntry<Args> {
     ctx: ProposalRenderCtx,
     output?: { queued?: boolean }
   ) => React.ReactNode
+  /** What Truffle says when the card is accepted — the model sends no words with a forced card. */
+  spoken: (args: Args, ctx: ProposalRenderCtx) => string
 }
 
 /** The "printed" slip a confirmed proposal leaves behind in the conversation. */
@@ -87,6 +89,8 @@ const PROPOSAL_TOOLS: Record<string, ProposalToolEntry<any>> = {
         right={formatAmount(Number(args.targetAmount))}
       />
     ),
+    spoken: (args, { t, formatAmount }) =>
+      t.proposals.goal.spoken(args.name, formatAmount(Number(args.targetAmount))),
   },
   proposeTransaction: {
     PendingCard: TransactionProposalCard,
@@ -99,6 +103,8 @@ const PROPOSAL_TOOLS: Record<string, ProposalToolEntry<any>> = {
         right={`${args.amount < 0 ? MINUS : '+'}${formatAmount(args.amount)}`}
       />
     ),
+    spoken: (args, { t, formatAmount }) =>
+      t.proposals.transaction.spoken(args.description, formatAmount(args.amount), args.amount > 0),
   },
   proposeHabit: {
     PendingCard: HabitProposalCard,
@@ -114,6 +120,12 @@ const PROPOSAL_TOOLS: Record<string, ProposalToolEntry<any>> = {
         />
       )
     },
+    spoken: (args, { t, formatAmount }) =>
+      t.proposals.habit.spoken(
+        args.name,
+        formatAmount(Number(args.amount)),
+        args.frequency === 'weekly' ? t.savingsHabits.periodWeek : t.savingsHabits.periodMonth
+      ),
   },
 }
 
@@ -351,6 +363,11 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
                   // While the call is still streaming its input is partial (or
                   // missing) — the card waits for the complete, validated input.
                   if (part.state === 'input-streaming') return null
+                  if (part.state === 'output-error') {
+                    return (
+                      <NoticeSlip key={part.toolCallId} tone="warning" title={t.proposals.cardFailed} />
+                    )
+                  }
                   if (part.state === 'input-available') {
                     const PendingCard = renderer.PendingCard
                     return (
@@ -358,9 +375,16 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
                         key={part.toolCallId}
                         proposal={part.input}
                         userId={userId}
-                        onResult={(c, queued) =>
+                        onResult={(c, queued) => {
                           resolveTool(part.toolCallId, { confirmed: c, queued })
-                        }
+                          chat.say(
+                            !c
+                              ? t.proposals.declinedSpoken
+                              : queued
+                                ? t.proposals.queuedSpoken
+                                : renderer.spoken(part.input, { t, formatAmount })
+                          )
+                        }}
                       />
                     )
                   }

@@ -54,6 +54,7 @@ describe('csv parsing details', () => {
     expect(parseAmount('1.234,56')).toBe(1234.56)
     expect(parseAmount('12,50')).toBe(12.5)
     expect(parseAmount('-€20.00')).toBe(-20)
+    expect(parseAmount('€100.00')).toBe(100) // a chat tool's amount, as GPT-OSS sometimes sends it
     expect(parseAmount('(45.00)')).toBe(-45)
     expect(parseAmount('1,234')).toBe(1234)
     expect(parseAmount('')).toBeNaN()

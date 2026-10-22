@@ -121,12 +121,21 @@ export function useFinancialChat(
 
   const isLoading = chat.status === 'submitted' || chat.status === 'streaming'
 
+  /** Say something that isn't a model reply (e.g. a card's confirmation), unless muted. */
+  const say = useCallback(
+    (text: string) => {
+      if (!isMutedRef.current) speak(text)
+    },
+    [speak]
+  )
+
   return {
     ...chat,
     messageText,
     sendText,
     isLoading,
     isSpeaking,
+    say,
     cancelSpeech: cancel,
     startVoice,
     isMuted,
