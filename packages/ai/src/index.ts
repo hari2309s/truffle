@@ -14,7 +14,7 @@ export { chatModel, visionModel, groq, groqProviderOptions, groqChatProviderOpti
 export { langfuseSpanProcessor, langfuseClient, otelSdk } from './langfuse'
 export { getSpeechTone, getToneGuidance } from './toneDetection'
 export type { SpeechTone } from './toneDetection'
-export { buildSystemPrompt } from './chatSystemPrompt'
+export { buildSystemPrompt, type FinancialFacts } from './chatSystemPrompt'
 export { selectModel, selectModelCandidates, getModelId, routedGenerateText } from './router'
 export { logEval, incrementUsage, getGlobalUsage } from './eval'
 export type { Provider, TaskType, EvalLogEntry } from './types'

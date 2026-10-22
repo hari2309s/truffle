@@ -2,7 +2,7 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import { embedTransaction, upsertTransaction } from '@truffle/ai'
 import type { Transaction, Anomaly } from '@truffle/types'
-import { isMissingSchema, MIGRATION_NEEDED, recomputeSnapshot } from '@/lib/server-db'
+import { fetchTotals, isMissingSchema, MIGRATION_NEEDED, recomputeSnapshot } from '@/lib/server-db'
 import { sendAnomalyNudge, sendBudgetNudge } from '@/lib/proactive-nudge'
 import { CATEGORY_EMOJI } from '@/lib/categories'
 import { DEFAULT_ALERT_PCT, effectiveLimit, previousMonth } from '@/lib/budgets'
@@ -101,19 +101,7 @@ export async function GET(request: NextRequest) {
     }
 
     // All-time totals via SQL; null until the migration adds the function.
-    let totals: { balance: number; count: number } | null = null
-    const { data: totalRows, error: totalsError } = await db.rpc('transaction_totals', {
-      p_user_id: userId,
-    })
-    if (totalsError && !isMissingSchema(totalsError)) {
-      console.warn('transaction_totals failed (non-fatal):', totalsError.message)
-    }
-    const totalRow = (Array.isArray(totalRows) ? totalRows[0] : totalRows) as
-      | { balance: number | string; transaction_count: number | string }
-      | undefined
-    if (totalRow) {
-      totals = { balance: Number(totalRow.balance), count: Number(totalRow.transaction_count) }
-    }
+    const totals = await fetchTotals(db, userId)
 
     return NextResponse.json(
       { transactions: rows, from, hasOlder, totals },

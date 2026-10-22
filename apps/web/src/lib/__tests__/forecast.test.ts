@@ -115,6 +115,16 @@ describe('computeStatement', () => {
     expect(s.projectedClose).toBeCloseTo(3482.16 - 100) // €10/day × 10 days left
   })
 
+  it('reports income, spend and net for the month', () => {
+    const s = computeStatement(
+      [makeTx(3250, '2026-10-01'), makeTx(-1455.48, '2026-10-12'), makeTx(-500, '2026-09-30')],
+      today
+    )!
+    expect(s.incomeThisMonth).toBe(3250)
+    expect(s.spentThisMonth).toBe(1455.48)
+    expect(s.netThisMonth).toBeCloseTo(1794.52)
+  })
+
   it('returns null when nothing is logged this month', () => {
     expect(computeStatement([makeTx(-50, '2026-09-04')], today)).toBeNull()
   })

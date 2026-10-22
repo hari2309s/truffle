@@ -27,28 +27,92 @@ type HabitRow = {
 
 type BudgetRow = {
   category: unknown
+  /** This month's limit (including any rolled-over amount). */
   amount: unknown
   spentAmount: unknown // computed by caller — current month spend in that category
+  /** Computed by caller with the budget's own heads-up threshold. */
+  status?: 'over' | 'headsUp' | 'onTrack'
 }
 
 function buildBudgetContext(budgetRows: BudgetRow[] | null, fmt: (n: number) => string): string {
   const budgets = (budgetRows ?? []).slice(0, 12)
   if (!budgets.length) return ''
   return (
-    '\nMonthly budgets:\n' +
+    '\nMonthly budgets (spent this month / limit):\n' +
     budgets
       .map((b) => {
         const limit = b.amount as number
         const spent = b.spentAmount as number
         const pct = limit > 0 ? ((spent / limit) * 100).toFixed(0) : '0'
         const cat = sanitize(String(b.category).replace(/_/g, ' '))
-        const status =
-          spent > limit ? ' ⚠️ over budget' : spent / limit >= 0.8 ? ' (near limit)' : ''
+        const state =
+          b.status ?? (spent > limit ? 'over' : limit > 0 && spent / limit >= 0.8 ? 'headsUp' : 'onTrack')
+        const status = state === 'over' ? ', over budget' : state === 'headsUp' ? ', near limit' : ''
         return `- ${cat}: ${fmt(spent)} / ${fmt(limit)} (${pct}% used${status})`
       })
       .join('\n')
   )
 }
+
+/**
+ * The figures the assistant may state about the user's money, pre-formatted
+ * exactly as the app shows them. Computed by the caller from the same
+ * function as the Home statement card, so chat and Home always agree.
+ */
+export interface FinancialFacts {
+  month: string
+  income_this_month: string
+  spent_this_month: string
+  net_this_month: string
+  daily_rate: string
+  forecast_month_spend: string
+  days_remaining: number
+  /** Where the user ends the month at the current daily rate; null with nothing logged recently. */
+  projected_close: string | null
+  /** What projected_close is measured from. */
+  projected_close_basis: 'net_of_everything_logged' | 'net_this_month'
+  /** Net of every transaction the user has ever logged — not a bank balance. */
+  net_of_everything_logged: string | null
+  pace_vs_last_month: 'spending less than last month' | 'spending more than last month' | null
+  /** e.g. "Netflix: €13.99 a month". */
+  recurring: string[]
+}
+
+function buildFactsContext(f: FinancialFacts): string {
+  const lines = [
+    `month: ${f.month}`,
+    `income_this_month: ${f.income_this_month}`,
+    `spent_this_month: ${f.spent_this_month}`,
+    `net_this_month: ${f.net_this_month} (income minus spending this month)`,
+    `daily_rate: ${f.daily_rate} per day`,
+    `forecast_month_spend: ${f.forecast_month_spend} (total spending by month end at the daily rate)`,
+    `days_remaining: ${f.days_remaining}`,
+    f.projected_close
+      ? `projected_close: ${f.projected_close} (${
+          f.projected_close_basis === 'net_this_month'
+            ? 'net this month at month end'
+            : 'net of everything logged, at month end'
+        }, if spending continues at the daily rate)`
+      : 'projected_close: not available (not enough logged yet)',
+  ]
+  if (f.net_of_everything_logged) {
+    lines.push(`net_of_everything_logged: ${f.net_of_everything_logged} (all income minus all spending ever logged in Truffle)`)
+  }
+  if (f.pace_vs_last_month) lines.push(`pace_vs_last_month: ${f.pace_vs_last_month} at this point`)
+  lines.push(
+    f.recurring.length
+      ? `recurring: ${f.recurring.map((r) => sanitize(r, 80)).join('; ')}`
+      : 'recurring: none detected'
+  )
+  return `FINANCIAL FACTS — the only figures you may state about the user's money:\n${lines.map((l) => `- ${l}`).join('\n')}`
+}
+
+const FACT_RULES = `Rules for figures:
+- Only state amounts that appear in FINANCIAL FACTS, budgets, goals, habits, spending by category or the transaction list. Never calculate, estimate or invent a new total.
+- Quote every amount exactly as written, including cents (say "€1,794.52", not "about €1,800"). Never round, approximate or re-express a figure differently from how it is written.
+- A leading "−" means a negative amount: write it as "minus €120.00" so it reads aloud correctly.
+- Truffle does not know the user's bank or account balance. Never say or imply "in the bank", "in your account", "left in your account", "available", "your balance" or "balance". Income minus spending this month is "net this month". If net_of_everything_logged is given, call it "net of everything you've logged in Truffle" — never a bank balance.
+- If the user asks for something these figures don't cover (like their bank balance), say plainly that Truffle doesn't have it.`
 
 // Intents that need full transaction data
 const NEEDS_TRANSACTIONS: QueryIntent[] = [
@@ -201,41 +265,24 @@ function buildSpendByCategoryContext(
   )
 }
 
-function buildSnapshotContext(
+/**
+ * Earlier months the user asked about (from monthly summaries). The current
+ * month always comes from FINANCIAL FACTS instead, so the two can't disagree.
+ */
+function buildPastMonthsContext(
   snapshots: MonthlySnapshot[],
-  projectedBalance: number,
-  daysRemaining: number,
-  dailySpend: number,
   currentMonth: string,
   fmt: (n: number) => string
 ): string {
-  if (snapshots.length === 1) {
-    const s = snapshots[0]!
-    const isCurrentMonth = s.month === currentMonth
-    const projectionLine = isCurrentMonth
-      ? `\n- Projected end of month: ${fmt(projectedBalance)} (${daysRemaining} days remaining, spending ~${fmt(dailySpend)}/day)`
-      : ''
-    return `Monthly summary (${s.month}):
-- Income: ${fmt(s.totalIncome)}
-- Expenses: ${fmt(Math.abs(s.totalExpenses))}
-- Balance: ${fmt(s.balance)}${projectionLine}`
-  }
-
-  const totalIncome = snapshots.reduce((sum, s) => sum + s.totalIncome, 0)
-  const totalExpenses = snapshots.reduce((sum, s) => sum + Math.abs(s.totalExpenses), 0)
-  const totalBalance = snapshots.reduce((sum, s) => sum + s.balance, 0)
-
-  const lines = snapshots.map((s) => {
-    const projectionNote =
-      s.month === currentMonth
-        ? ` (projected end: ${fmt(projectedBalance)}, ${daysRemaining}d remaining)`
-        : ''
-    return `- ${s.month}: income ${fmt(s.totalIncome)}, expenses ${fmt(Math.abs(s.totalExpenses))}, balance ${fmt(s.balance)}${projectionNote}`
-  })
-
-  return `Monthly summary (${snapshots[0]!.month} – ${snapshots[snapshots.length - 1]!.month}):
-${lines.join('\n')}
-- Totals: income ${fmt(totalIncome)}, expenses ${fmt(totalExpenses)}, net balance ${fmt(totalBalance)}`
+  const past = snapshots.filter((s) => s.month !== currentMonth && (s.totalIncome || s.totalExpenses))
+  if (!past.length) return ''
+  const net = (s: MonthlySnapshot) => `${s.balance < 0 ? '−' : ''}${fmt(s.balance)}`
+  return (
+    '\nEarlier months (income, spending, net = income minus spending):\n' +
+    past
+      .map((s) => `- ${s.month}: income ${fmt(s.totalIncome)}, spending ${fmt(Math.abs(s.totalExpenses))}, net ${net(s)}`)
+      .join('\n')
+  )
 }
 
 export function buildSystemPrompt(params: {
@@ -250,9 +297,7 @@ export function buildSystemPrompt(params: {
   habitRows: HabitRow[] | null
   budgetRows: BudgetRow[] | null
   spendByCategory?: Record<string, number> | null
-  projectedBalance: number
-  daysRemaining: number
-  dailySpend: number
+  facts: FinancialFacts
   currencyCode?: string
   locale?: string
 }): string {
@@ -268,15 +313,20 @@ export function buildSystemPrompt(params: {
     habitRows,
     budgetRows,
     spendByCategory,
-    projectedBalance,
-    daysRemaining,
-    dailySpend,
+    facts,
     currencyCode = 'EUR',
   } = params
 
   const decimals = 2
   const symbol = currencyCode === 'GBP' ? '£' : currencyCode === 'USD' ? '$' : '€'
-  const fmt = (n: number) => `${symbol}${Math.abs(n).toFixed(decimals)}`
+  // Matches the app's own formatting ("€1,794.52") so quoted figures read the same.
+  const money = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
+  const fmt = (n: number) => money.format(Math.abs(n))
 
   const languageInstruction = ''
   // user_metadata.name is user-writable — sanitize like every other
@@ -298,14 +348,8 @@ Say hi back like a friend who's genuinely glad to hear from them — one or two 
   const habitReminderContext = buildHabitReminderContext(intent, pendingHabits)
   const budgetContext = buildBudgetContext(budgetRows, fmt)
   const toolRules = buildToolRules(intent)
-  const snapshotContext = buildSnapshotContext(
-    snapshots,
-    projectedBalance,
-    daysRemaining,
-    dailySpend,
-    currentMonth,
-    fmt
-  )
+  const factsContext = buildFactsContext(facts)
+  const pastMonthsContext = buildPastMonthsContext(snapshots, currentMonth, fmt)
   const categoryContext = buildSpendByCategoryContext(spendByCategory ?? null, fmt)
 
   return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a close friend who happens to be good with money, never a banker or a lecturer.${languageInstruction}${nameInstruction}
@@ -315,21 +359,24 @@ Voice: you're a familiar, friendly presence — someone who's genuinely glad the
 Tone guidance for this conversation: ${toneGuidance}
 ${transactionContext}${anomalyContext}${goalsContext}${habitsContext}${budgetContext}${habitReminderContext}
 
-${snapshotContext}${categoryContext}
+${factsContext}${pastMonthsContext}${categoryContext}
+
+${FACT_RULES}
 
 Intent detected: ${intent}
 
 Response guidelines:
-- Keep it short and spoken — usually 2 to 4 sentences, read aloud. Warmth matters more than completeness: pick the one or two numbers that tell the story and round them conversationally ("about ${symbol}1,200", not "${symbol}1199.50"). Don't recite every figure you were given.
+- Keep it short and spoken — usually 2 to 4 sentences, read aloud. Warmth matters more than completeness: pick the one or two figures that tell the story, quoted exactly as written. Don't recite every figure you were given.
 - What you say to the user is plain spoken words only — no emoji, asterisks, markdown, bullet points or lists (this does not apply to the emoji argument of a tool call)
 - Ground what you say in the real transaction data, but say it like a person, not a ledger.
 - Never lecture, shame, or pile on numbers. Celebrate wins like you mean it. When it's tight, be reassuring and human about it.
 - Don't hand out unsolicited tips or multi-point advice. One warm, encouraging closing thought is welcome; a to-do list is not.
-- If you cited specific amounts in a previous message this conversation, those are accurate — do not retract them. The monthly summary reflects only the current period; historical data lives in the transaction list above.
+- If an earlier message in this conversation gave a figure that differs from FINANCIAL FACTS, FINANCIAL FACTS is right — use it.
 
 Register to aim for:
-- Flat, avoid this: "You've brought in ${symbol}3,500 and spent ${symbol}1,199.50, leaving ${symbol}2,300.50. Projected end-of-month balance is ${symbol}98."
-- Warm, aim for this: "Honestly? You're in good shape. You've spent around ${symbol}1,200 of the ${symbol}3,500 that came in, and if the next couple of weeks look like the last few, you'll reach the end of the month with a little breathing room."
+- Flat, avoid this: "Income ${symbol}3,500.00. Spending ${symbol}1,199.50. Net ${symbol}2,300.50. Projected close ${symbol}98."
+- Wrong, never this: "You've got about ${symbol}2,300 left in the bank." (Truffle doesn't know their bank balance, and the figure is rounded.)
+- Warm, aim for this: "Honestly? You're in good shape. You've spent ${symbol}1,199.50 of the ${symbol}3,500.00 that came in, so you're ${symbol}2,300.50 net this month — and at this pace you'd close the month at ${symbol}98 net."
 
 ${toolRules}`
 }

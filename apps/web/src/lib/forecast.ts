@@ -50,8 +50,12 @@ export interface Statement {
    */
   balance: number
   balanceIsAllTime: boolean
+  /** Money in so far this calendar month (positive number). */
+  incomeThisMonth: number
   /** Money out so far this calendar month (positive number). */
   spentThisMonth: number
+  /** This month's income minus spend. */
+  netThisMonth: number
   /** Average spend per elapsed day this month (positive number). */
   dailyRate: number
   /** Spend projected for the whole month at the current daily rate. */
@@ -91,6 +95,7 @@ export function computeStatement(
 
   let balance = 0
   let spentThisMonth = 0
+  let incomeThisMonth = 0
   let spentLastMonthToDate = 0
   let hasLastMonth = false
   let hasThisMonth = false
@@ -101,6 +106,7 @@ export function computeStatement(
       hasThisMonth = true
       balance += amount
       if (amount < 0) spentThisMonth += -amount
+      else incomeThisMonth += amount
     }
     if (date.startsWith(prevMonth)) {
       hasLastMonth = true
@@ -117,7 +123,9 @@ export function computeStatement(
   return {
     balance: shownBalance,
     balanceIsAllTime: allTimeBalance !== null,
+    incomeThisMonth,
     spentThisMonth,
+    netThisMonth: balance,
     dailyRate,
     forecastMonthSpend: spentThisMonth + dailyRate * daysRemaining,
     projectedClose: shownBalance - dailyRate * daysRemaining,

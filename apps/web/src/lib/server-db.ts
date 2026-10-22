@@ -82,3 +82,54 @@ export const MIGRATION_NEEDED = {
   error: 'This needs a database update (supabase/migrations/20261022000001). Please apply it.',
   code: 'MIGRATION_REQUIRED',
 } as const
+
+/**
+ * Every transaction on or after `from` (YYYY-MM-DD), paging past PostgREST's
+ * 1,000-row response cap. Server-side reads (chat context) use this so their
+ * figures come from the same complete data the Home statement uses.
+ */
+export async function fetchTransactionsSince(
+  db: ReturnType<typeof createServerClient>,
+  userId: string,
+  from: string
+): Promise<{ amount: number; category: string; date: string; description: string; merchant: string | null; currency: string }[]> {
+  const PAGE = 1000
+  const rows: Record<string, unknown>[] = []
+  for (let page = 0; page < 20; page++) {
+    const { data, error } = await db
+      .from('transactions')
+      .select('amount, category, date, description, merchant, currency')
+      .eq('user_id', userId)
+      .gte('date', from)
+      .order('date', { ascending: false })
+      .order('id', { ascending: false })
+      .range(page * PAGE, page * PAGE + PAGE - 1)
+    if (error) throw error
+    rows.push(...((data ?? []) as Record<string, unknown>[]))
+    if ((data ?? []).length < PAGE) break
+  }
+  return rows.map((r) => ({
+    amount: Number(r.amount),
+    category: String(r.category),
+    date: String(r.date),
+    description: String(r.description ?? ''),
+    merchant: (r.merchant as string | null) ?? null,
+    currency: String(r.currency ?? 'EUR'),
+  }))
+}
+
+/** All-time net and count, or null before the totals function exists. */
+export async function fetchTotals(
+  db: ReturnType<typeof createServerClient>,
+  userId: string
+): Promise<{ balance: number; count: number } | null> {
+  const { data, error } = await db.rpc('transaction_totals', { p_user_id: userId })
+  if (error) {
+    if (!isMissingSchema(error)) console.warn('transaction_totals failed (non-fatal):', error.message)
+    return null
+  }
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { balance: number | string; transaction_count: number | string }
+    | undefined
+  return row ? { balance: Number(row.balance), count: Number(row.transaction_count) } : null
+}

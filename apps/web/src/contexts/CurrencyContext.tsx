@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useCallback, useMemo } from 'react'
 import { CURRENCY_SYMBOLS } from '@/lib/currency'
+import { formatMoney } from '@/lib/money'
 import { usePersistedPreference } from '@/hooks/usePersistedPreference'
 
 export type Currency = 'EUR' | 'GBP' | 'USD'
@@ -13,10 +14,7 @@ function isCurrency(value: unknown): value is Currency {
 }
 
 function formatWithCurrency(amount: number, currency: Currency): string {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency,
-  }).format(Math.abs(amount))
+  return formatMoney(amount, currency)
 }
 
 interface CurrencyContextValue {

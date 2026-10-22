@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { computeStatement } from '@/lib/forecast'
+import { formatMoney } from '@/lib/money'
 import { SkeletonPulse } from './PageMotion'
 import { LeaderRow, MINUS, Rule } from './Tally'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
@@ -27,14 +28,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
         : null,
     [data?.transactions, data?.totals, now]
   )
-  const formatWhole = useMemo(() => {
-    const f = new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    })
-    return (n: number) => f.format(Math.abs(n))
-  }, [currency])
+  const formatWhole = (n: number) => formatMoney(n, currency, { whole: true })
 
   const dateLocale = toDateLocale(locale)
   const stamp = `${now.toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short' })} · ${now.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}`

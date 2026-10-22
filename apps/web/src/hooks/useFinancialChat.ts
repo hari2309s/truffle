@@ -2,6 +2,7 @@
 
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
+import { localDate } from '@/lib/date'
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { useTextToSpeech, type SpeechTone } from './useTextToSpeech'
 import { supabase } from '@/lib/supabase'
@@ -56,7 +57,9 @@ export function useFinancialChat(
     messages: initialMessages,
     transport: new DefaultChatTransport({
       api: '/api/chat',
-      body: { userId, currency, locale },
+      // A function so each request carries today's date in the user's timezone
+      // — the server reads "this month" from it, exactly as the Home card does.
+      body: () => ({ userId, currency, locale, today: localDate() }),
     }),
     onError: (error) => {
       console.error('[useFinancialChat] stream error:', error, error?.message, error?.cause)

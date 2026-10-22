@@ -6,6 +6,24 @@ export function currentYearMonth(): string {
   return new Date().toISOString().slice(0, 7)
 }
 
+/** "YYYY-MM-DD" for a date in its own (local) timezone. */
+export function localDate(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * The user's "today" from a client-sent "YYYY-MM-DD", as local noon. Ignored
+ * unless it is within a day of the server's date (timezones span ±14h).
+ */
+export function userToday(sent: unknown, serverNow: Date = new Date()): Date {
+  if (typeof sent === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(sent)) {
+    const [y, m, d] = sent.split('-').map(Number)
+    const day = new Date(y!, m! - 1, d!, 12)
+    if (day.getDate() === d && Math.abs(day.getTime() - serverNow.getTime()) <= 36 * 3600 * 1000) return day
+  }
+  return serverNow
+}
+
 export function formatYearMonth(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`
 }

@@ -9,6 +9,7 @@ import {
   getSpeechTone,
   getToneGuidance,
   buildSystemPrompt,
+  type FinancialFacts,
   selectModelCandidates,
   groqChatProviderOptions,
   incrementUsage,
@@ -18,15 +19,23 @@ import { createServerClient as createDbClient } from '@truffle/db'
 import type { MonthlySnapshot, TransactionCategory, QueryIntent } from '@truffle/types'
 import { INTENT, TRANSACTION_CATEGORIES } from '@truffle/types'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
-import { currentYearMonth, parseDateRange } from '@/lib/date'
+import { localDate, parseDateRange, userToday } from '@/lib/date'
 import { requireUser } from '@/lib/supabase-server'
+import { fetchTotals, fetchTransactionsSince } from '@/lib/server-db'
+import { computeStatement } from '@/lib/forecast'
+import { formatMoney, formatSignedMoney } from '@/lib/money'
+import { budgetView, spendByCategory as categorySpend } from '@/lib/budgets'
+import { detectSubscriptions } from '@/lib/subscriptions'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
-function buildEmptySnapshot(): MonthlySnapshot {
+/** This month's transactions shown to the model for summaries and anomaly scans. */
+const MAX_MONTH_CONTEXT_ROWS = 150
+
+function buildEmptySnapshot(month: string): MonthlySnapshot {
   return {
-    month: currentYearMonth(),
+    month,
     totalIncome: 0,
     totalExpenses: 0,
     byCategory: {
@@ -88,9 +97,12 @@ export async function POST(request: NextRequest) {
 
     const {
       messages: clientMessages,
-      currency = 'EUR',
+      currency: requestedCurrency = 'EUR',
       locale = 'en',
-    } = (await request.json()) as { messages: UIMessage[]; currency?: string; locale?: string }
+      today,
+    } = (await request.json()) as { messages: UIMessage[]; currency?: string; locale?: string; today?: unknown }
+    // Client-supplied; only the currencies the app supports reach Intl.
+    const currency = ['EUR', 'GBP', 'USD'].includes(requestedCurrency) ? requestedCurrency : 'EUR'
 
     // v5 UIMessages carry text in `parts`, not a `content` string.
     const textOf = (m: UIMessage | undefined): string =>
@@ -123,10 +135,17 @@ export async function POST(request: NextRequest) {
 
     const db = createDbClient()
 
-    const currentMonth = currentYearMonth()
-    const dateRange = parseDateRange(message, new Date())
+    // The user's own date, so "this month" matches their Home card at month boundaries.
+    const now = userToday(today)
+    const currentMonth = localDate(now).slice(0, 7)
+    const dateRange = parseDateRange(message, now)
 
     // Run all independent queries in parallel — contributions depends on habit IDs so runs after
+    // Six months back: this month + last month for the statement and budget
+    // rollover, the rest so recurring charges can be detected.
+    const historyFrom = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+    const historyFromStr = `${historyFrom.getFullYear()}-${String(historyFrom.getMonth() + 1).padStart(2, '0')}-01`
+
     const [
       { data: txRows },
       { data: snapshotRows },
@@ -134,6 +153,8 @@ export async function POST(request: NextRequest) {
       { data: goalRows },
       { data: rawHabitRows },
       { data: rawBudgetRows },
+      recentRows,
+      totals,
     ] = await Promise.all([
       db
         .from('transactions')
@@ -167,7 +188,14 @@ export async function POST(request: NextRequest) {
         .eq('user_id', userId)
         .eq('is_active', true)
         .order('created_at', { ascending: true }),
-      db.from('monthly_budgets').select('category, amount').eq('user_id', userId),
+      // select('*') so rollover/alert_pct are used when the migration is applied.
+      db.from('monthly_budgets').select('*').eq('user_id', userId),
+      // Soft-fail like the reads above: the facts fall back to zeros.
+      fetchTransactionsSince(db, userId, historyFromStr).catch((err) => {
+        console.warn('[chat] history read failed:', err)
+        return []
+      }),
+      fetchTotals(db, userId),
     ])
 
     const transactions = ((txRows ?? []) as Record<string, unknown>[]).map((row) => ({
@@ -185,12 +213,45 @@ export async function POST(request: NextRequest) {
     const snapshots: MonthlySnapshot[] = ((snapshotRows ?? []) as Record<string, unknown>[])
       .map((row) => row.data as unknown as MonthlySnapshot)
       .filter(Boolean)
-    if (snapshots.length === 0) snapshots.push(buildEmptySnapshot())
+    if (snapshots.length === 0) snapshots.push(buildEmptySnapshot(currentMonth))
 
-    const currentMonthSnapshot =
-      snapshots.find((s) => s.month === currentMonth) ??
-      snapshots[snapshots.length - 1] ??
-      buildEmptySnapshot()
+    // ── This month's figures: the same function and data as the Home card ──
+    const statement = computeStatement(recentRows, now, totals?.balance ?? null)
+    const monthRows = recentRows.filter((tx) => tx.date.startsWith(currentMonth))
+    const money = (n: number) => formatMoney(n, currency)
+    const signed = (n: number, whole = false) => formatSignedMoney(n, currency, { whole })
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    const facts: FinancialFacts = {
+      month: now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+      income_this_month: money(statement?.incomeThisMonth ?? 0),
+      spent_this_month: money(statement?.spentThisMonth ?? 0),
+      net_this_month: signed(statement?.netThisMonth ?? 0),
+      daily_rate: money(statement?.dailyRate ?? 0),
+      forecast_month_spend: money(statement?.forecastMonthSpend ?? 0),
+      days_remaining: daysInMonth - now.getDate(),
+      // Whole units, exactly as the Home card prints "Projected close".
+      projected_close: statement ? signed(statement.projectedClose, true) : null,
+      projected_close_basis: totals ? 'net_of_everything_logged' : 'net_this_month',
+      net_of_everything_logged: totals ? signed(totals.balance) : null,
+      pace_vs_last_month:
+        statement?.pace === 'ahead'
+          ? 'spending less than last month'
+          : statement?.pace === 'behind'
+            ? 'spending more than last month'
+            : null,
+      recurring: detectSubscriptions(recentRows)
+        .slice(0, 8)
+        .map((sub) => `${sub.displayName}: ${money(sub.monthlyAmount)} a month`),
+    }
+
+    // Tone reads this month from the same figures (not a cached snapshot).
+    const currentMonthSnapshot: MonthlySnapshot = {
+      ...buildEmptySnapshot(currentMonth),
+      month: currentMonth,
+      totalIncome: statement?.incomeThisMonth ?? 0,
+      totalExpenses: -(statement?.spentThisMonth ?? 0),
+      balance: statement?.netThisMonth ?? 0,
+    }
 
     // Contributions query depends on habit IDs from the parallel batch above
     const habitIds = (rawHabitRows ?? []).map((h: Record<string, unknown>) => h.id as string)
@@ -226,18 +287,23 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Compute current-month spend per category for budget context
-    const spendByCategory: Record<string, number> = {}
-    for (const tx of transactions) {
-      if (tx.amount < 0 && tx.date.startsWith(currentMonth)) {
-        spendByCategory[tx.category] = (spendByCategory[tx.category] ?? 0) + Math.abs(tx.amount)
-      }
-    }
-    const budgetRows = (rawBudgetRows ?? []).map((b: Record<string, unknown>) => ({
-      category: b.category,
-      amount: b.amount,
-      spentAmount: spendByCategory[b.category as string] ?? 0,
-    }))
+    // Current-month spend per category, from the complete month (not just
+    // the latest transactions), and budgets as the Insights page shows them.
+    const spendByCategory = categorySpend(recentRows, currentMonth)
+    const budgetRows = (rawBudgetRows ?? []).map((b: Record<string, unknown>) => {
+      const view = budgetView(
+        {
+          amount: Number(b.amount),
+          category: String(b.category),
+          rollover: b.rollover as boolean | undefined,
+          alertPct: b.alert_pct === undefined ? undefined : (b.alert_pct as number | null),
+          createdAt: b.created_at as string | undefined,
+        },
+        recentRows,
+        now
+      )
+      return { category: b.category, amount: view.limit, spentAmount: view.spent, status: view.status }
+    })
 
     return await propagateAttributes({ userId }, async () => {
       // Langfuse trace for the full request
@@ -269,21 +335,13 @@ export async function POST(request: NextRequest) {
       // For spending_summary, also use full month data for accurate totals.
       const needsFullMonth = intent === INTENT.ANOMALY_REVIEW || intent === INTENT.SPENDING_SUMMARY
       const contextTransactions = needsFullMonth
-        ? transactions.filter((tx) => tx.date.startsWith(currentMonth))
+        ? monthRows
+            // Newest first; totals live in FINANCIAL FACTS, so a cap loses no accuracy.
+            .slice(0, MAX_MONTH_CONTEXT_ROWS)
+            .map((tx) => ({ ...tx, category: tx.category as TransactionCategory }))
         : filteredRelevant.length > 0
           ? filteredRelevant
           : transactions
-
-      // Compute forecast numbers for affordability / forecast intents
-      const today = new Date()
-      const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-      const daysElapsed = today.getDate()
-      const daysRemaining = daysInMonth - daysElapsed
-      const dailySpend =
-        daysElapsed > 0 && currentMonthSnapshot.totalExpenses < 0
-          ? Math.abs(currentMonthSnapshot.totalExpenses) / daysElapsed
-          : 0
-      const projectedBalance = currentMonthSnapshot.balance - dailySpend * daysRemaining
 
       const speechTone = getSpeechTone(currentMonthSnapshot)
       const toneGuidance = getToneGuidance(currentMonthSnapshot)
@@ -308,9 +366,7 @@ export async function POST(request: NextRequest) {
         habitRows,
         budgetRows,
         spendByCategory,
-        projectedBalance,
-        daysRemaining,
-        dailySpend,
+        facts,
         currencyCode: currency,
         locale,
       })

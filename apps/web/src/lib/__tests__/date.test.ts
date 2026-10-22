@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatYearMonth, parseDateRange } from '../date'
+import { formatYearMonth, localDate, parseDateRange, userToday } from '../date'
 
 const MAY_2026 = new Date('2026-05-21T12:00:00Z')
 const JAN_2026 = new Date('2026-01-15T12:00:00Z')
@@ -154,5 +154,20 @@ describe('parseDateRange', () => {
         explicit: true,
       })
     })
+  })
+})
+
+describe('userToday', () => {
+  const server = new Date(2026, 9, 31, 23, 30)
+
+  it("uses the user's date when it is within a day of the server's", () => {
+    expect(localDate(userToday('2026-11-01', server))).toBe('2026-11-01')
+    expect(localDate(userToday('2026-10-30', server))).toBe('2026-10-30')
+  })
+
+  it('falls back to the server date for missing, malformed or far-off dates', () => {
+    for (const sent of [undefined, 42, '2026-11-1', '2026-02-30', '2027-01-01']) {
+      expect(userToday(sent, server)).toBe(server)
+    }
   })
 })
