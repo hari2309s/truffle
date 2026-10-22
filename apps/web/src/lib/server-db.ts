@@ -1,5 +1,6 @@
 import { createServerClient } from '@truffle/db'
 import { currentYearMonth } from './date'
+import type { RecurringOverride, RecurringOverrides } from './recurring'
 
 /**
  * Recomputes the monthly snapshot for a given user from the transactions table.
@@ -74,7 +75,9 @@ export function isMissingSchema(error: { code?: string; message?: string } | nul
     error.code === '42703' || // undefined_column
     error.code === '42883' || // undefined_function
     error.code === 'PGRST204' || // column not in schema cache
-    error.code === 'PGRST202' // function not in schema cache
+    error.code === 'PGRST202' || // function not in schema cache
+    error.code === '42P01' || // undefined_table
+    error.code === 'PGRST205' // table not in schema cache
   )
 }
 
@@ -82,6 +85,31 @@ export const MIGRATION_NEEDED = {
   error: 'This needs a database update (supabase/migrations/20261022000001). Please apply it.',
   code: 'MIGRATION_REQUIRED',
 } as const
+
+export const RECURRING_MIGRATION_NEEDED = {
+  error: 'This needs a database update (supabase/migrations/20261022000002). Please apply it.',
+  code: 'MIGRATION_REQUIRED',
+} as const
+
+/** The user's recurring-payment corrections; {} before the migration is applied. */
+export async function fetchRecurringOverrides(
+  db: ReturnType<typeof createServerClient>,
+  userId: string
+): Promise<{ overrides: RecurringOverrides; available: boolean }> {
+  const { data, error } = await db
+    .from('recurring_overrides')
+    .select('item_key, choice')
+    .eq('user_id', userId)
+  if (error) {
+    if (isMissingSchema(error)) return { overrides: {}, available: false }
+    throw error
+  }
+  const overrides: RecurringOverrides = {}
+  for (const row of (data ?? []) as { item_key: string; choice: RecurringOverride }[]) {
+    overrides[row.item_key] = row.choice
+  }
+  return { overrides, available: true }
+}
 
 /**
  * Every transaction on or after `from` (YYYY-MM-DD), paging past PostgREST's

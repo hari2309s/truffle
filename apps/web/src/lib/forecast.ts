@@ -52,15 +52,20 @@ export interface Statement {
   balanceIsAllTime: boolean
   /** Money in so far this calendar month (positive number). */
   incomeThisMonth: number
-  /** Money out so far this calendar month (positive number). */
+  /** Spending so far this calendar month (positive) — not money moved to savings. */
   spentThisMonth: number
-  /** This month's income minus spend. */
+  /**
+   * Moved to savings and investments this month (category 'savings'), net of
+   * anything taken back out — negative when more came out than went in.
+   */
+  savedThisMonth: number
+  /** This month's income minus everything out, spending and savings alike. */
   netThisMonth: number
-  /** Average spend per elapsed day this month (positive number). */
+  /** Average spending per elapsed day this month — savings don't count. */
   dailyRate: number
   /** Spend projected for the whole month at the current daily rate. */
   forecastMonthSpend: number
-  /** This month's income minus projected spend — where the month closes. */
+  /** Income − projected spend − saved: where the month closes. */
   projectedClose: number
   /** Last day of the current month (for the "Projected spend · 31 Oct" line). */
   monthEnd: Date
@@ -81,7 +86,7 @@ export interface Statement {
  * tests can pin the calendar.
  */
 export function computeStatement(
-  transactions: { amount: number | string; date: string }[],
+  transactions: { amount: number | string; date: string; category?: string }[],
   today: Date = new Date(),
   allTimeBalance: number | null = null
 ): Statement | null {
@@ -98,6 +103,7 @@ export function computeStatement(
 
   let balance = 0
   let spentThisMonth = 0
+  let savedThisMonth = 0
   let incomeThisMonth = 0
   let spentLastMonthToDate = 0
   let hasLastMonth = false
@@ -108,12 +114,18 @@ export function computeStatement(
     if (date.startsWith(thisMonth)) {
       hasThisMonth = true
       balance += amount
-      if (amount < 0) spentThisMonth += -amount
+      // Savings and investment transfers stay yours: they're out of the
+      // month's money but not spending, so they don't drive the daily rate.
+      // A goal withdrawal (positive, 'savings') is money back from savings, not income.
+      if (tx.category === 'savings') savedThisMonth -= amount
+      else if (amount < 0) spentThisMonth += -amount
       else incomeThisMonth += amount
     }
     if (date.startsWith(prevMonth)) {
       hasLastMonth = true
-      if (amount < 0 && Number(date.slice(8, 10)) <= dayOfMonth) spentLastMonthToDate += -amount
+      if (amount < 0 && tx.category !== 'savings' && Number(date.slice(8, 10)) <= dayOfMonth) {
+        spentLastMonthToDate += -amount
+      }
     }
   }
 
@@ -129,10 +141,11 @@ export function computeStatement(
     balanceIsAllTime: allTimeBalance !== null,
     incomeThisMonth,
     spentThisMonth,
+    savedThisMonth,
     netThisMonth: balance,
     dailyRate,
     forecastMonthSpend,
-    projectedClose: incomeThisMonth - forecastMonthSpend,
+    projectedClose: incomeThisMonth - forecastMonthSpend - savedThisMonth,
     monthEnd: new Date(y, m, daysInMonth),
     pace: !hasLastMonth ? null : Math.abs(paceGap) < 1 ? 'even' : paceGap < 0 ? 'ahead' : 'behind',
     paceDelta: hasLastMonth ? Math.abs(paceGap) : 0,

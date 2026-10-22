@@ -112,6 +112,8 @@ export interface Translations {
     forecastAfter: string
     projectedClose: string
     projectedCloseHow: string
+    savedThisMonth: string
+    projectedCloseHowSaved: string
     paceAhead: (amount: string, month: string) => string
     paceBehind: (amount: string, month: string) => string
     paceEven: (month: string) => string
@@ -438,8 +440,6 @@ export interface Translations {
     savingsGoals: string
     newGoal: string
     savingHabits: string
-    recurringSubscriptions: string
-    lastCharged: string
     detected: (months: number) => string
     thingsToReview: string
     noUnusualActivity: string
@@ -464,8 +464,26 @@ export interface Translations {
       sub: { code: string; title: string; heading: string }
     }
     newItem: string
-    monthly: string
     subsEmpty: string
+    recurring: {
+      total: string
+      confirmedOnly: string
+      groups: Record<'fixed' | 'investing' | 'subscriptions' | 'other', string>
+      last: (date: string) => string
+      every: Record<'week' | 'fortnight' | 'month' | 'quarter', (amount: string) => string>
+      possible: string
+      change: string
+      changeFor: (name: string) => string
+      moveTo: (group: string) => string
+      confirm: string
+      notRecurring: string
+      reset: string
+      hiddenCount: (n: number) => string
+      show: string
+      hide: string
+      restore: string
+      error: string
+    }
     severity: { high: string; medium: string; low: string }
     itsMine: string
     notMe: string
@@ -743,6 +761,8 @@ export const translations: Record<Locale, Translations> = {
       forecastAfter: 'after 3 days',
       projectedClose: 'Projected close',
       projectedCloseHow: 'Income − projected spend',
+      savedThisMonth: 'Saved & invested',
+      projectedCloseHowSaved: 'Income − projected spend − saved',
       paceAhead: (amount, month) => `Spent ${amount} less than by this point in ${month}. Nicely done.`,
       paceBehind: (amount, month) =>
         `Spent ${amount} more than by this point in ${month}. Plenty of month left to ease off.`,
@@ -1107,8 +1127,6 @@ export const translations: Record<Locale, Translations> = {
       savingsGoals: 'Savings Goals',
       newGoal: '+ New goal',
       savingHabits: 'Saving Habits',
-      recurringSubscriptions: 'Recurring Subscriptions',
-      lastCharged: 'Last charged',
       detected: (months) => `detected ${months} month${months !== 1 ? 's' : ''}`,
       thingsToReview: 'Things to Review',
       noUnusualActivity: 'No unusual activity detected',
@@ -1130,11 +1148,39 @@ export const translations: Record<Locale, Translations> = {
         bud: { code: 'Bud', title: 'Budgets', heading: 'Budgets' },
         goal: { code: 'Goal', title: 'Savings goals', heading: 'Savings' },
         hab: { code: 'Hab', title: 'Saving habits', heading: 'Habits' },
-        sub: { code: 'Sub', title: 'Recurring subscriptions', heading: 'Recurring' },
+        sub: { code: 'Rec', title: 'Recurring payments', heading: 'Recurring' },
       },
       newItem: '+ New',
-      monthly: 'Monthly',
-      subsEmpty: 'I’ll spot subscriptions after the second time they’re charged.',
+      subsEmpty: 'I’ll spot recurring payments after the second time they’re charged.',
+      recurring: {
+        total: 'Monthly recurring',
+        confirmedOnly: 'Counts confirmed items only — “possibly recurring” ones aren’t in the totals.',
+        groups: {
+          fixed: 'Fixed costs',
+          investing: 'Investing & savings plans',
+          subscriptions: 'Subscriptions',
+          other: 'Other',
+        },
+        last: (date) => `last ${date}`,
+        every: {
+          week: (amount) => `${amount} every week`,
+          fortnight: (amount) => `${amount} every two weeks`,
+          month: (amount) => `${amount} every month`,
+          quarter: (amount) => `${amount} every quarter`,
+        },
+        possible: 'possibly recurring',
+        change: 'Change',
+        changeFor: (name) => `Change how ${name} is counted`,
+        moveTo: (group) => `→ ${group}`,
+        confirm: '✓ Yes, it recurs',
+        notRecurring: 'Not recurring',
+        reset: 'Undo my change',
+        hiddenCount: (n) => `Not recurring (${n})`,
+        show: 'Show',
+        hide: 'Hide',
+        restore: 'Restore',
+        error: 'Couldn’t save that. Please try again.',
+      },
       severity: { high: 'Check soon', medium: 'Worth a look', low: 'FYI' },
       itsMine: 'It’s mine',
       notMe: 'Not me',

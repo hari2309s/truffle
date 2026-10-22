@@ -83,15 +83,6 @@ export interface SavingsGoal {
   createdAt: string
 }
 
-export interface DetectedSubscription {
-  key: string // normalised merchant/description
-  displayName: string
-  monthlyAmount: number
-  currency: 'EUR' | 'GBP' | 'USD'
-  lastCharged: string // ISO date
-  monthsDetected: number
-}
-
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'

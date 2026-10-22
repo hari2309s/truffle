@@ -98,6 +98,9 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
       <Rule className="mt-1.5" />
       <LeaderRow strong left={t.dashboard.incomeThisMonth} right={formatAmount(statement.incomeThisMonth)} />
       <LeaderRow strong left={t.dashboard.spentThisMonth} right={formatAmount(statement.spentThisMonth)} />
+      {statement.savedThisMonth !== 0 && (
+        <LeaderRow strong left={t.dashboard.savedThisMonth} right={signed(statement.savedThisMonth)} />
+      )}
       <LeaderRow
         strong
         left={t.dashboard.dailyRate}
@@ -116,7 +119,9 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
           <span>{t.dashboard.projectedClose}</span>
           <span>{signed(statement.projectedClose)}</span>
         </div>
-        <span className="text-[11px] text-truffle-text2 uppercase">{t.dashboard.projectedCloseHow}</span>
+        <span className="text-[11px] text-truffle-text2 uppercase">
+          {statement.savedThisMonth !== 0 ? t.dashboard.projectedCloseHowSaved : t.dashboard.projectedCloseHow}
+        </span>
       </div>
       <p className="font-grotesk text-sm text-truffle-text2">{paceNote}</p>
     </section>

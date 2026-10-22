@@ -5,6 +5,7 @@ import { buildSystemPrompt, type FinancialFacts } from '../chatSystemPrompt'
 const facts: FinancialFacts = {
   month: 'October 2026',
   income_this_month: '€3,250.00',
+  saved_this_month: '€0.00',
   spent_this_month: '€1,455.48',
   net_this_month: '€1,794.52',
   daily_rate: '€69.31',

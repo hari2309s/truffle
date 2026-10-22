@@ -63,17 +63,19 @@ export interface FinancialFacts {
   month: string
   income_this_month: string
   spent_this_month: string
+  /** Moved to savings/investments this month — not spending. */
+  saved_this_month: string
   net_this_month: string
   daily_rate: string
   forecast_month_spend: string
   days_remaining: number
-  /** Income this month − forecast_month_spend; null with nothing logged this month. */
+  /** Income this month − forecast_month_spend − saved_this_month; null with nothing logged this month. */
   projected_close: string | null
   /** Net of every transaction the user has ever logged — not a bank balance. */
   net_of_everything_logged: string | null
   /** e.g. "spent €140.12 less than by this point last month". */
   pace_vs_last_month: string | null
-  /** e.g. "Netflix: €13.99 a month". */
+  /** e.g. "Netflix (subscription): €13.99 a month" — confirmed items only. */
   recurring: string[]
 }
 
@@ -81,13 +83,14 @@ function buildFactsContext(f: FinancialFacts): string {
   const lines = [
     `month: ${f.month}`,
     `income_this_month: ${f.income_this_month}`,
-    `spent_this_month: ${f.spent_this_month}`,
-    `net_this_month: ${f.net_this_month} (income minus spending this month)`,
+    `spent_this_month: ${f.spent_this_month} (spending only — savings and investment transfers are not spending)`,
+    `saved_this_month: ${f.saved_this_month} (moved to savings and investments, net of withdrawals — still the user's money)`,
+    `net_this_month: ${f.net_this_month} (income minus spending and savings this month)`,
     `daily_rate: ${f.daily_rate} per day`,
     `forecast_month_spend: ${f.forecast_month_spend} (total spending by month end at the daily rate)`,
     `days_remaining: ${f.days_remaining}`,
     f.projected_close
-      ? `projected_close: ${f.projected_close} (income_this_month minus forecast_month_spend — where this month closes if spending continues at the daily rate)`
+      ? `projected_close: ${f.projected_close} (income_this_month minus forecast_month_spend minus saved_this_month — where this month closes if spending continues at the daily rate)`
       : 'projected_close: not available (not enough logged yet)',
   ]
   if (f.net_of_everything_logged) {
@@ -96,7 +99,7 @@ function buildFactsContext(f: FinancialFacts): string {
   if (f.pace_vs_last_month) lines.push(`pace_vs_last_month: ${f.pace_vs_last_month}`)
   lines.push(
     f.recurring.length
-      ? `recurring: ${f.recurring.map((r) => sanitize(r, 80)).join('; ')}`
+      ? `recurring: ${f.recurring.map((r) => sanitize(r, 160)).join('; ')}`
       : 'recurring: none detected'
   )
   return `FINANCIAL FACTS — the only figures you may state about the user's money:\n${lines.map((l) => `- ${l}`).join('\n')}`

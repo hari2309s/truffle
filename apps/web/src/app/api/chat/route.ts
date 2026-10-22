@@ -22,14 +22,22 @@ import { INTENT } from '@truffle/types'
 import { getCurrentPeriod, computeStreak } from '@/lib/habits'
 import { localDate, parseDateRange, userToday } from '@/lib/date'
 import { requireUser } from '@/lib/supabase-server'
-import { fetchTotals, fetchTransactionsSince } from '@/lib/server-db'
+import { fetchTotals, fetchTransactionsSince, fetchRecurringOverrides } from '@/lib/server-db'
 import { computeStatement } from '@/lib/forecast'
 import { formatMoney, formatSignedMoney } from '@/lib/money'
 import { budgetView, spendByCategory as categorySpend } from '@/lib/budgets'
-import { detectSubscriptions } from '@/lib/subscriptions'
+import { detectRecurring, recurringSince, type RecurringGroup } from '@/lib/recurring'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
+
+/** How chat names each recurring group — rent is a fixed cost, never "a subscription". */
+const RECURRING_GROUP_LABEL: Record<RecurringGroup, string> = {
+  fixed: 'fixed cost',
+  investing: 'investing or savings plan',
+  subscriptions: 'subscription',
+  other: 'other recurring',
+}
 
 /** This month's transactions shown to the model for summaries and anomaly scans. */
 const MAX_MONTH_CONTEXT_ROWS = 150
@@ -142,10 +150,10 @@ export async function POST(request: NextRequest) {
     const dateRange = parseDateRange(message, now)
 
     // Run all independent queries in parallel — contributions depends on habit IDs so runs after
-    // Six months back: this month + last month for the statement and budget
+    // Twelve months back: this month + last month for the statement and budget
     // rollover, the rest so recurring charges can be detected.
-    const historyFrom = new Date(now.getFullYear(), now.getMonth() - 5, 1)
-    const historyFromStr = `${historyFrom.getFullYear()}-${String(historyFrom.getMonth() + 1).padStart(2, '0')}-01`
+    // The recurring detector's own window, so chat and Insights find the same items.
+    const historyFromStr = recurringSince(now)
 
     const [
       { data: txRows },
@@ -156,6 +164,7 @@ export async function POST(request: NextRequest) {
       { data: rawBudgetRows },
       recentRows,
       totals,
+      { overrides: recurringOverrides },
     ] = await Promise.all([
       db
         .from('transactions')
@@ -197,6 +206,7 @@ export async function POST(request: NextRequest) {
         return []
       }),
       fetchTotals(db, userId),
+      fetchRecurringOverrides(db, userId).catch(() => ({ overrides: {}, available: false })),
     ])
 
     const transactions = ((txRows ?? []) as Record<string, unknown>[]).map((row) => ({
@@ -226,6 +236,7 @@ export async function POST(request: NextRequest) {
       month: now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
       income_this_month: money(statement?.incomeThisMonth ?? 0),
       spent_this_month: money(statement?.spentThisMonth ?? 0),
+      saved_this_month: signed(statement?.savedThisMonth ?? 0),
       net_this_month: signed(statement?.netThisMonth ?? 0),
       daily_rate: money(statement?.dailyRate ?? 0),
       forecast_month_spend: money(statement?.forecastMonthSpend ?? 0),
@@ -241,9 +252,18 @@ export async function POST(request: NextRequest) {
             : statement?.pace === 'even'
               ? 'right in line with last month so far'
               : null,
-      recurring: detectSubscriptions(recentRows)
-        .slice(0, 8)
-        .map((sub) => `${sub.displayName}: ${money(sub.monthlyAmount)} a month`),
+      // Same detection and the user's corrections as the Recurring section;
+      // only confirmed items, with their group so rent is never "a subscription".
+      recurring: detectRecurring(recentRows, now, recurringOverrides)
+        .filter((item) => !item.hidden && item.confidence === 'high')
+        .slice(0, 12)
+        .map((item) => {
+          const cost =
+            item.every && item.every !== 'month'
+              ? `${money(item.perCharge)} every ${item.every} (${money(item.monthlyAmount)} a month)`
+              : `${money(item.monthlyAmount)} a month`
+          return `${item.displayName} (${RECURRING_GROUP_LABEL[item.group]}): ${cost}`
+        }),
     }
 
     // Tone reads this month from the same figures (not a cached snapshot).

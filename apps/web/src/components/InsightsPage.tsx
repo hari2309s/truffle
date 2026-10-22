@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { setChatHandoff } from '@/lib/chatHandoff'
 import type { Anomaly, Transaction } from '@truffle/types'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
-import { detectSubscriptions } from '@/lib/subscriptions'
+import { RecurringSection } from './RecurringSection'
 import { PageEnter, SkeletonPulse } from './PageMotion'
 import { SavingsGoalsEmbedded } from './SavingsGoals'
 import { SavingsHabits } from './SavingsHabits'
@@ -66,7 +66,6 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
   const transactions = txData?.transactions ?? []
   const anomalies = anomalyData ?? []
-  const subscriptions = txData?.transactions ? detectSubscriptions(txData.transactions) : []
 
   // Scroll-spy: the active code is the last section whose top has passed
   // just below the sticky code bar.
@@ -202,33 +201,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
               <Rule className="mt-2" />
               <Section code="sub" title={t.insights.sections.sub.heading}>
-                {subscriptions.length > 0 ? (
-                  <>
-                    {subscriptions.map((sub) => (
-                      <LeaderRow
-                        key={sub.key}
-                        left={
-                          <span>
-                            {sub.displayName}
-                            <span className="block text-[11px] text-truffle-text2">
-                              {t.insights.detected(sub.monthsDetected)}
-                            </span>
-                          </span>
-                        }
-                        right={<SubscriptionAmount amount={sub.monthlyAmount} />}
-                      />
-                    ))}
-                    <Rule />
-                    <div className="flex justify-between font-bold text-[15px] uppercase">
-                      <span>{t.insights.monthly}</span>
-                      <SubscriptionAmount
-                        amount={subscriptions.reduce((s, sub) => s + sub.monthlyAmount, 0)}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <p className="font-grotesk text-sm text-truffle-text2">{t.insights.subsEmpty}</p>
-                )}
+                <RecurringSection userId={userId} transactions={transactions} />
               </Section>
             </div>
           </ErrorBoundary>
@@ -240,10 +213,6 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   )
 }
 
-function SubscriptionAmount({ amount }: { amount: number }) {
-  const { formatAmount } = useCurrency()
-  return <span>{formatAmount(amount)}</span>
-}
 
 function Section({
   code,
