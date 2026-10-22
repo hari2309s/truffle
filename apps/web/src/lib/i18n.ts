@@ -210,8 +210,10 @@ export interface Translations {
     edit: string
     target: (amount: string) => string
     toGo: (amount: string) => string
-    weeksAt: (weeks: number, amount: string) => string
-    notePace: (perWeek: string, deadline: string) => string
+    perMonth: (amount: string) => string
+    notePace: (perMonth: string, deadline: string) => string
+    noteBehind: (shortBy: string, perMonth: string, deadline: string) => string
+    noteOverdue: string
     noteNoDeadline: string
     noteDone: string
     deposits: string
@@ -232,7 +234,10 @@ export interface Translations {
     save: string
     since: (date: string) => string
     inARow: (period: string) => string
+    rule: (amount: string, period: string) => string
+    boxesCaption: (period: string) => string
     totalSaved: string
+    selfReported: string
     history: string
     noHistory: string
     week: (n: number) => string
@@ -475,8 +480,11 @@ export interface Translations {
     newGoal: string
     cancel: string
     noGoals: string
-    deadlinePassed: string
     daysLeft: (days: number) => string
+    perMonth: (amount: string) => string
+    statusOnTrack: string
+    statusBehind: (amount: string) => string
+    statusOverdue: string
     complete: string
     addFunds: string
     add: string
@@ -498,6 +506,9 @@ export interface Translations {
     periodWeek: string
     periodMonth: string
     totalSaved: (amount: string) => string
+    rule: (amount: string, period: string) => string
+    lastN: (n: number, period: string) => string
+    boxLabel: (period: string, logged: boolean) => string
     done: string
     log: string
     frequencyWeekly: string
@@ -838,9 +849,12 @@ export const translations: Record<Locale, Translations> = {
       edit: 'Edit',
       target: (amount) => `Target ${amount}`,
       toGo: (amount) => `${amount} to go`,
-      weeksAt: (weeks, amount) => `≈ ${weeks} week${weeks !== 1 ? 's' : ''} at ${amount}`,
-      notePace: (perWeek, deadline) => `To land by ${deadline}, put away about ${perWeek} a week.`,
-      noteNoDeadline: 'No deadline yet. Add one and Truffle works out the weekly amount.',
+      perMonth: (amount) => `${amount}/month to hit target`,
+      notePace: (perMonth, deadline) => `On pace. Put away ${perMonth} a month to land it by ${deadline}.`,
+      noteBehind: (shortBy, perMonth, deadline) =>
+        `${shortBy} behind an even pace. ${perMonth} a month from now still lands it by ${deadline}.`,
+      noteOverdue: 'The date has passed. Pick a new one and Truffle works out the monthly amount again.',
+      noteNoDeadline: 'No deadline yet. Add one and Truffle works out the monthly amount.',
       noteDone: 'Goal reached. Lovely work.',
       deposits: 'Deposits',
       noDeposits: 'Nothing saved yet. Your first deposit prints here.',
@@ -860,7 +874,10 @@ export const translations: Record<Locale, Translations> = {
       save: 'Save habit',
       since: (date) => `Since ${date}`,
       inARow: (period) => `${period}s in a row`,
-      totalSaved: 'Total saved',
+      rule: (amount, period) => `Put ${amount} aside each ${period}, then log it here.`,
+      boxesCaption: (period) => `Each box is a ${period}, filled when you logged it.`,
+      totalSaved: 'Logged so far',
+      selfReported: 'What you’ve logged. Truffle doesn’t check it against your spending.',
       history: 'Recent saves',
       noHistory: 'No saves logged yet.',
       week: (n) => `Week ${n}`,
@@ -1135,8 +1152,11 @@ export const translations: Record<Locale, Translations> = {
       newGoal: '+ New goal',
       cancel: 'Cancel',
       noGoals: 'No goals yet — set one to start saving towards something',
-      deadlinePassed: 'deadline passed',
       daysLeft: (days) => `${days}d left`,
+      perMonth: (amount) => `${amount}/month to hit target`,
+      statusOnTrack: 'On track',
+      statusBehind: (amount) => `Behind by ${amount}`,
+      statusOverdue: 'Deadline passed',
       complete: 'Complete!',
       addFunds: '+ Add funds',
       add: 'Add',
@@ -1157,7 +1177,10 @@ export const translations: Record<Locale, Translations> = {
       noHabits: 'No saving habits yet. Start one here, or ask Truffle to set one up.',
       periodWeek: 'week',
       periodMonth: 'month',
-      totalSaved: (amount) => `${amount} total saved`,
+      totalSaved: (amount) => `${amount} logged so far · self-reported`,
+      rule: (amount, period) => `${amount} every ${period} · you log it`,
+      lastN: (n, period) => `Last ${n} ${period}s`,
+      boxLabel: (period, logged) => `${period}: ${logged ? 'logged' : 'not logged'}`,
       done: 'Done',
       log: '+ Log',
       frequencyWeekly: 'Weekly',

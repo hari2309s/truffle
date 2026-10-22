@@ -1,6 +1,8 @@
 'use client'
 
 import { DEFAULT_GOAL_EMOJI, EmojiField } from './EmojiField'
+import { GoalStatus } from './GoalStatus'
+import { goalPlan } from '@/lib/goalPlan'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SkeletonPulse } from './PageMotion'
@@ -202,12 +204,9 @@ function GoalRow({
   const [depositAmount, setDepositAmount] = useState('')
 
   const progress = Math.min(100, (goal.savedAmount / goal.targetAmount) * 100)
-  const remaining = Math.max(0, goal.targetAmount - goal.savedAmount)
-  const done = goal.savedAmount >= goal.targetAmount
-
-  const daysLeft = goal.deadline
-    ? Math.ceil((new Date(goal.deadline).getTime() - Date.now()) / 86_400_000)
-    : null
+  const plan = goalPlan(goal)
+  const { remaining, daysLeft } = plan
+  const done = plan.status === 'reached'
 
   return (
     <div
@@ -252,9 +251,9 @@ function GoalRow({
       <span className="text-[11px] text-truffle-text2">
         {t.savingsGoals.ofTarget(formatAmount(goal.savedAmount), formatAmount(goal.targetAmount))}
         {done && <b className="text-truffle-positive uppercase"> · ● {t.savingsGoals.complete}</b>}
-        {!done && daysLeft !== null && daysLeft > 0 && ` · ${t.savingsGoals.daysLeft(daysLeft)}`}
-        {!done && daysLeft !== null && daysLeft <= 0 && ` · ${t.savingsGoals.deadlinePassed}`}
+        {!done && daysLeft !== null && daysLeft >= 0 && ` · ${t.savingsGoals.daysLeft(daysLeft)}`}
       </span>
+      <GoalStatus plan={plan} />
 
       <AnimatePresence>
         {isConfirmingDelete && (

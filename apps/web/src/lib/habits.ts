@@ -41,6 +41,13 @@ export function previousPeriod(frequency: 'weekly' | 'monthly', current: string)
   return getCurrentPeriod('weekly', prevMonday)
 }
 
+/** The last `n` periods, oldest first, ending with the current one. */
+export function recentPeriods(frequency: 'weekly' | 'monthly', n: number, date = new Date()): string[] {
+  const periods = [getCurrentPeriod(frequency, date)]
+  while (periods.length < n) periods.unshift(previousPeriod(frequency, periods[0]!))
+  return periods
+}
+
 /**
  * Compute streak: number of consecutive periods (including current if logged)
  * going back from the most recent logged period.
@@ -58,4 +65,12 @@ export function computeStreak(frequency: 'weekly' | 'monthly', loggedPeriods: st
     check = previousPeriod(frequency, check)
   }
   return streak
+}
+
+/** "2026-W42" → weekLabel(42), "2026-10" → "Oct 2026". */
+export function periodName(period: string, weekLabel: (n: number) => string, dateLocale: string): string {
+  const week = period.match(/-W(\d+)$/)
+  if (week) return weekLabel(Number(week[1]))
+  const [y, m] = period.split('-').map(Number)
+  return new Date(y!, (m ?? 1) - 1, 1).toLocaleDateString(dateLocale, { month: 'short', year: 'numeric' })
 }

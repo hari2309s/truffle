@@ -339,7 +339,9 @@ async function applyDemoData(userId) {
     .from('savings_habits')
     .insert({
       user_id: userId,
-      name: 'No-spend weekdays',
+      // A plain "put €25 aside weekly" habit — the app has no no-spend tracking,
+      // so a name like "No-spend weekdays" implied a rule it doesn't measure.
+      name: 'Weekly top-up',
       amount: 25,
       frequency: 'weekly',
       emoji: '🌱',

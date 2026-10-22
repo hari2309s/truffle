@@ -9,13 +9,14 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
 import { LeaderRow, MINUS, Rule, Sheet } from './Tally'
-
-const WEEK = 7 * 86_400_000
+import { GoalStatus } from './GoalStatus'
+import { goalPlan } from '@/lib/goalPlan'
+import { parseLocalDay } from '@/lib/toolArgs'
 
 type Mode = 'view' | 'deposit' | 'withdraw' | 'edit'
 
 /**
- * One savings goal: progress, the weekly pace to the deadline, deposit
+ * One savings goal: progress, status and the monthly amount to the deadline, deposit
  * history, and deposit / withdraw / edit / delete.
  */
 export function GoalDetailSheet({
@@ -45,9 +46,10 @@ export function GoalDetailSheet({
 
   const g = t.goalDetail
   const dateLocale = toDateLocale(locale)
-  const remaining = Math.max(0, goal.targetAmount - goal.savedAmount)
+  const plan = goalPlan(goal)
+  const { remaining } = plan
   const pct = goal.targetAmount > 0 ? Math.min(100, (goal.savedAmount / goal.targetAmount) * 100) : 0
-  const done = goal.savedAmount >= goal.targetAmount
+  const done = plan.status === 'reached'
   const filled = Math.floor(pct / 10)
 
   // Deposits/withdrawals the goals API records, linked by goal_id. Before the
@@ -64,19 +66,21 @@ export function GoalDetailSheet({
     [txData, goal.id, goal.name]
   )
 
-  const weeksLeft = goal.deadline
-    ? Math.max(1, Math.ceil((new Date(goal.deadline).getTime() - Date.now()) / WEEK))
-    : null
-  const perWeek = weeksLeft ? remaining / weeksLeft : null
   const deadlineLabel = goal.deadline
-    ? new Date(goal.deadline).toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' })
+    ? parseLocalDay(goal.deadline).toLocaleDateString(dateLocale, { day: 'numeric', month: 'long', year: 'numeric' })
     : null
+  const perMonth = plan.perMonth !== null ? formatAmount(plan.perMonth) : ''
 
-  const note = done
-    ? g.noteDone
-    : weeksLeft && perWeek !== null && deadlineLabel
-      ? g.notePace(formatAmount(perWeek), deadlineLabel)
-      : g.noteNoDeadline
+  const note =
+    plan.status === 'reached'
+      ? g.noteDone
+      : plan.status === 'overdue'
+        ? g.noteOverdue
+        : plan.status === 'behind' && deadlineLabel
+          ? g.noteBehind(formatAmount(plan.shortBy), perMonth, deadlineLabel)
+          : plan.status === 'onTrack' && deadlineLabel
+            ? g.notePace(perMonth, deadlineLabel)
+            : g.noteNoDeadline
 
   const invalidate = () =>
     Promise.all([
@@ -336,12 +340,10 @@ export function GoalDetailSheet({
                 />
               ))}
             </div>
-            <div className="flex justify-between gap-3 text-xs text-truffle-text2 uppercase">
-              <span>{done ? `● ${t.savingsGoals.complete}` : g.toGo(formatAmount(remaining))}</span>
-              {perWeek !== null && weeksLeft && !done && (
-                <span>{g.weeksAt(weeksLeft, formatAmount(perWeek))}</span>
-              )}
-            </div>
+            <span className="text-xs text-truffle-text2 uppercase">
+              {done ? `● ${t.savingsGoals.complete}` : g.toGo(formatAmount(remaining))}
+            </span>
+            <GoalStatus plan={plan} />
           </div>
 
           <p className="mx-4 mt-3.5 mb-0 py-3 px-3.5 bg-truffle-surface font-grotesk text-[15px] leading-[1.45]">

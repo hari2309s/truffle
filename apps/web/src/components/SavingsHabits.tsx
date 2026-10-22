@@ -4,7 +4,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useHabitsQuery } from '@/hooks/useHabitsQuery'
-import { getCurrentPeriod } from '@/lib/habits'
+import { getCurrentPeriod, periodName, recentPeriods } from '@/lib/habits'
+import { toDateLocale } from '@/lib/date'
 import { staggerItemVariants, staggerListVariants } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
 import { LeaderRow } from './Tally'
@@ -131,7 +132,8 @@ export function SavingsHabits({ userId }: SavingsHabitsProps) {
   )
 }
 
-const STREAK_DOTS = 8
+/** How many recent periods the row's boxes show. */
+const RECENT_PERIODS = 8
 
 function HabitRow({
   habit,
@@ -144,11 +146,13 @@ function HabitRow({
   onLog: () => void
   onOpen: () => void
 }) {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
   const { formatAmount } = useCurrency()
   const periodLabel =
     habit.frequency === 'weekly' ? t.savingsHabits.periodWeek : t.savingsHabits.periodMonth
-  const lit = Math.min(habit.streak, STREAK_DOTS)
+  // One box per recent period, oldest first — filled when that period was logged.
+  const logged = new Set((habit.history ?? []).map((c) => c.period))
+  const periods = recentPeriods(habit.frequency, RECENT_PERIODS)
 
   return (
     <div className="flex flex-col gap-[5px]">
@@ -162,14 +166,19 @@ function HabitRow({
           right={<b aria-label={t.savingsHabits.streak(habit.streak)}>×{habit.streak} →</b>}
         />
       </button>
+      <span className="text-[11px] text-truffle-text2">
+        {t.savingsHabits.rule(formatAmount(habit.amount), periodLabel)}
+      </span>
       <div className="flex items-center gap-[3px]">
-        {Array.from({ length: STREAK_DOTS }, (_, i) => (
-          <div
-            key={i}
-            aria-hidden
-            className={`w-[18px] h-[18px] border-2 ${i < lit ? 'bg-truffle-accent border-truffle-accent' : 'border-truffle-border'}`}
-          />
-        ))}
+        <span role="img" aria-label={t.savingsHabits.lastN(RECENT_PERIODS, periodLabel)} className="flex gap-[3px]">
+          {periods.map((p) => (
+            <span
+              key={p}
+              title={t.savingsHabits.boxLabel(periodName(p, t.habitDetail.week, toDateLocale(locale)), logged.has(p))}
+              className={`w-[18px] h-[18px] border-2 ${logged.has(p) ? 'bg-truffle-accent border-truffle-accent' : 'border-truffle-border'}`}
+            />
+          ))}
+        </span>
         <span className="ml-auto">
           {habit.currentPeriodLogged ? (
             <span className="text-[11px] font-bold uppercase text-truffle-positive">
@@ -188,7 +197,7 @@ function HabitRow({
         </span>
       </div>
       <span className="text-[11px] text-truffle-text2">
-        {formatAmount(habit.amount)}/{periodLabel} ·{' '}
+        {t.savingsHabits.lastN(RECENT_PERIODS, periodLabel)} ·{' '}
         {t.savingsHabits.totalSaved(formatAmount(habit.totalSaved))}
       </span>
     </div>

@@ -4,21 +4,14 @@ import { DEFAULT_HABIT_EMOJI, EmojiField } from './EmojiField'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { HabitWithStats } from '@truffle/types'
-import { getCurrentPeriod } from '@/lib/habits'
+import { getCurrentPeriod, periodName, recentPeriods } from '@/lib/habits'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
 import { LeaderRow, Rule, Sheet } from './Tally'
 
-const STREAK_DOTS = 8
-
-/** "2026-W42" → "Week 42", "2026-10" → "Oct 2026". */
-function periodLabel(period: string, weekLabel: (n: number) => string, dateLocale: string) {
-  const week = period.match(/-W(\d+)$/)
-  if (week) return weekLabel(Number(week[1]))
-  const [y, m] = period.split('-').map(Number)
-  return new Date(y!, (m ?? 1) - 1, 1).toLocaleDateString(dateLocale, { month: 'short', year: 'numeric' })
-}
+/** How many recent periods the boxes show. */
+const RECENT_PERIODS = 8
 
 /** One saving habit: streak, history, log, edit, stop. */
 export function HabitDetailSheet({
@@ -42,7 +35,8 @@ export function HabitDetailSheet({
   const h = t.habitDetail
   const dateLocale = toDateLocale(locale)
   const period = habit.frequency === 'weekly' ? t.savingsHabits.periodWeek : t.savingsHabits.periodMonth
-  const lit = Math.min(habit.streak, STREAK_DOTS)
+  const logged = new Set((habit.history ?? []).map((c) => c.period))
+  const periods = recentPeriods(habit.frequency, RECENT_PERIODS)
 
   const call = async (init: RequestInit & { url?: string }) => {
     setBusy(true)
@@ -197,6 +191,7 @@ export function HabitDetailSheet({
                 new Date(habit.createdAt).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })
               )}
             </span>
+            <p className="m-0 font-grotesk text-sm text-truffle-text2">{h.rule(formatAmount(habit.amount), period)}</p>
           </div>
 
           <div className="paper print-in mx-4 mt-4 p-[18px] flex flex-col gap-3 border-t-[6px] border-truffle-accent">
@@ -204,19 +199,26 @@ export function HabitDetailSheet({
               <span className="text-[40px] font-bold leading-none">×{habit.streak}</span>
               <span className="text-xs font-bold uppercase text-truffle-text2">{h.inARow(period)}</span>
             </div>
-            <div aria-hidden className="flex gap-[3px]">
-              {Array.from({ length: STREAK_DOTS }, (_, i) => (
-                <div
-                  key={i}
-                  className={`flex-1 h-[18px] border-2 ${i < lit ? 'bg-truffle-accent border-truffle-accent' : 'border-truffle-border'}`}
+            <span className="text-[11px] font-bold uppercase text-truffle-text2">
+              {t.savingsHabits.lastN(RECENT_PERIODS, period)}
+            </span>
+            <ul className="m-0 p-0 list-none flex gap-[3px]">
+              {periods.map((p) => (
+                <li
+                  key={p}
+                  aria-label={t.savingsHabits.boxLabel(periodName(p, h.week, dateLocale), logged.has(p))}
+                  title={periodName(p, h.week, dateLocale)}
+                  className={`flex-1 h-[18px] border-2 ${logged.has(p) ? 'bg-truffle-accent border-truffle-accent' : 'border-truffle-border'}`}
                 />
               ))}
-            </div>
+            </ul>
+            <span className="text-[11px] text-truffle-text2">{h.boxesCaption(period)}</span>
             <LeaderRow
               className="text-[13px]"
               left={h.totalSaved}
               right={<b>{formatAmount(habit.totalSaved)}</b>}
             />
+            <span className="text-[11px] text-truffle-text2">{h.selfReported}</span>
           </div>
 
           <div className="slip mx-4 mt-4 px-4 pt-4 pb-7 flex flex-col gap-2 text-[13px]">
@@ -227,7 +229,7 @@ export function HabitDetailSheet({
               (habit.history ?? []).map((c, i) => (
                 <div key={c.period} className="rule-soft pt-2 print-in" style={{ animationDelay: `${i * 40}ms` }}>
                   <LeaderRow
-                    left={periodLabel(c.period, h.week, dateLocale)}
+                    left={periodName(c.period, h.week, dateLocale)}
                     right={<b className="text-truffle-positive">+{formatAmount(c.amount)}</b>}
                   />
                 </div>
