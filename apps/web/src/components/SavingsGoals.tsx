@@ -1,5 +1,6 @@
 'use client'
 
+import { EmojiField, GOAL_SUGGESTIONS } from './EmojiField'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SkeletonPulse } from './PageMotion'
@@ -13,7 +14,6 @@ import { useSectionAddForm } from '@/contexts/SectionAddFormContext'
 import { LeaderRow } from './Tally'
 import { GoalDetailSheet } from './GoalDetailSheet'
 
-const GOAL_EMOJIS = ['🎯', '✈️', '🏠', '🚗', '💻', '🎓', '💍', '🏖️', '🎸', '📱', '🏋️', '🌍']
 
 interface SavingsGoalsBodyProps {
   userId: string
@@ -290,7 +290,7 @@ function GoalRow({
 
       {!done &&
         (showDeposit ? (
-          <div className="grid grid-cols-[1fr_auto] gap-2 pt-1">
+          <div className="grid grid-cols-[1fr_auto_auto] gap-2 pt-1">
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-truffle-text2 text-sm">
                 {symbol}
@@ -321,6 +321,16 @@ function GoalRow({
               className="key key-accent key-3 h-11 px-4 text-xs uppercase"
             >
               {t.savingsGoals.add}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDepositAmount('')
+                setShowDeposit(false)
+              }}
+              className="key key-line key-3 h-11 px-3 text-xs uppercase"
+            >
+              {t.savingsGoals.cancel}
             </button>
           </div>
         ) : (
@@ -383,19 +393,12 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2 print-in">
-      <div role="group" aria-label={t.savingsGoals.iconLabel} className="flex gap-1 flex-wrap">
-        {GOAL_EMOJIS.map((e) => (
-          <button
-            key={e}
-            type="button"
-            aria-pressed={form.emoji === e}
-            onClick={() => setForm((f) => ({ ...f, emoji: e }))}
-            className={`w-9 h-9 grid place-items-center text-lg rounded-md border ${form.emoji === e ? 'border-truffle-text bg-truffle-accent-soft' : 'border-transparent'}`}
-          >
-            {e}
-          </button>
-        ))}
-      </div>
+      <EmojiField
+        value={form.emoji}
+        onChange={(emoji) => setForm((f) => ({ ...f, emoji }))}
+        label={t.savingsGoals.iconLabel}
+        suggestions={GOAL_SUGGESTIONS}
+      />
 
       <input
         type="text"

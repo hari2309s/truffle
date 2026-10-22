@@ -496,6 +496,20 @@ export interface Translations {
     frequencyWeekly: string
     frequencyMonthly: string
     streak: (n: number) => string
+    startHabit: string
+    iconLabel: string
+    namePlaceholder: string
+    amountLabel: string
+    frequencyLabel: string
+    create: string
+    createError: string
+  }
+  emoji: {
+    placeholder: string
+    hint: string
+    notEmoji: string
+    current: (emoji: string) => string
+    pick: (emoji: string) => string
   }
   monthlyBudgets: {
     noBudgets: string
@@ -1116,7 +1130,7 @@ export const translations: Record<Locale, Translations> = {
       deadlineLabel: 'Target date',
     },
     savingsHabits: {
-      noHabits: 'No saving habits yet — ask Truffle to set one up',
+      noHabits: 'No saving habits yet. Start one here, or ask Truffle to set one up.',
       periodWeek: 'week',
       periodMonth: 'month',
       totalSaved: (amount) => `${amount} total saved`,
@@ -1125,6 +1139,20 @@ export const translations: Record<Locale, Translations> = {
       frequencyWeekly: 'Weekly',
       frequencyMonthly: 'Monthly',
       streak: (n) => `${n} in a row`,
+      startHabit: '+ Start a habit',
+      iconLabel: 'Habit icon',
+      namePlaceholder: 'Habit name (e.g. Save every Friday)',
+      amountLabel: 'Amount',
+      frequencyLabel: 'How often',
+      create: 'Start habit',
+      createError: 'Couldn’t start the habit. Please try again.',
+    },
+    emoji: {
+      placeholder: 'Type or paste any emoji',
+      hint: 'Use your emoji keyboard, or tap one below.',
+      notEmoji: 'That’s not an emoji — try the emoji keyboard',
+      current: (emoji) => `Chosen icon: ${emoji}`,
+      pick: (emoji) => `Use ${emoji}`,
     },
     monthlyBudgets: {
       noBudgets: 'No budgets yet — set one to track category spending',

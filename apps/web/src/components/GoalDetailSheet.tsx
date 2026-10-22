@@ -1,5 +1,6 @@
 'use client'
 
+import { EmojiField, GOAL_SUGGESTIONS } from './EmojiField'
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { SavingsGoal } from '@truffle/types'
@@ -9,7 +10,6 @@ import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
 import { LeaderRow, MINUS, Rule, Sheet } from './Tally'
 
-const GOAL_EMOJIS = ['🎯', '✈️', '🏠', '🚗', '💻', '🎓', '💍', '🏖️', '🎸', '📱', '🏋️', '🌍']
 const WEEK = 7 * 86_400_000
 
 type Mode = 'view' | 'deposit' | 'withdraw' | 'edit'
@@ -241,19 +241,12 @@ export function GoalDetailSheet({
     >
       {mode === 'edit' ? (
         <div className="slip mx-4 mt-3 px-[18px] pt-4 pb-7 flex flex-col gap-3 text-sm">
-          <div role="group" aria-label={t.savingsGoals.iconLabel} className="flex gap-1 flex-wrap">
-            {GOAL_EMOJIS.map((e) => (
-              <button
-                key={e}
-                type="button"
-                aria-pressed={form.emoji === e}
-                onClick={() => setForm((f) => ({ ...f, emoji: e }))}
-                className={`w-9 h-9 grid place-items-center text-lg rounded-md border ${form.emoji === e ? 'border-truffle-text bg-truffle-accent-soft' : 'border-transparent'}`}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
+          <EmojiField
+            value={form.emoji}
+            onChange={(emoji) => setForm((f) => ({ ...f, emoji }))}
+            label={t.savingsGoals.iconLabel}
+            suggestions={GOAL_SUGGESTIONS}
+          />
           <input
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}

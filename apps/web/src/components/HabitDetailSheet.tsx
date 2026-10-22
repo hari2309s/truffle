@@ -1,5 +1,6 @@
 'use client'
 
+import { EmojiField, HABIT_SUGGESTIONS } from './EmojiField'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { HabitWithStats } from '@truffle/types'
@@ -10,7 +11,6 @@ import { toDateLocale } from '@/lib/date'
 import { LeaderRow, Rule, Sheet } from './Tally'
 
 const STREAK_DOTS = 8
-const HABIT_EMOJIS = ['💰', '🐷', '☕', '🍱', '🚲', '📚', '🧾', '🌱']
 
 /** "2026-W42" → "Week 42", "2026-10" → "Oct 2026". */
 function periodLabel(period: string, weekLabel: (n: number) => string, dateLocale: string) {
@@ -130,19 +130,12 @@ export function HabitDetailSheet({
     >
       {editing ? (
         <div className="slip mx-4 mt-3 px-[18px] pt-4 pb-7 flex flex-col gap-3 text-sm">
-          <div role="group" aria-label={h.icon} className="flex gap-1 flex-wrap">
-            {HABIT_EMOJIS.map((e) => (
-              <button
-                key={e}
-                type="button"
-                aria-pressed={form.emoji === e}
-                onClick={() => setForm((f) => ({ ...f, emoji: e }))}
-                className={`w-9 h-9 grid place-items-center text-lg rounded-md border ${form.emoji === e ? 'border-truffle-text bg-truffle-accent-soft' : 'border-transparent'}`}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
+          <EmojiField
+            value={form.emoji}
+            onChange={(emoji) => setForm((f) => ({ ...f, emoji }))}
+            label={h.icon}
+            suggestions={HABIT_SUGGESTIONS}
+          />
           <input
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}

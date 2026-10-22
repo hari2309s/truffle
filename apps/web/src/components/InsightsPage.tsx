@@ -194,9 +194,11 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               </SectionAddFormProvider>
 
               <Rule className="mt-2" />
-              <Section code="hab" title={t.insights.sections.hab.heading}>
-                <SavingsHabits userId={userId} />
-              </Section>
+              <SectionAddFormProvider>
+                <AddableSection code="hab" title={t.insights.sections.hab.heading}>
+                  <SavingsHabits userId={userId} />
+                </AddableSection>
+              </SectionAddFormProvider>
 
               <Rule className="mt-2" />
               <Section code="sub" title={t.insights.sections.sub.heading}>
