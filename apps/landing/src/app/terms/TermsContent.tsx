@@ -1,4 +1,5 @@
-import LegalNav from '@/components/LegalNav'
+import LegalPage, { type LegalSection } from '@/components/LegalPage'
+import { LegalItem, LegalList, MailLink, readMinutes } from '@/components/LegalParts'
 import { translations } from '@/lib/i18n'
 
 const LAST_UPDATED = 'May 2025'
@@ -7,131 +8,124 @@ const CONTACT_EMAIL = 'hello@truffle.finance'
 // Server Component — see PrivacyContent.tsx for why this is safe.
 const t = translations.en
 
-export default function TermsContent() {
-  const s = t.legal.terms.sections
+/** Drops the "1. " numbering — the section code and index carry it now. */
+const unnumbered = (heading: string) => heading.replace(/^\d+\.\s*/, '')
 
+/** Splits "text {token} text" around a link. */
+function withLink(text: string, token: string, link: React.ReactNode) {
+  const [before, after] = text.split(token)
   return (
-    <div className="min-h-screen bg-truffle-bg text-truffle-text">
-      <LegalNav />
-      <main className="max-w-3xl mx-auto px-6 py-16">
-        <p className="text-truffle-amber text-xs font-semibold uppercase tracking-widest mb-4">
-          Legal
-        </p>
-        <h1 className="text-4xl font-black tracking-tight mb-2">{t.legal.terms.pageTitle}</h1>
-        <p className="text-truffle-muted text-sm mb-12">
-          {t.legal.lastUpdatedPrefix} {LAST_UPDATED}
-        </p>
+    <>
+      {before}
+      {link}
+      {after}
+    </>
+  )
+}
 
-        <div className="space-y-10 text-truffle-text-secondary leading-relaxed">
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.whoApplies.heading}</h2>
-            <p>{s.whoApplies.body}</p>
-          </section>
+const linkClass = 'text-truffle-accent-ink underline underline-offset-2'
 
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.whatTruffleIs.heading}</h2>
-            <p>{s.whatTruffleIs.body}</p>
-            <p className="mt-3 font-semibold text-truffle-text">
-              {s.whatTruffleIs.notAdvisorLabel}
-            </p>
-            <p className="mt-2">{s.whatTruffleIs.notAdvisorBody}</p>
-          </section>
+export default function TermsContent() {
+  const p = t.legal.terms
+  const s = p.sections
 
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.yourAccount.heading}</h2>
-            <ul className="space-y-2 list-none">
-              {s.yourAccount.items.map((item) => (
-                <li key={item} className="flex gap-3">
-                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-truffle-amber flex-shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.plans.heading}</h2>
-            <p>
-              {s.plans.body.split('{pricingLink}')[0]}
-              <a href="/#pricing" className="text-truffle-amber hover:underline">
+  const sections: LegalSection[] = [
+    { code: 'Who', heading: unnumbered(s.whoApplies.heading), body: <p className="m-0">{s.whoApplies.body}</p> },
+    {
+      code: 'What',
+      heading: unnumbered(s.whatTruffleIs.heading),
+      body: (
+        <>
+          <p className="m-0">{s.whatTruffleIs.body}</p>
+          <div className="bg-truffle-surface border-t-[6px] border-truffle-warning p-4 flex flex-col gap-1.5">
+            <b className="font-mono text-[13px] uppercase tracking-[.04em] text-truffle-warning">
+              ▲ {s.whatTruffleIs.notAdvisorLabel}
+            </b>
+            <span className="text-base">{s.whatTruffleIs.notAdvisorBody}</span>
+          </div>
+        </>
+      ),
+    },
+    {
+      code: 'Acct',
+      heading: unnumbered(s.yourAccount.heading),
+      body: (
+        <LegalList>
+          {s.yourAccount.items.map((item) => (
+            <LegalItem key={item}>{item}</LegalItem>
+          ))}
+        </LegalList>
+      ),
+    },
+    {
+      code: 'Plan',
+      heading: unnumbered(s.plans.heading),
+      body: (
+        <>
+          <p className="m-0">
+            {withLink(
+              s.plans.body,
+              '{pricingLink}',
+              <a href="/#pricing" className={linkClass}>
                 {s.plans.pricingLinkLabel}
               </a>
-              {s.plans.body.split('{pricingLink}')[1]}
-            </p>
-            <p className="mt-3">{s.plans.body2}</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.yourData.heading}</h2>
-            <p>{s.yourData.body}</p>
-            <p className="mt-3">
-              {s.yourData.body2.split('{privacyLink}')[0]}
-              <a href="/privacy" className="text-truffle-amber hover:underline">
+            )}
+          </p>
+          <p className="m-0">{s.plans.body2}</p>
+        </>
+      ),
+    },
+    {
+      code: 'Data',
+      heading: unnumbered(s.yourData.heading),
+      body: (
+        <>
+          <p className="m-0">{s.yourData.body}</p>
+          <p className="m-0">
+            {withLink(
+              s.yourData.body2,
+              '{privacyLink}',
+              <a href="/privacy" className={linkClass}>
                 {s.yourData.privacyLinkLabel}
               </a>
-              {s.yourData.body2.split('{privacyLink}')[1]}
-            </p>
-          </section>
+            )}
+          </p>
+        </>
+      ),
+    },
+    {
+      code: 'Use',
+      heading: unnumbered(s.acceptableUse.heading),
+      body: (
+        <>
+          <p className="m-0">{s.acceptableUse.intro}</p>
+          <LegalList>
+            {s.acceptableUse.items.map((item) => (
+              <LegalItem key={item}>{item}</LegalItem>
+            ))}
+          </LegalList>
+        </>
+      ),
+    },
+    { code: 'Up', heading: unnumbered(s.availability.heading), body: <p className="m-0">{s.availability.body}</p> },
+    { code: 'Liab', heading: unnumbered(s.liability.heading), body: <p className="m-0">{s.liability.body}</p> },
+    { code: 'End', heading: unnumbered(s.termination.heading), body: <p className="m-0">{s.termination.body}</p> },
+    { code: 'Law', heading: unnumbered(s.governingLaw.heading), body: <p className="m-0">{s.governingLaw.body}</p> },
+    {
+      code: 'Ask',
+      heading: unnumbered(s.contact.heading),
+      body: <p className="m-0">{withLink(s.contact.body, '{email}', <MailLink email={CONTACT_EMAIL} />)}</p>,
+    },
+  ]
 
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.acceptableUse.heading}</h2>
-            <p>{s.acceptableUse.intro}</p>
-            <ul className="mt-3 space-y-2 list-none">
-              {s.acceptableUse.items.map((item) => (
-                <li key={item} className="flex gap-3">
-                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-truffle-muted flex-shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.availability.heading}</h2>
-            <p>{s.availability.body}</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.liability.heading}</h2>
-            <p>{s.liability.body}</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.termination.heading}</h2>
-            <p>{s.termination.body}</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.governingLaw.heading}</h2>
-            <p>{s.governingLaw.body}</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.contact.heading}</h2>
-            <p>
-              {s.contact.body.split('{email}')[0]}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-truffle-amber hover:underline">
-                {CONTACT_EMAIL}
-              </a>
-              {s.contact.body.split('{email}')[1]}
-            </p>
-          </section>
-        </div>
-      </main>
-
-      <footer className="border-t border-truffle-border/40 mt-16">
-        <div className="max-w-3xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-truffle-muted">© {new Date().getFullYear()} Truffle.</p>
-          <div className="flex gap-6 text-xs text-truffle-muted">
-            <a href="/privacy" className="hover:text-truffle-text-secondary transition-colors">
-              {t.legal.footerPrivacy}
-            </a>
-            <a href="/terms" className="text-truffle-text-secondary">
-              {t.legal.footerTerms}
-            </a>
-          </div>
-        </div>
-      </footer>
-    </div>
+  return (
+    <LegalPage
+      eyebrow={p.eyebrow}
+      headline={p.headline}
+      meta={t.legal.meta(LAST_UPDATED, sections.length, readMinutes(s))}
+      summary={p.summary}
+      sections={sections}
+      contactEmail={CONTACT_EMAIL}
+    />
   )
 }

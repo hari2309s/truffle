@@ -2,52 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Tally Receipt tokens ──────────────────────────────────────────────────
+   Same system as the web app (apps/web/src/app/globals.css), plus the hover
+   and slip-shadow values the marketing site uses. Dark is the default; light
+   comes from the .light class or, with no class, the OS preference. */
+
 /* ── Dark theme (default) ── */
 :root {
   color-scheme: dark;
-  --t-bg: #0e0d0c;
-  --t-surface: #1e1d1b;
-  --t-card: #2c2b28;
-  --t-border: #404038;
-  --t-muted: #706a5e;
-  --t-text: #f5ead2;
-  --t-text-secondary: #c4a87e;
-  --t-amber: #e8a84e;
-  --t-amber-light: #f0c070;
-  --t-green: #4a7a5a;
-  --t-red: #7a4a4a;
+  --t-bg: #121211;
+  --t-surface: #1a1918;
+  --t-card: #22201e;
+  --t-border: #3a3733;
+  --t-text: #efe9de;
+  --t-text2: #ada597;
+  --t-accent: #f6bd87;
+  --t-accent-ink: #f6bd87;
+  --t-accent-soft: #3b2a1c;
+  --t-accent-edge: #b07a4a;
+  --t-on-accent: #1b1a18;
+  --t-positive: #8cc79f;
+  --t-warning: #e9c062;
+  --t-negative: #f08c78;
+  --t-accent-hover: #f9cb9e;
+  --t-ink-hover: #fffaf0;
+  --t-plain-hover: #2a2826;
+  --t-slip-shadow: rgba(0, 0, 0, 0.5);
+  --t-h0: #1a1918;
+  --t-h1: #3b2a1c;
+  --t-h2: #6e4524;
+  --t-h3: #c0814b;
+  --t-h4: #f6bd87;
 }
 
 /* ── Light theme ── */
 :root.light {
   color-scheme: light;
-  --t-bg: #faf6f0;
-  --t-surface: #f0e9df;
-  --t-card: #e8dfd3;
-  --t-border: #d4c8b8;
-  --t-muted: #8c7d6b;
-  --t-text: #1a1814;
-  --t-text-secondary: #6b4f2a;
-  --t-amber: #b86d10;
-  --t-amber-light: #c87f20;
-  --t-green: #2d5c3d;
-  --t-red: #7a3030;
+  --t-bg: #e9e5dd;
+  --t-surface: #f1ece3;
+  --t-card: #fffdf8;
+  --t-border: #cfc7b9;
+  --t-text: #1b1a18;
+  --t-text2: #5c5851;
+  --t-accent: #f6bd87;
+  --t-accent-ink: #a5500f;
+  --t-accent-soft: #fbe2c9;
+  --t-accent-edge: #c98a52;
+  --t-on-accent: #1b1a18;
+  --t-positive: #2f6b45;
+  --t-warning: #8a5a00;
+  --t-negative: #a8321f;
+  --t-accent-hover: #f9cb9e;
+  --t-ink-hover: #34322e;
+  --t-plain-hover: #f1ece3;
+  --t-slip-shadow: rgba(40, 30, 20, 0.14);
+  --t-h0: #f1ece3;
+  --t-h1: #fbe2c9;
+  --t-h2: #f6bd87;
+  --t-h3: #d98a46;
+  --t-h4: #8f4a14;
 }
 
+/* ── System theme (no class set) — respects OS preference ── */
 @media (prefers-color-scheme: light) {
   :root:not(.dark):not(.light) {
     color-scheme: light;
-    --t-bg: #faf6f0;
-    --t-surface: #f0e9df;
-    --t-card: #e8dfd3;
-    --t-border: #d4c8b8;
-    --t-muted: #8c7d6b;
-    --t-text: #1a1814;
-    --t-text-secondary: #6b4f2a;
-    --t-amber: #b86d10;
-    --t-amber-light: #c87f20;
-    --t-green: #2d5c3d;
-    --t-red: #7a3030;
+    --t-bg: #e9e5dd;
+    --t-surface: #f1ece3;
+    --t-card: #fffdf8;
+    --t-border: #cfc7b9;
+    --t-text: #1b1a18;
+    --t-text2: #5c5851;
+    --t-accent: #f6bd87;
+    --t-accent-ink: #a5500f;
+    --t-accent-soft: #fbe2c9;
+    --t-accent-edge: #c98a52;
+    --t-on-accent: #1b1a18;
+    --t-positive: #2f6b45;
+    --t-warning: #8a5a00;
+    --t-negative: #a8321f;
+    --t-accent-hover: #f9cb9e;
+    --t-ink-hover: #34322e;
+    --t-plain-hover: #f1ece3;
+    --t-slip-shadow: rgba(40, 30, 20, 0.14);
+    --t-h0: #f1ece3;
+    --t-h1: #fbe2c9;
+    --t-h2: #f6bd87;
+    --t-h3: #d98a46;
+    --t-h4: #8f4a14;
   }
 }
 
@@ -55,52 +97,205 @@
   html {
     background-color: var(--t-bg);
     color: var(--t-text);
+    scroll-behavior: smooth;
   }
 
   body {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-mono), ui-monospace, monospace;
     background-color: var(--t-bg);
     color: var(--t-text);
     overflow-x: hidden;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    -webkit-font-smoothing: antialiased;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
   }
 
   * {
     -webkit-tap-highlight-color: transparent;
   }
-}
 
+  /* Keyboard focus: 2px ink outline, 4px offset, on every key and link. */
+  a:focus-visible,
+  button:focus-visible,
+  [role='option']:focus-visible {
+    outline: 2px solid var(--t-text);
+    outline-offset: 4px;
+  }
+
+  /* Anchored sections clear the sticky nav. */
+  section[id] {
+    scroll-margin-top: 80px;
+  }
+}
 
 @layer components {
-  .btn-primary {
-    @apply bg-truffle-amber text-truffle-bg font-bold px-7 py-3.5 rounded-xl
-           hover:bg-truffle-amber-light active:scale-95 transition-all duration-150;
+  /* Receipt paper with a torn (zig-zag) bottom edge — one CSS mask. Wrap in
+     .slip-drop to cast a shadow (a mask clips box-shadow, not a parent filter). */
+  .slip {
+    background: var(--t-card);
+    -webkit-mask:
+      linear-gradient(#000 0 0) top/100% calc(100% - 10px) no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/16px
+        10px repeat-x;
+    mask:
+      linear-gradient(#000 0 0) top/100% calc(100% - 10px) no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/16px
+        10px repeat-x;
   }
 
-  .btn-outline {
-    @apply border border-truffle-border text-truffle-text-secondary px-7 py-3.5 rounded-xl
-           hover:border-truffle-muted hover:text-truffle-text transition-all duration-150;
+  .slip-sm {
+    background: var(--t-card);
+    -webkit-mask:
+      linear-gradient(#000 0 0) top/100% calc(100% - 8px) no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/12px 8px
+        repeat-x;
+    mask:
+      linear-gradient(#000 0 0) top/100% calc(100% - 8px) no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/12px 8px
+        repeat-x;
   }
 
-  .section-label {
-    @apply text-truffle-amber text-sm font-semibold uppercase tracking-widest;
+  .slip-drop {
+    filter: drop-shadow(0 6px 16px var(--t-slip-shadow));
+  }
+
+  .rule {
+    border-top: 1px dashed var(--t-text2);
+  }
+
+  .leader {
+    flex: 1 1 auto;
+    min-width: 12px;
+    border-bottom: 2px dotted var(--t-border);
+    margin-bottom: 5px;
+  }
+
+  /* Keys: physical buttons that press down 4px. */
+  .key {
+    --drop: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+    transition:
+      transform 80ms,
+      box-shadow 80ms,
+      background-color 120ms;
+  }
+
+  .key:active,
+  .key[aria-expanded='true'] {
+    transform: translateY(var(--drop));
+  }
+
+  .key-3 {
+    --drop: 3px;
+  }
+
+  .key-accent {
+    background: var(--t-accent);
+    color: var(--t-on-accent);
+    box-shadow: 0 var(--drop) 0 var(--t-accent-edge);
+  }
+
+  .key-accent:hover {
+    background: var(--t-accent-hover);
+  }
+
+  .key-accent:active {
+    box-shadow: inset 0 2px 0 var(--t-accent-edge);
+  }
+
+  .key-ink {
+    background: var(--t-text);
+    color: var(--t-bg);
+    box-shadow: 0 var(--drop) 0 var(--t-text2);
+  }
+
+  .key-ink:hover {
+    background: var(--t-ink-hover);
+  }
+
+  .key-plain {
+    background: var(--t-card);
+    color: var(--t-text);
+    border: 1px solid var(--t-border);
+    box-shadow: 0 var(--drop) 0 var(--t-border);
+  }
+
+  .key-plain:hover,
+  .key-plain[aria-expanded='true'] {
+    background: var(--t-plain-hover);
+  }
+
+  .key-ink:active,
+  .key-plain:active,
+  .key-plain[aria-expanded='true'] {
+    box-shadow: none;
+  }
+
+  /* Highlighted word: apricot wash that bleeds past the glyphs. */
+  .mark {
+    background: var(--t-accent-soft);
+    color: var(--t-accent-ink);
+    box-shadow:
+      -0.08em 0 0 var(--t-accent-soft),
+      0.08em 0 0 var(--t-accent-soft);
+  }
+
+  .print-in {
+    animation: tl-print 0.3s ease-out both;
   }
 }
 
-/* Shifts a `bottom-0` fixed element up to clear the home-indicator/gesture
-   area on notched devices. Margin (not padding) so it never fights with an
-   element's own padding utilities in the cascade. */
-.safe-bottom {
-  margin-bottom: env(safe-area-inset-bottom);
+@keyframes tl-print {
+  0% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-/* Respect the user's motion preference: neutralize the looping Tailwind
-   keyframe animations (see tailwind.config.ts) used for ambient/decorative
-   effects across the landing page. */
+@keyframes tl-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes tl-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Reduced motion: every printed line appears at once; meters hold still. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-pulse-slow,
-  .animate-float,
-  .animate-glow-pulse {
+  *,
+  ::before,
+  ::after {
     animation: none !important;
+    transition: none !important;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 }

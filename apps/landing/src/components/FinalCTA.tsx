@@ -1,86 +1,43 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import Image from 'next/image'
+import { APP_URL, TRUFFLE_ICON } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion'
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
 export default function FinalCTA() {
   const { t } = useLanguage()
-  const reducedMotion = usePrefersReducedMotion()
+  const c = t.finalCta
 
   return (
-    <section className="py-28 px-6">
-      <div className="max-w-3xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 32, scale: 0.97 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          className="relative overflow-hidden rounded-3xl border border-truffle-amber/30 bg-truffle-card px-8 py-16 text-center"
-        >
-          {/* Background glow */}
-          <div className="absolute inset-0 bg-truffle-amber/[0.05]" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-truffle-amber/10 blur-3xl rounded-full animate-glow-pulse" />
-          <div className="absolute top-0 left-0 w-[200px] h-[150px] bg-truffle-amber/[0.06] blur-2xl rounded-full" />
-          <div className="absolute bottom-0 right-0 w-[200px] h-[150px] bg-truffle-amber/[0.06] blur-2xl rounded-full" />
-
-          {/* Content */}
-          <div className="relative z-10">
-            <div className="flex justify-center mb-6">
-              <motion.div
-                animate={reducedMotion ? undefined : { y: [0, -10, 0], scale: [1, 1.06, 1] }}
-                transition={
-                  reducedMotion ? undefined : { repeat: Infinity, duration: 3.5, ease: 'easeInOut' }
-                }
-              >
-                <Image src="/icons/truffle.png" alt="Truffle" width={56} height={56} />
-              </motion.div>
-            </div>
-
-            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-truffle-text mb-5">
-              {t.finalCta.headline} <br className="hidden sm:block" />
-              <span className="text-truffle-amber">{t.finalCta.headlineAmber}</span>
+    <section className="pt-[clamp(72px,9cqi,144px)] px-[clamp(16px,5.5cqi,80px)] pb-[clamp(56px,7cqi,112px)]">
+      <div className="max-w-[820px] mx-auto flex flex-col gap-[18px]">
+        <div className="slip-drop">
+          <div className="slip pt-[clamp(28px,4cqi,56px)] px-[clamp(20px,4cqi,56px)] pb-[clamp(44px,5cqi,64px)] flex flex-col items-center text-center gap-5">
+            <Image src={TRUFFLE_ICON} alt="" width={56} height={56} />
+            <h2 className="m-0 font-grotesk font-medium text-[clamp(32px,4.6cqi,64px)] leading-[1.04] tracking-[-.025em] [text-wrap:balance]">
+              {c.headline} <span className="mark">{c.headlineAmber}</span>.
             </h2>
-
-            <p className="text-truffle-text-secondary text-lg leading-relaxed mb-10 max-w-lg mx-auto">
-              {t.finalCta.subheadline}
+            <p className="m-0 font-grotesk text-[clamp(16px,1.3cqi,19px)] leading-normal text-truffle-text2 max-w-[520px]">
+              {c.subheadline}
             </p>
-
-            <motion.a
-              href={APP_URL}
-              whileHover={{ scale: 1.05, boxShadow: '0 0 32px -4px rgba(232,168,78,0.45)' }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="inline-flex items-center gap-2.5 bg-truffle-amber text-truffle-bg font-black px-9 py-4 rounded-2xl hover:bg-truffle-amber-light transition-colors duration-150 text-lg"
-            >
-              {t.finalCta.cta}
-              <ArrowRightIcon />
-            </motion.a>
-
-            <p className="mt-6 text-sm text-truffle-muted">{t.finalCta.finePrint}</p>
+            <a href={APP_URL} className="key key-accent w-full max-w-[400px] h-[68px] text-base">
+              {c.cta}
+            </a>
+            <div aria-hidden className="rule w-full mt-2" />
+            <div className="w-full flex justify-between text-[clamp(16px,1.5cqi,20px)] font-bold tracking-[.1em] uppercase">
+              <span>{c.total.label}</span>
+              <span>{c.total.value}</span>
+            </div>
           </div>
-        </motion.div>
+        </div>
+        <div aria-hidden className="flex items-center gap-2.5 text-truffle-text2 text-sm">
+          <span>✂</span>
+          <span className="flex-1 border-t-2 border-dashed border-truffle-border" />
+        </div>
+        <p className="m-0 text-center text-xs tracking-[.08em] uppercase text-truffle-text2">
+          {c.finePrint}
+        </p>
       </div>
     </section>
-  )
-}
-
-function ArrowRightIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14M12 5l7 7-7 7" />
-    </svg>
   )
 }

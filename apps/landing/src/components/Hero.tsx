@@ -1,280 +1,147 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { useState } from 'react'
 import Image from 'next/image'
+import { APP_URL, Line, TRUFFLE_ICON } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
+/** Print-in with the hero's stretched stagger (90ms a line). */
+const at = (ms: number, duration = 300) => ({
+  animation: `tl-print ${duration}ms ease-out ${ms}ms both`,
+})
 
 export default function Hero() {
   const { t } = useLanguage()
+  const m = t.hero.mockup
+  // Bumping the key remounts the slip, replaying the print sequence.
+  const [printRun, setPrintRun] = useState(0)
 
   return (
-    <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
-      {/* Background */}
-      <HeroBackground />
-
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-24 w-full">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left: copy */}
-          <div className="flex flex-col items-start">
-            {/* Badge */}
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.05, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-              className="mb-8 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-truffle-amber/40 bg-truffle-amber/10 text-truffle-amber text-xs font-semibold uppercase tracking-wider"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-truffle-amber animate-pulse-slow" />
-              {t.hero.badge}
-            </motion.div>
-
-            {/* Headline */}
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight mb-6">
-              {t.hero.headlineWords.map((w, i) => (
-                <span key={w.text} className="inline-block overflow-hidden mr-[0.22em]">
-                  <motion.span
-                    initial={{ y: '110%' }}
-                    animate={{ y: '0%' }}
-                    transition={{
-                      delay: 0.15 + i * 0.15,
-                      duration: 0.75,
-                      ease: [0.76, 0, 0.24, 1],
-                    }}
-                    className={`inline-block ${w.amber ? 'text-truffle-amber' : 'text-truffle-text'}`}
-                  >
-                    {w.text}
-                  </motion.span>
-                </span>
-              ))}
-            </h1>
-
-            {/* Subheadline */}
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-              className="text-lg sm:text-xl text-truffle-text-secondary leading-relaxed mb-10 max-w-md"
-            >
-              {t.hero.subheadline}
-            </motion.p>
-
-            {/* CTAs */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.78, duration: 0.5 }}
-              className="flex flex-wrap gap-4"
-            >
-              <a href={APP_URL} className="btn-primary inline-flex items-center gap-2 text-base">
-                {t.hero.getStartedFree}
-                <ArrowRightIcon />
-              </a>
-              <a href="#features" className="btn-outline inline-flex items-center gap-2 text-base">
-                {t.hero.seeHowItWorks}
-                <ChevronDownIcon />
-              </a>
-            </motion.div>
-
-            {/* Social proof nudge */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.1 }}
-              className="mt-8 text-sm text-truffle-muted"
-            >
-              {t.hero.socialProof}
-            </motion.p>
+    <section className="pt-[clamp(32px,6cqi,96px)] px-[clamp(16px,5.5cqi,80px)] pb-[clamp(56px,8cqi,120px)]">
+      <div className="max-w-[1280px] mx-auto grid grid-cols-[repeat(auto-fit,minmax(min(100%,520px),1fr))] gap-[clamp(40px,5cqi,80px)] items-center">
+        <div className="flex flex-col gap-6">
+          <div className="self-start flex items-center gap-2.5 py-2 px-3 bg-truffle-card border border-truffle-border text-xs font-bold tracking-[.14em] uppercase">
+            <span
+              aria-hidden
+              className="w-2 h-2 bg-truffle-accent border border-truffle-accent-edge"
+            />
+            {t.hero.badge}
           </div>
-
-          {/* Right: chat mockup — desktop only */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 24 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: 0.45, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="hidden lg:block"
-          >
-            <ChatMockup />
-          </motion.div>
+          <h1 className="m-0 font-grotesk font-medium text-[clamp(44px,7cqi,100px)] leading-none tracking-[-.03em] [text-wrap:balance]">
+            {t.hero.headlineWords.map((w, i) => (
+              <span key={i}>
+                {i > 0 && ' '}
+                {w.amber ? <span className="mark">{w.text}</span> : w.text}
+              </span>
+            ))}
+          </h1>
+          <p className="m-0 font-grotesk text-[clamp(17px,1.45cqi,21px)] leading-normal text-truffle-text2 max-w-[540px] [text-wrap:pretty]">
+            {t.hero.subheadline}
+          </p>
+          <div className="flex flex-wrap gap-x-3.5 gap-y-3 pt-1">
+            <a
+              href={APP_URL}
+              className="key key-accent flex-[1_1_200px] max-w-[280px] h-[60px] px-6 text-[15px]"
+            >
+              {t.hero.getStartedFree}
+            </a>
+            <a
+              href="#how-it-works"
+              className="key key-plain flex-[1_1_200px] max-w-[280px] h-[60px] px-6 text-[15px]"
+            >
+              {t.hero.seeHowItWorks}
+            </a>
+          </div>
+          <div className="text-xs tracking-[.08em] uppercase text-truffle-text2">
+            {t.hero.socialProof}
+          </div>
         </div>
 
-        {/* Chat mockup — mobile, below CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.0, duration: 0.6 }}
-          className="lg:hidden mt-16"
-        >
-          <ChatMockup />
-        </motion.div>
+        <div className="justify-self-center w-full max-w-[460px] flex flex-col gap-4 p-[clamp(16px,2cqi,28px)] bg-truffle-surface border border-truffle-border">
+          <div className="flex justify-between items-center text-[11px] font-bold tracking-[.1em] uppercase text-truffle-text2">
+            <span>{m.label}</span>
+            <button
+              type="button"
+              onClick={() => setPrintRun((n) => n + 1)}
+              className="min-h-8 flex items-center gap-1.5 uppercase hover:text-truffle-text"
+            >
+              {m.reprint}
+            </button>
+          </div>
+
+          <div key={printRun} className="flex flex-col gap-4" aria-live="off">
+            <div
+              className="self-end max-w-[88%] bg-truffle-text text-truffle-bg rounded-lg py-3 px-3.5 font-grotesk text-base leading-[1.4]"
+              style={at(0, 320)}
+            >
+              {m.question}
+            </div>
+
+            <div className="relative pt-2.5">
+              {/* Last week's slip, tucked behind at an angle. */}
+              <div
+                aria-hidden
+                className="absolute left-[22px] -right-1.5 top-0 bottom-10 origin-top-left rotate-[2.4deg] slip-drop"
+                style={at(500, 320)}
+              >
+                <div className="slip h-full py-3.5 px-[18px] flex flex-col gap-1.5 text-xs text-truffle-text2">
+                  <span className="uppercase">{m.prevSlipLabel}</span>
+                  <Line label={m.prevSlipTotal.label} value={m.prevSlipTotal.value} />
+                </div>
+              </div>
+
+              <div className="relative slip-drop">
+                <div className="slip pt-[18px] px-5 pb-8 flex flex-col gap-2.5 text-sm">
+                  <div
+                    className="flex justify-between text-[11px] text-truffle-text2 uppercase"
+                    style={at(700)}
+                  >
+                    <span>{m.forLine}</span>
+                    <span>{m.stamp}</span>
+                  </div>
+                  <div className="rule" style={at(790)} />
+                  <span
+                    className="text-xs font-bold tracking-[.12em] uppercase"
+                    style={at(880)}
+                  >
+                    {m.heading}
+                  </span>
+                  {m.lines.map((line, i) => (
+                    <div key={line.label} style={at(970 + i * 90)}>
+                      <Line
+                        label={line.label}
+                        value={line.value}
+                        valueClassName="font-bold"
+                        className="!gap-2"
+                      />
+                    </div>
+                  ))}
+                  <div className="rule" style={at(1150)} />
+                  <div
+                    className="flex justify-between items-baseline"
+                    style={at(1240)}
+                  >
+                    <span className="text-base font-bold tracking-[.08em] uppercase">
+                      {m.total.label}
+                    </span>
+                    <span className="text-[clamp(24px,2.4cqi,30px)] font-bold">
+                      {m.total.value}
+                    </span>
+                  </div>
+                  <span className="font-grotesk text-[15px] leading-[1.45]" style={at(1450)}>
+                    <b className="font-mono text-xs text-truffle-warning">▲</b> {m.note}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <a href={APP_URL} className="key key-accent h-16 text-sm tracking-[.06em] uppercase">
+            <Image src={TRUFFLE_ICON} alt="" width={30} height={30} />
+            {t.hero.holdToSpeak}
+          </a>
+        </div>
       </div>
     </section>
-  )
-}
-
-function HeroBackground() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] rounded-full bg-truffle-amber/[0.07] blur-[120px] animate-glow-pulse" />
-      <div className="absolute top-0 right-0 w-[500px] h-[400px] rounded-full bg-truffle-amber/[0.04] blur-[100px]" />
-      <div className="absolute bottom-1/4 left-0 w-[360px] h-[280px] rounded-full bg-truffle-amber/[0.03] blur-[90px]" />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.32 }}
-        transition={{ duration: 1.2, ease: 'easeOut' }}
-        className="absolute inset-0"
-        style={{
-          backgroundImage: `linear-gradient(var(--t-border) 1px, transparent 1px), linear-gradient(90deg, var(--t-border) 1px, transparent 1px)`,
-          backgroundSize: '64px 64px',
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-truffle-bg" />
-      <div className="absolute inset-0 bg-gradient-to-r from-truffle-bg/40 via-transparent to-truffle-bg/40" />
-    </div>
-  )
-}
-
-function ChatMockup() {
-  const { t } = useLanguage()
-  const reducedMotion = usePrefersReducedMotion()
-
-  return (
-    <div className="relative max-w-sm mx-auto lg:max-w-none animate-float">
-      {/* Glow */}
-      <div className="absolute -inset-4 bg-truffle-amber/8 rounded-3xl blur-2xl" />
-
-      {/* Phone card */}
-      <div className="relative bg-[#181714] border border-[#38362f] rounded-2xl shadow-2xl overflow-hidden">
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#28261f]">
-          <div className="flex items-center gap-2">
-            <Image src="/icons/truffle.png" alt="Truffle" width={20} height={20} />
-            <span className="text-sm font-black text-[#f5ead2] tracking-tight">truffle</span>
-          </div>
-          <span className="text-[11px] text-[#706a5e] font-medium">{t.hero.aiAssistant}</span>
-        </div>
-
-        {/* Chat area */}
-        <div className="px-4 py-5 space-y-4 min-h-[260px]">
-          {/* User message */}
-          <motion.div
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1.4, duration: 0.4, ease: 'easeOut' }}
-            className="flex justify-end"
-          >
-            <div className="bg-truffle-amber/20 border border-truffle-amber/30 rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[82%]">
-              <p className="text-sm text-[#f5ead2] leading-relaxed">{t.hero.mockupQuestion}</p>
-            </div>
-          </motion.div>
-
-          {/* Typing dots */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 1, 1, 0] }}
-            transition={{ delay: 2.3, duration: 1.4, times: [0, 0.1, 0.85, 1] }}
-            className="flex items-center gap-1.5 bg-[#242220] border border-[#38362f] rounded-2xl rounded-tl-sm px-4 py-3 w-fit"
-          >
-            {[0, 1, 2].map((i) => (
-              <motion.span
-                key={i}
-                animate={reducedMotion ? undefined : { y: [-2, 2, -2] }}
-                transition={
-                  reducedMotion ? undefined : { repeat: Infinity, duration: 0.75, delay: i * 0.18 }
-                }
-                className="block w-1.5 h-1.5 rounded-full bg-[#706a5e]"
-              />
-            ))}
-          </motion.div>
-
-          {/* AI response */}
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 3.7, duration: 0.5, ease: 'easeOut' }}
-            className="flex justify-start"
-          >
-            <div className="bg-[#242220] border border-[#38362f] rounded-2xl rounded-tl-sm px-4 py-3 max-w-[90%]">
-              <p className="text-sm text-[#f5ead2] leading-relaxed">{t.hero.mockupAnswer}</p>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Voice input bar */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-t border-[#28261f]">
-          <motion.div
-            animate={reducedMotion ? undefined : { scale: [1, 1.1, 1] }}
-            transition={
-              reducedMotion ? undefined : { repeat: Infinity, duration: 2.4, ease: 'easeInOut' }
-            }
-            className="relative flex-shrink-0 w-10 h-10 rounded-full bg-[#e8a84e] flex items-center justify-center"
-          >
-            <motion.div
-              animate={reducedMotion ? undefined : { scale: [1, 1.7], opacity: [0.5, 0] }}
-              transition={
-                reducedMotion ? undefined : { repeat: Infinity, duration: 2.4, ease: 'easeOut' }
-              }
-              className="absolute inset-0 rounded-full bg-[#e8a84e]"
-            />
-            <MicIcon />
-          </motion.div>
-          <p className="text-xs text-[#706a5e]">{t.hero.holdToSpeak}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function MicIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#0e0d0c"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" y1="19" x2="12" y2="22" />
-    </svg>
-  )
-}
-
-function ArrowRightIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14M12 5l7 7-7 7" />
-    </svg>
-  )
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
   )
 }

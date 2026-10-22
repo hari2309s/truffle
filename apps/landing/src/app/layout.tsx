@@ -1,14 +1,24 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Space_Grotesk, Space_Mono } from 'next/font/google'
 import './globals.css'
 import Providers from '@/components/Providers'
 
-const inter = Inter({ subsets: ['latin'] })
+const spaceMono = Space_Mono({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-mono',
+})
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-grotesk',
+})
 
 export const viewport: Viewport = {
+  // Mirrors --t-bg in globals.css for each scheme.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#faf6f0' },
-    { media: '(prefers-color-scheme: dark)', color: '#0e0d0c' },
+    { media: '(prefers-color-scheme: light)', color: '#e9e5dd' },
+    { media: '(prefers-color-scheme: dark)', color: '#121211' },
   ],
 }
 
@@ -36,14 +46,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Prevent flash of wrong theme */}
+        {/* Prevent flash of wrong theme. 'system' means no class — the CSS
+            follows the OS via prefers-color-scheme. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('truffle-theme')||'dark';document.documentElement.classList.add(t)}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('truffle-theme')||'dark';if(t!=='system')document.documentElement.classList.add(t)}catch(e){}`,
           }}
         />
       </head>
-      <body className={inter.className}>
+      <body className={`${spaceMono.variable} ${spaceGrotesk.variable} font-mono`}>
         <Providers>{children}</Providers>
       </body>
     </html>

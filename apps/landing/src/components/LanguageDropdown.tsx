@@ -9,10 +9,18 @@ import { useLanguage } from '@/contexts/LanguageContext'
  * dropped into a Server Component parent — Server Components can't pass
  * closures like `setLocale` down as props to a child.
  */
-export default function LanguageDropdown() {
-  const { locale, setLocale } = useLanguage()
+export default function LanguageDropdown({
+  variant = 'code',
+  align = 'right',
+}: {
+  /** `code` shows "EN" (nav); `name` shows "English" (footer). */
+  variant?: 'code' | 'name'
+  align?: 'left' | 'right'
+}) {
+  const { t, locale, setLocale } = useLanguage()
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
@@ -23,65 +31,72 @@ export default function LanguageDropdown() {
         triggerRef.current?.focus()
       }
     }
+    const handlePointer = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+    }
 
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('pointerdown', handlePointer)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('pointerdown', handlePointer)
+    }
   }, [open])
 
+  const locales = Object.entries(LOCALE_LABELS) as [Locale, { flag: string; label: string }][]
+
   return (
-    <div className="relative">
+    <div ref={rootRef} className="relative">
       <button
         ref={triggerRef}
+        type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-truffle-text-secondary hover:text-truffle-text hover:bg-truffle-surface transition-all"
-        aria-label="Select language"
+        className="key key-plain h-11 px-3 text-[13px] gap-2"
+        aria-label={t.nav.language}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span>{LOCALE_LABELS[locale].flag}</span>
-        <span className="hidden sm:inline">{LOCALE_LABELS[locale].label}</span>
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" className="opacity-50">
-          <path
-            d="M2 3.5L5 6.5L8 3.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </svg>
+        {variant === 'code' ? locale.toUpperCase() : LOCALE_LABELS[locale].label}
+        <span aria-hidden className="text-[10px]">
+          {open ? '▴' : '▾'}
+        </span>
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div
-            role="listbox"
-            className="absolute right-0 top-full mt-1 z-20 bg-truffle-bg border border-truffle-border rounded-xl shadow-lg overflow-hidden min-w-[120px]"
-          >
-            {(Object.entries(LOCALE_LABELS) as [Locale, { flag: string; label: string }][]).map(
-              ([loc, { flag, label }]) => (
-                <button
-                  key={loc}
-                  role="option"
-                  aria-selected={locale === loc}
-                  onClick={() => {
-                    setLocale(loc)
-                    setOpen(false)
-                    triggerRef.current?.focus()
-                  }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors ${
-                    locale === loc
-                      ? 'text-truffle-amber bg-truffle-amber/10'
-                      : 'text-truffle-text-secondary hover:text-truffle-text hover:bg-truffle-surface'
-                  }`}
-                >
-                  <span>{flag}</span>
-                  <span>{label}</span>
-                </button>
-              )
-            )}
+        <div
+          className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} ${variant === 'name' ? 'bottom-[56px]' : 'top-14'} w-[220px] z-30 slip-drop`}
+        >
+          <div className="slip-sm pt-2 px-3.5 pb-5 flex flex-col">
+            <span className="text-[11px] font-bold tracking-[.12em] uppercase text-truffle-text2 py-1.5">
+              {t.nav.language}
+            </span>
+            <div role="listbox" aria-label={t.nav.language} className="flex flex-col">
+              {locales.map(([loc, { label }]) => {
+                const selected = locale === loc
+                return (
+                  <button
+                    key={loc}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      setLocale(loc)
+                      setOpen(false)
+                      triggerRef.current?.focus()
+                    }}
+                    className="flex gap-2 min-h-11 items-center text-[13px] border-t border-dashed border-truffle-border -mx-3.5 px-3.5 hover:bg-truffle-surface text-left"
+                  >
+                    <span className={selected ? 'font-bold' : ''}>{label}</span>
+                    <span aria-hidden className="leader !mb-0 mt-1.5 self-center" />
+                    <span className="font-bold">
+                      {selected ? '✓ ' : ''}
+                      {loc.toUpperCase()}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )

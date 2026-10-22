@@ -5,6 +5,12 @@ export interface HeadlineWord {
   amber: boolean
 }
 
+/** A "label ........ value" receipt line. */
+export interface ReceiptLine {
+  label: string
+  value: string
+}
+
 export interface LandingTranslations {
   nav: {
     features: string
@@ -12,6 +18,10 @@ export interface LandingTranslations {
     pricing: string
     signIn: string
     getStarted: string
+    menu: string
+    closeMenu: string
+    theme: { label: string; light: string; system: string; dark: string }
+    language: string
   }
   hero: {
     badge: string
@@ -20,26 +30,52 @@ export interface LandingTranslations {
     getStartedFree: string
     seeHowItWorks: string
     socialProof: string
-    mockupQuestion: string
-    mockupAnswer: string
+    mockup: {
+      label: string
+      reprint: string
+      question: string
+      prevSlipLabel: string
+      prevSlipTotal: ReceiptLine
+      forLine: string
+      stamp: string
+      heading: string
+      lines: ReceiptLine[]
+      total: ReceiptLine
+      note: string
+    }
     holdToSpeak: string
-    aiAssistant: string
   }
   trustStrip: {
     badges: string[]
   }
   features: {
     sectionLabel: string
-    headlineNormal: string
-    headlineAmber: string
+    headline: string
     subheadline: string
-    items: { title: string; desc: string }[]
+    statementLabel: string
+    itemsCount: string
+    items: { code: string; title: string; desc: string }[]
+    total: ReceiptLine
+    demo: {
+      listening: string
+      scanLine: ReceiptLine
+      scanStatus: string
+      revStatus: string
+      goal: { label: string; line: ReceiptLine; create: string; notNow: string }
+      habitStreak: string
+      privacy: ReceiptLine[]
+      subscriptions: ReceiptLine[]
+      subscriptionsTotal: ReceiptLine
+      budget: { line: ReceiptLine; status: string }
+    }
   }
   howItWorks: {
     sectionLabel: string
     headline: string
     subheadline: string
-    steps: { number: string; title: string; desc: string; detail: string }[]
+    stepLabel: (n: number, total: number) => string
+    steps: { title: string; desc: string; meta: ReceiptLine }[]
+    total: ReceiptLine
   }
   pricing: {
     sectionLabel: string
@@ -48,16 +84,18 @@ export interface LandingTranslations {
     free: {
       name: string
       period: string
-      description: string
+      price: string
       features: string[]
+      total: ReceiptLine
       cta: string
     }
     pro: {
       name: string
       badge: string
       period: string
-      description: string
+      price: string
       features: string[]
+      total: ReceiptLine
       cta: string
     }
     finePrint: string
@@ -67,18 +105,22 @@ export interface LandingTranslations {
     headlineAmber: string
     subheadline: string
     cta: string
+    total: ReceiptLine
     finePrint: string
   }
   footer: {
     tagline: string
-    getStartedFree: string
     groups: {
       product: { label: string; links: { label: string; href: string }[] }
       legal: { label: string; links: { label: string; href: string }[] }
     }
+    demo: string
+    copyright: (year: number) => string
+    builtBy: string
     bottomTagline: string
   }
   cookieBanner: {
+    title: string
     message: string
     accept: string
     reject: string
@@ -86,11 +128,19 @@ export interface LandingTranslations {
   }
   legal: {
     back: string
+    home: string
+    sectionsLabel: string
+    meta: (updated: string, sections: number, minutes: number) => string
+    questions: (email: string) => string
+    endOfDocument: string
     lastUpdatedPrefix: string
     footerPrivacy: string
     footerTerms: string
     privacy: {
       pageTitle: string
+      eyebrow: string
+      headline: string
+      summary: string
       sections: {
         whoWeAre: { heading: string; body: string; contactPrefix: string }
         whatWeCollect: {
@@ -117,6 +167,9 @@ export interface LandingTranslations {
     }
     terms: {
       pageTitle: string
+      eyebrow: string
+      headline: string
+      summary: string
       sections: {
         whoApplies: { heading: string; body: string }
         whatTruffleIs: {
@@ -147,6 +200,10 @@ export const translations: Record<Locale, LandingTranslations> = {
       pricing: 'Pricing',
       signIn: 'Sign in',
       getStarted: 'Get started',
+      menu: 'Open menu',
+      closeMenu: 'Close menu',
+      theme: { label: 'Theme', light: 'Light', system: 'System', dark: 'Dark' },
+      language: 'Language',
     },
     hero: {
       badge: 'Voice-first · AI-powered',
@@ -157,14 +214,26 @@ export const translations: Record<Locale, LandingTranslations> = {
       ],
       subheadline:
         'The AI finance assistant that talks with you, not at you. No spreadsheets. No bank linking. Just speak.',
-      getStartedFree: 'Get Started Free',
+      getStartedFree: 'Get Started Free →',
       seeHowItWorks: 'See how it works',
       socialProof: 'Free to start · No credit card · No bank credentials',
-      mockupQuestion: 'How much did I spend on food this week?',
-      mockupAnswer:
-        'You spent €200 on food this week — €23 over last week. Most of it was food delivery (5 orders) and groceries (2 visits).',
-      holdToSpeak: 'Hold to speak',
-      aiAssistant: 'AI assistant',
+      mockup: {
+        label: 'Truffle · chat',
+        reprint: '↻ Reprint',
+        question: 'How much did I spend on food this week?',
+        prevSlipLabel: 'Week 41 · Food',
+        prevSlipTotal: { label: 'Total', value: '€177.00' },
+        forLine: 'For Hari · Week 42',
+        stamp: 'Wed 21 Oct · 18:42',
+        heading: 'Food this week',
+        lines: [
+          { label: 'Food delivery × 5', value: '€142.00' },
+          { label: 'Groceries × 2', value: '€58.00' },
+        ],
+        total: { label: 'Total', value: '€200.00' },
+        note: '€23 over last week.',
+      },
+      holdToSpeak: 'Hold · Speak',
     },
     trustStrip: {
       badges: [
@@ -176,79 +245,114 @@ export const translations: Record<Locale, LandingTranslations> = {
       ],
     },
     features: {
-      sectionLabel: 'Features',
-      headlineNormal: 'Everything you need,',
-      headlineAmber: "nothing you don't",
-      subheadline:
-        'Truffle is built for people who hate managing money — so it does the heavy lifting for you.',
+      sectionLabel: 'Features · 08 items',
+      headline: 'Everything you need, nothing you don’t',
+      subheadline: 'Itemised, like everything else in Truffle. No add-ons hiding at the bottom.',
+      statementLabel: 'Statement of features',
+      itemsCount: '08 items',
       items: [
         {
-          title: 'Voice-First Chat',
-          desc: "Ask 'How much did I spend on food this week?' out loud. Truffle understands natural language and remembers your context.",
+          code: 'Chat',
+          title: 'Voice-first chat',
+          desc: 'Hold the key and talk. Truffle answers out loud and prints the numbers.',
         },
         {
-          title: 'Receipt Scanner',
-          desc: 'Snap a receipt or upload a PDF. Truffle extracts every line and categorizes it automatically — no manual entry needed.',
+          code: 'Scan',
+          title: 'Receipt scanner',
+          desc: 'Snap a receipt or a PDF statement. Every line itemised in seconds.',
         },
         {
-          title: 'AI Spending Insights',
-          desc: 'Anomalies, trends, and month-end forecasts — surfaced automatically. Know where your money goes before you run out.',
+          code: 'Rev',
+          title: 'AI spending insights',
+          desc: 'Spots the odd charge and the busy days, then tells you plainly.',
         },
         {
-          title: 'Savings Goals',
-          desc: 'Set a goal with a deadline. Get nudged when you fall behind. Get celebrated when you hit milestones.',
+          code: 'Goal',
+          title: 'Savings goals',
+          desc: 'Mention a plan and Truffle offers a goal to save towards, with a deadline.',
         },
         {
-          title: 'Smart Habits',
-          desc: 'Build weekly saving streaks. Truffle tracks every contribution and rewards consistency with milestone celebrations.',
+          code: 'Hab',
+          title: 'Smart habits',
+          desc: 'Small, repeatable saves like “€25 every Friday”, tracked as streaks.',
         },
         {
-          title: 'Privacy First',
-          desc: 'No bank linking. Ever. You enter your data — Truffle analyzes it. Nothing is sold, shared, or synced without you.',
+          code: 'Priv',
+          title: 'Privacy first',
+          desc: 'No bank logins, ever. Your data is yours to export or delete at any time.',
         },
         {
-          title: 'Subscription Tracker',
-          desc: 'Truffle spots recurring charges automatically and flags the ones you forgot about — before they quietly drain your account.',
+          code: 'Sub',
+          title: 'Subscription tracker',
+          desc: 'Spots recurring charges automatically and flags the ones you forgot about.',
         },
         {
-          title: 'Monthly Budgets',
-          desc: 'Set a limit per category. Get a heads-up at 80% before you go over — no spreadsheets, just a gentle nudge.',
+          code: 'Bud',
+          title: 'Monthly budgets',
+          desc: 'Soft limits per category, with a gentle heads-up at 80%. Never a scolding.',
         },
       ],
+      total: { label: 'Total to start', value: '€0.00' },
+      demo: {
+        listening: 'Listening 0:03',
+        scanLine: { label: 'Lidl × 11 items', value: '€45.20' },
+        scanStatus: '● Read 11 of 11 lines',
+        revStatus: '▲ 1 to review · €129.00 new merchant',
+        goal: {
+          label: 'Proposed goal',
+          line: { label: 'Japan trip', value: '€3,600.00' },
+          create: 'Create goal',
+          notNow: 'Not now',
+        },
+        habitStreak: '✦ 6-week streak',
+        privacy: [
+          { label: 'Bank logins stored', value: '0' },
+          { label: 'Export', value: 'CSV · JSON' },
+        ],
+        subscriptions: [
+          { label: 'Netflix', value: '€13.99' },
+          { label: 'Spotify', value: '€10.99' },
+        ],
+        subscriptionsTotal: { label: 'Monthly', value: '€24.98' },
+        budget: {
+          line: { label: 'Groceries', value: '€322/€400' },
+          status: '▲ Heads-up 80% · €78 left',
+        },
+      },
     },
     howItWorks: {
-      sectionLabel: 'How it works',
-      headline: 'Up and running in three steps',
-      subheadline: 'No onboarding call. No three-week integration. Just sign up and start talking.',
+      sectionLabel: 'How it works · 3 steps',
+      headline: 'From first word to first answer in a minute.',
+      subheadline:
+        'No setup wizard, no bank connection, no categories to build. Talk, and it prints.',
+      stepLabel: (n, total) => `Step 0${n} of 0${total}`,
       steps: [
         {
-          number: '01',
           title: 'Sign up in seconds',
-          desc: "Just your email. No credit card, no bank credentials, no form that takes ten minutes. You're in before your coffee gets cold.",
-          detail: 'Passwordless magic link — no password to forget',
+          desc: 'Just your email and a magic link. No password, no bank details, ever.',
+          meta: { label: 'Time', value: '~30 seconds · No card' },
         },
         {
-          number: '02',
           title: 'Log your spending your way',
-          desc: 'Type it, say it out loud, snap a receipt, or drop in a bank CSV. However you prefer — Truffle handles the rest.',
-          detail: 'Text · Voice · Receipt photo · CSV import',
+          desc: 'Say it, type it, snap a receipt or import a CSV from your bank.',
+          meta: { label: 'Inputs', value: 'Voice · Text · Photo · CSV' },
         },
         {
-          number: '03',
           title: 'Ask anything, get real answers',
-          desc: '"What did I spend last month?" "Can I afford this?" "Where is my money going?" Ask naturally, get clear answers — no dashboard diving.',
-          detail: 'Context-aware AI that remembers your history',
+          desc: '“Can I afford Japan in April?” Truffle checks your numbers and answers in plain words.',
+          meta: { label: 'Currencies', value: 'EUR · GBP · USD' },
         },
       ],
+      total: { label: 'Spreadsheets', value: '0' },
     },
     pricing: {
-      sectionLabel: 'Pricing',
+      sectionLabel: 'Pricing · 2 plans',
       headline: 'Simple, honest pricing',
       subheadline: 'Start free. Upgrade when Truffle earns it.',
       free: {
         name: 'Free',
         period: 'forever',
-        description: 'Everything you need to get started. No card required.',
+        price: '€0.00',
         features: [
           'Manual transaction entry',
           'AI chat',
@@ -257,13 +361,14 @@ export const translations: Record<Locale, LandingTranslations> = {
           'Savings habits',
           'CSV export',
         ],
+        total: { label: 'Total', value: '€0.00' },
         cta: 'Get Started Free',
       },
       pro: {
         name: 'Pro',
-        badge: 'Coming Soon',
-        period: '/month',
-        description: 'For people serious about taking control of their money.',
+        badge: 'Coming soon',
+        period: 'per month',
+        price: '€—.——',
         features: [
           'Everything in Free',
           'Unlimited AI chat',
@@ -273,23 +378,21 @@ export const translations: Record<Locale, LandingTranslations> = {
           'Full history CSV export',
           'Monthly AI finance report',
         ],
+        total: { label: 'Total', value: 'At launch' },
         cta: 'Join Waitlist',
       },
-      finePrint:
-        'Pro tier in active development. Join the waitlist to be notified at launch and lock in early pricing.',
+      finePrint: 'Pro is in active development · The free plan stays free',
     },
     finalCta: {
-      headline: 'Your finances are waiting',
-      headlineAmber: 'to be unearthed',
-      subheadline:
-        'Stop guessing where your money went. Start asking. Truffle is free to try — no card, no bank link, no catch.',
-      cta: 'Get Started Free',
+      headline: 'Your finances are waiting to be',
+      headlineAmber: 'unearthed',
+      subheadline: 'Start with one sentence. Truffle takes it from there.',
+      cta: 'Get Started Free →',
+      total: { label: 'Total', value: 'Calm' },
       finePrint: 'Free forever · No credit card · Takes 30 seconds',
     },
     footer: {
-      tagline:
-        'Your finances, unearthed. A voice-first personal finance assistant that talks with you, not at you.',
-      getStartedFree: 'Get started free →',
+      tagline: 'Your finances, unearthed.',
       groups: {
         product: {
           label: 'Product',
@@ -302,14 +405,18 @@ export const translations: Record<Locale, LandingTranslations> = {
         legal: {
           label: 'Legal',
           links: [
-            { label: 'Privacy Policy', href: '/privacy' },
-            { label: 'Terms of Service', href: '/terms' },
+            { label: 'Privacy', href: '/privacy' },
+            { label: 'Terms', href: '/terms' },
           ],
         },
       },
-      bottomTagline: 'No bank linking. No spreadsheets. Just talk.',
+      demo: 'Explore the demo',
+      copyright: (year) => `© ${year} Truffle · All rights reserved`,
+      builtBy: 'Built by Hariharan Selvaraj',
+      bottomTagline: 'Printed with care · No bank logins stored',
     },
     cookieBanner: {
+      title: 'Cookies · itemised',
       message:
         'We use analytics cookies to understand how Truffle is used and improve the experience.',
       accept: 'Accept',
@@ -318,11 +425,21 @@ export const translations: Record<Locale, LandingTranslations> = {
     },
     legal: {
       back: '← Back',
+      home: '← Home',
+      sectionsLabel: 'Sections',
+      meta: (updated, sections, minutes) =>
+        `Last updated ${updated} · ${sections} sections · ~${minutes} min read`,
+      questions: (email) => `Questions? ${email}`,
+      endOfDocument: 'End of document',
       lastUpdatedPrefix: 'Last updated:',
       footerPrivacy: 'Privacy',
       footerTerms: 'Terms',
       privacy: {
         pageTitle: 'Privacy Policy',
+        eyebrow: 'Legal · Privacy policy',
+        headline: 'Privacy, itemised.',
+        summary:
+          'The short version: Truffle never asks for your bank login, keeps only what it needs to answer you, and lets you export or delete your data from Settings.',
         sections: {
           whoWeAre: {
             heading: 'Who we are',
@@ -422,6 +539,10 @@ export const translations: Record<Locale, LandingTranslations> = {
       },
       terms: {
         pageTitle: 'Terms of Service',
+        eyebrow: 'Legal · Terms of service',
+        headline: 'Terms, itemised.',
+        summary:
+          'The short version: Truffle helps you keep track of your own money. It isn’t financial advice, you own your data, and you can leave at any time.',
         sections: {
           whoApplies: {
             heading: '1. Who these terms apply to',

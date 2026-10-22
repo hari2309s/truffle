@@ -1,149 +1,104 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { APP_URL, Eyebrow, Line } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
-import type { LandingTranslations } from '@/lib/i18n'
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://truffle-ivory.vercel.app'
 
 export default function Pricing() {
   const { t } = useLanguage()
+  const p = t.pricing
 
   return (
-    <section id="pricing" className="py-28 px-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
-        >
-          <p className="section-label mb-4">{t.pricing.sectionLabel}</p>
-          <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-truffle-text mb-5">
-            {t.pricing.headline}
+    <section id="pricing" className="pt-[clamp(64px,8cqi,128px)] px-[clamp(16px,5.5cqi,80px)]">
+      <div className="max-w-[960px] mx-auto flex flex-col gap-[clamp(28px,3cqi,48px)]">
+        <div className="flex flex-col gap-3.5 items-center text-center">
+          <Eyebrow>{p.sectionLabel}</Eyebrow>
+          <h2 className="m-0 font-grotesk font-medium text-[clamp(34px,4.4cqi,64px)] leading-[1.02] tracking-[-.025em]">
+            {p.headline}
           </h2>
-          <p className="text-lg text-truffle-text-secondary max-w-md mx-auto">
-            {t.pricing.subheadline}
+          <p className="m-0 font-grotesk text-[clamp(16px,1.3cqi,19px)] leading-normal text-truffle-text2">
+            {p.subheadline}
           </p>
-        </motion.div>
-
-        {/* Cards */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-          {/* Free */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-            className="bg-truffle-card border border-truffle-border rounded-2xl p-8 flex flex-col"
-          >
-            <PricingCardContent tier={t.pricing.free} isPro={false} href={APP_URL} />
-          </motion.div>
-
-          {/* Pro */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            whileHover={{ y: -4, transition: { duration: 0.2 } }}
-            className="relative bg-truffle-card border border-truffle-amber/50 rounded-2xl p-8 flex flex-col shadow-[0_0_40px_-12px_rgba(232,168,78,0.25)]"
-          >
-            <div className="absolute inset-0 rounded-2xl bg-truffle-amber/[0.04]" />
-            <div className="relative">
-              <PricingCardContent tier={t.pricing.pro} isPro href="#" />
-            </div>
-          </motion.div>
         </div>
 
-        {/* Fine print */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="text-center mt-10 text-sm text-truffle-muted"
-        >
-          {t.pricing.finePrint}
-        </motion.p>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,330px),1fr))] gap-[clamp(20px,3cqi,40px)] items-start">
+          {/* FREE */}
+          <div className="slip-drop">
+            <div className="slip pt-7 px-6 pb-11 flex flex-col gap-3 text-sm">
+              <div className="flex justify-between items-baseline">
+                <h3 className="m-0 text-lg font-bold tracking-[.2em] uppercase">{p.free.name}</h3>
+                <span className="font-grotesk text-[15px] text-truffle-text2">{p.free.period}</span>
+              </div>
+              <span className="text-[52px] font-bold leading-none">{p.free.price}</span>
+              <div aria-hidden className="rule my-1" />
+              <ul className="flex flex-col gap-3">
+                {p.free.features.map((f) => (
+                  <li key={f}>
+                    <Line
+                      label={f}
+                      value={<span aria-label="included">✓</span>}
+                      valueClassName="text-truffle-positive font-bold"
+                    />
+                  </li>
+                ))}
+              </ul>
+              <div aria-hidden className="rule my-1" />
+              <div className="flex justify-between text-base font-bold tracking-[.06em] uppercase">
+                <span>{p.free.total.label}</span>
+                <span>{p.free.total.value}</span>
+              </div>
+              <a href={APP_URL} className="key key-accent mt-2 h-14 text-[15px]">
+                {p.free.cta}
+              </a>
+            </div>
+          </div>
+
+          {/* PRO */}
+          <div className="slip-drop">
+            <div className="slip relative border-t-[6px] border-truffle-accent pt-[22px] px-6 pb-11 flex flex-col gap-3 text-sm">
+              <div
+                aria-hidden
+                className="absolute right-[18px] top-[58px] -rotate-[9deg] border-2 border-truffle-accent-ink text-truffle-accent-ink py-1 px-2.5 text-[13px] font-bold tracking-[.16em] uppercase opacity-90"
+              >
+                {p.pro.badge}
+              </div>
+              <div className="flex justify-between items-baseline">
+                <h3 className="m-0 text-lg font-bold tracking-[.2em] uppercase">
+                  {p.pro.name}
+                  <span className="sr-only"> ({p.pro.badge})</span>
+                </h3>
+                <span className="font-grotesk text-[15px] text-truffle-text2">{p.pro.period}</span>
+              </div>
+              <span className="text-[52px] font-bold leading-none text-truffle-text2">
+                {p.pro.price}
+              </span>
+              <div aria-hidden className="rule my-1" />
+              <ul className="flex flex-col gap-3">
+                {p.pro.features.map((f, i) => (
+                  <li key={f}>
+                    <Line
+                      label={f}
+                      value={<span aria-label={i === 0 ? 'included' : 'added'}>{i === 0 ? '✓' : '+'}</span>}
+                      valueClassName="font-bold"
+                    />
+                  </li>
+                ))}
+              </ul>
+              <div aria-hidden className="rule my-1" />
+              <div className="flex justify-between text-base font-bold tracking-[.06em] uppercase">
+                <span>{p.pro.total.label}</span>
+                <span>{p.pro.total.value}</span>
+              </div>
+              <a href="#" className="key key-ink mt-2 h-14 text-[15px]">
+                {p.pro.cta}
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <p className="m-0 text-center text-xs leading-[1.7] tracking-[.04em] uppercase text-truffle-text2">
+          {p.finePrint}
+        </p>
       </div>
     </section>
-  )
-}
-
-type FreeTier = LandingTranslations['pricing']['free']
-type ProTier = LandingTranslations['pricing']['pro']
-
-function PricingCardContent({
-  tier,
-  isPro,
-  href,
-}: {
-  tier: FreeTier | ProTier
-  isPro: boolean
-  href: string
-}) {
-  return (
-    <>
-      <div className="flex items-center gap-3 mb-2">
-        <span className="font-black text-lg text-truffle-text">{tier.name}</span>
-        {isPro && 'badge' in tier && (
-          <span className="text-[11px] font-bold uppercase tracking-wider text-truffle-bg bg-truffle-amber px-2.5 py-0.5 rounded-full">
-            {tier.badge}
-          </span>
-        )}
-      </div>
-
-      <p className="text-sm text-truffle-text-secondary mb-6 leading-relaxed">{tier.description}</p>
-
-      <div className="flex items-baseline gap-1 mb-8">
-        <span
-          className={`text-5xl font-black ${isPro ? 'text-truffle-amber' : 'text-truffle-text'}`}
-        >
-          €{isPro ? '9' : '0'}
-        </span>
-        <span className="text-truffle-muted text-sm">{tier.period}</span>
-      </div>
-
-      <ul className="space-y-3 mb-8 flex-1">
-        {tier.features.map((f) => (
-          <li key={f} className="flex items-start gap-2.5 text-sm text-truffle-text-secondary">
-            <CheckIcon amber={isPro} />
-            <span>{f}</span>
-          </li>
-        ))}
-      </ul>
-
-      <a
-        href={href}
-        className={`block text-center font-bold py-3.5 rounded-xl transition-all duration-150 active:scale-95 text-sm ${
-          isPro
-            ? 'bg-truffle-amber text-truffle-bg hover:bg-truffle-amber-light'
-            : 'border border-truffle-border text-truffle-text hover:border-truffle-muted hover:bg-truffle-surface'
-        }`}
-      >
-        {tier.cta}
-      </a>
-    </>
-  )
-}
-
-function CheckIcon({ amber }: { amber: boolean }) {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={amber ? 'var(--t-amber)' : 'var(--t-muted)'}
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="flex-shrink-0 mt-0.5"
-    >
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
   )
 }

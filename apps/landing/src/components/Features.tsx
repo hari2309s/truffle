@@ -1,233 +1,225 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { Eyebrow, Line } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
+import type { LandingTranslations } from '@/lib/i18n'
 
-const ICONS = [
-  <MicIcon />,
-  <CameraIcon />,
-  <ChartIcon />,
-  <TargetIcon />,
-  <RepeatIcon />,
-  <ShieldIcon />,
-  <CreditCardIcon />,
-  <PieChartIcon />,
+type Demo = LandingTranslations['features']['demo']
+
+// Heat levels for the two-week strip in the REV fragment (0 = no spend).
+const HEAT = [2, 1, 0, 3, 1, 2, 1, 0, 3, 2, 1, 2, 1, 4] as const
+const HEAT_BG = ['bg-truffle-h0', 'bg-truffle-h1', 'bg-truffle-h2', 'bg-truffle-h3', 'bg-truffle-h4']
+// Level-meter timings for the CHAT fragment: [duration, delay] in seconds.
+const BARS = [
+  [0.8, 0],
+  [0.9, 0.1],
+  [0.7, 0.2],
+  [1, 0.05],
+  [0.8, 0.3],
+  [0.9, 0.15],
+  [0.75, 0.25],
+  [0.85, 0.35],
+  [0.95, 0.12],
+  [0.8, 0.22],
 ]
 
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-} as const
-
-const card = {
-  hidden: { opacity: 0, y: 28, scale: 0.96 },
-  show: { opacity: 1, y: 0, scale: 1 },
-} as const
+/** The small, real UI fragment printed under each feature. */
+function Fragment({ index, demo }: { index: number; demo: Demo }) {
+  switch (index) {
+    case 0:
+      return (
+        <div
+          aria-hidden
+          className="h-[52px] rounded-lg bg-truffle-accent text-truffle-on-accent flex items-center gap-2.5 px-3.5 max-w-[340px]"
+        >
+          <span
+            className="w-2 h-2 rounded-full bg-truffle-on-accent flex-none"
+            style={{ animation: 'tl-dot 1s infinite' }}
+          />
+          <div className="flex-1 flex gap-[3px] items-center h-[26px]">
+            {BARS.map(([d, delay], i) => (
+              <div
+                key={i}
+                className="flex-1 h-full bg-truffle-on-accent"
+                style={{ animation: `tl-bar ${d}s ease-in-out ${delay}s infinite` }}
+              />
+            ))}
+          </div>
+          <span className="text-[11px] font-bold uppercase">{demo.listening}</span>
+        </div>
+      )
+    case 1:
+      return (
+        <div className="max-w-[340px] bg-truffle-surface py-2.5 px-3.5 flex flex-col gap-1 text-[13px]">
+          <Line
+            label={demo.scanLine.label}
+            value={demo.scanLine.value}
+            valueClassName="font-bold"
+            className="[&>.leader]:!mb-1 !gap-1.5"
+          />
+          <span className="text-[11px] font-bold uppercase text-truffle-positive">
+            {demo.scanStatus}
+          </span>
+        </div>
+      )
+    case 2:
+      return (
+        <div className="max-w-[340px] flex flex-col gap-1.5">
+          <div aria-hidden className="grid grid-cols-[repeat(14,1fr)] gap-0.5">
+            {HEAT.map((level, i) => (
+              <div
+                key={i}
+                className={`h-5 ${HEAT_BG[level]} ${level === 0 ? 'border border-truffle-border' : ''}`}
+              />
+            ))}
+          </div>
+          <span className="text-[11px] font-bold uppercase text-truffle-warning">
+            {demo.revStatus}
+          </span>
+        </div>
+      )
+    case 3:
+      return (
+        <div className="max-w-[340px] bg-truffle-surface border-t-[6px] border-truffle-accent pt-2.5 px-3.5 pb-3.5 flex flex-col gap-2 text-[13px]">
+          <span className="text-[11px] font-bold uppercase text-truffle-accent-ink">
+            {demo.goal.label}
+          </span>
+          <Line
+            label={demo.goal.line.label}
+            value={demo.goal.line.value}
+            valueClassName="font-bold"
+            className="[&>.leader]:!mb-1 !gap-1.5"
+          />
+          <div aria-hidden className="grid grid-cols-2 gap-2">
+            <span className="key key-ink key-3 h-11 text-xs cursor-default">{demo.goal.create}</span>
+            <span className="key key-plain key-3 h-11 text-xs cursor-default">{demo.goal.notNow}</span>
+          </div>
+        </div>
+      )
+    case 4:
+      return (
+        <div className="flex items-center gap-3.5 flex-wrap">
+          <div aria-hidden className="flex gap-1">
+            {Array.from({ length: 8 }, (_, i) => (
+              <div
+                key={i}
+                className={`w-5 h-5 border-2 ${i < 6 ? 'bg-truffle-accent border-truffle-accent-edge' : 'border-truffle-border'}`}
+              />
+            ))}
+          </div>
+          <span className="text-[11px] font-bold uppercase">{demo.habitStreak}</span>
+        </div>
+      )
+    case 5:
+      return (
+        <div className="max-w-[340px] bg-truffle-surface py-2.5 px-3.5 flex flex-col gap-1 text-[13px]">
+          {demo.privacy.map((row) => (
+            <Line
+              key={row.label}
+              label={row.label}
+              value={row.value}
+              valueClassName="font-bold"
+              className="[&>.leader]:!mb-1 !gap-1.5"
+            />
+          ))}
+        </div>
+      )
+    case 6:
+      return (
+        <div className="max-w-[340px] bg-truffle-surface py-2.5 px-3.5 flex flex-col gap-1 text-[13px]">
+          {demo.subscriptions.map((row) => (
+            <Line
+              key={row.label}
+              label={row.label}
+              value={row.value}
+              className="[&>.leader]:!mb-1 !gap-1.5"
+            />
+          ))}
+          <div className="rule my-0.5" />
+          <div className="flex justify-between font-bold uppercase">
+            <span>{demo.subscriptionsTotal.label}</span>
+            <span>{demo.subscriptionsTotal.value}</span>
+          </div>
+        </div>
+      )
+    default:
+      return (
+        <div className="max-w-[340px] flex flex-col gap-1.5">
+          <Line
+            label={demo.budget.line.label}
+            value={demo.budget.line.value}
+            className="text-[13px] [&>.leader]:!mb-1 !gap-1.5"
+          />
+          <div aria-hidden className="grid grid-cols-10 gap-0.5">
+            {Array.from({ length: 10 }, (_, i) => (
+              <div
+                key={i}
+                className={`h-3.5 ${i < 8 ? 'bg-truffle-warning' : 'border border-truffle-border'}`}
+              />
+            ))}
+          </div>
+          <span className="text-[11px] font-bold uppercase text-truffle-warning">
+            {demo.budget.status}
+          </span>
+        </div>
+      )
+  }
+}
 
 export default function Features() {
   const { t } = useLanguage()
+  const f = t.features
 
   return (
-    <section id="features" className="py-28 px-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
-        >
-          <p className="section-label mb-4">{t.features.sectionLabel}</p>
-          <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-truffle-text mb-5">
-            {t.features.headlineNormal}{' '}
-            <span className="text-truffle-amber">{t.features.headlineAmber}</span>
+    <section id="features" className="pt-[clamp(64px,8cqi,128px)] px-[clamp(16px,5.5cqi,80px)]">
+      <div className="max-w-[1280px] mx-auto flex flex-col gap-[clamp(28px,3cqi,48px)]">
+        <div className="flex flex-col gap-3.5 max-w-[760px]">
+          <Eyebrow>{f.sectionLabel}</Eyebrow>
+          <h2 className="m-0 font-grotesk font-medium text-[clamp(34px,4.4cqi,64px)] leading-[1.02] tracking-[-.025em] [text-wrap:balance]">
+            {f.headline}
           </h2>
-          <p className="text-lg text-truffle-text-secondary max-w-xl mx-auto leading-relaxed">
-            {t.features.subheadline}
+          <p className="m-0 font-grotesk text-[clamp(16px,1.3cqi,19px)] leading-normal text-truffle-text2">
+            {f.subheadline}
           </p>
-        </motion.div>
+        </div>
 
-        {/* Grid */}
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: '-80px' }}
-          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
-        >
-          {t.features.items.map((f, i) => (
-            <motion.div
-              key={f.title}
-              variants={card}
-              transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-              whileHover={{ y: -5, transition: { duration: 0.2 } }}
-              className="group relative bg-truffle-card border border-truffle-border rounded-2xl p-6 overflow-hidden cursor-default"
-            >
-              <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-truffle-amber/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute inset-0 bg-truffle-amber/0 group-hover:bg-truffle-amber/[0.03] transition-colors duration-300 rounded-2xl" />
-
-              <div className="relative w-11 h-11 rounded-xl bg-truffle-amber/10 border border-truffle-amber/20 flex items-center justify-center mb-5 text-truffle-amber group-hover:bg-truffle-amber/20 transition-colors duration-300">
-                {ICONS[i]}
-              </div>
-
-              <h3 className="relative font-bold text-truffle-text text-lg mb-2">{f.title}</h3>
-              <p className="relative text-sm text-truffle-text-secondary leading-relaxed">
-                {f.desc}
-              </p>
-            </motion.div>
-          ))}
-        </motion.div>
+        <div className="slip-drop">
+          <div className="slip pt-[clamp(18px,2.6cqi,40px)] px-[clamp(18px,3cqi,48px)] pb-[clamp(40px,4cqi,56px)]">
+            <Line
+              label={f.statementLabel}
+              value={f.itemsCount}
+              className="text-[13px] font-bold tracking-[.1em] uppercase pb-4"
+            />
+            <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,480px),1fr))] gap-x-14">
+              {f.items.map((item, i) => (
+                <li
+                  key={item.code}
+                  className="grid grid-cols-[64px_minmax(0,1fr)] gap-4 py-6 border-t border-dashed border-truffle-text2"
+                >
+                  <span className="self-start py-[5px] text-center bg-truffle-surface text-xs font-bold tracking-[.06em] uppercase">
+                    {item.code}
+                  </span>
+                  <div className="flex flex-col gap-2">
+                    <h3 className="m-0 font-grotesk text-[clamp(20px,1.7cqi,24px)] font-medium">
+                      {item.title}
+                    </h3>
+                    <p className="m-0 font-grotesk text-base leading-normal text-truffle-text2">
+                      {item.desc}
+                    </p>
+                    <div className="mt-1.5">
+                      <Fragment index={i} demo={f.demo} />
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="rule mt-2 pt-4 flex flex-wrap justify-between gap-2 text-[15px] font-bold tracking-[.06em] uppercase">
+              <span>{f.total.label}</span>
+              <span>{f.total.value}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
-  )
-}
-
-function MicIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" y1="19" x2="12" y2="22" />
-    </svg>
-  )
-}
-
-function CameraIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-      <circle cx="12" cy="13" r="4" />
-    </svg>
-  )
-}
-
-function ChartIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="18" y1="20" x2="18" y2="10" />
-      <line x1="12" y1="20" x2="12" y2="4" />
-      <line x1="6" y1="20" x2="6" y2="14" />
-      <line x1="2" y1="20" x2="22" y2="20" />
-    </svg>
-  )
-}
-
-function TargetIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" />
-    </svg>
-  )
-}
-
-function RepeatIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="17 1 21 5 17 9" />
-      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-      <polyline points="7 23 3 19 7 15" />
-      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-    </svg>
-  )
-}
-
-function ShieldIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-  )
-}
-
-function CreditCardIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
-      <line x1="1" y1="10" x2="23" y2="10" />
-    </svg>
-  )
-}
-
-function PieChartIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-      <path d="M22 12A10 10 0 0 0 12 2v10z" />
-    </svg>
   )
 }

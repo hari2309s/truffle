@@ -1,156 +1,129 @@
-import LegalNav from '@/components/LegalNav'
+import LegalPage, { type LegalSection } from '@/components/LegalPage'
+import { LegalItem, LegalList, MailLink, readMinutes } from '@/components/LegalParts'
 import { translations } from '@/lib/i18n'
 
 const LAST_UPDATED = 'May 2025'
 const CONTACT_EMAIL = 'hello@truffle.finance'
 
-// Server Component — LegalNav is now purely static markup around two
-// self-contained client islands (ThemeToggle, LanguageDropdown), and the
-// rest of this page is static legal text, so nothing here forces a client
-// boundary. Reads the translation table directly since there's only one
-// supported locale today.
+// Server Component — the page is static legal text; LegalPage is the only
+// client island (for the scroll-tracked section index). Reads the
+// translation table directly since there's only one supported locale today.
 const t = translations.en
 
+/** Splits "text {email} text" around a mail link. */
+function withEmail(text: string) {
+  const [before, after] = text.split('{email}')
+  return (
+    <>
+      {before}
+      <MailLink email={CONTACT_EMAIL} />
+      {after}
+    </>
+  )
+}
+
 export default function PrivacyContent() {
-  const s = t.legal.privacy.sections
+  const p = t.legal.privacy
+  const s = p.sections
+
+  const sections: LegalSection[] = [
+    {
+      code: 'Who',
+      heading: s.whoWeAre.heading,
+      body: (
+        <>
+          <p className="m-0">{s.whoWeAre.body}</p>
+          <p className="m-0">
+            {s.whoWeAre.contactPrefix} <MailLink email={CONTACT_EMAIL} />
+          </p>
+        </>
+      ),
+    },
+    {
+      code: 'Col',
+      heading: s.whatWeCollect.heading,
+      body: (
+        <LegalList>
+          {s.whatWeCollect.items.map(({ title, desc }) => (
+            <LegalItem key={title} title={`${title}:`}>
+              {desc}
+            </LegalItem>
+          ))}
+        </LegalList>
+      ),
+    },
+    {
+      code: 'Not',
+      heading: s.whatWeDoNotCollect.heading,
+      body: (
+        <LegalList>
+          {s.whatWeDoNotCollect.items.map((item) => (
+            <LegalItem key={item}>{item}</LegalItem>
+          ))}
+        </LegalList>
+      ),
+    },
+    {
+      code: 'Use',
+      heading: s.howWeUse.heading,
+      body: (
+        <>
+          <p className="m-0">{s.howWeUse.intro}</p>
+          <LegalList>
+            {s.howWeUse.items.map((item) => (
+              <LegalItem key={item}>{item}</LegalItem>
+            ))}
+          </LegalList>
+          <p className="m-0">{s.howWeUse.outro}</p>
+        </>
+      ),
+    },
+    {
+      code: '3rd',
+      heading: s.thirdParty.heading,
+      body: (
+        <>
+          <p className="m-0">{s.thirdParty.intro}</p>
+          <LegalList>
+            {s.thirdParty.items.map(({ name, desc }) => (
+              <LegalItem key={name} title={name}>
+                {desc}
+              </LegalItem>
+            ))}
+          </LegalList>
+        </>
+      ),
+    },
+    {
+      code: 'You',
+      heading: s.gdprRights.heading,
+      body: (
+        <>
+          <p className="m-0">{s.gdprRights.intro}</p>
+          <LegalList>
+            {s.gdprRights.items.map(({ right, desc }) => (
+              <LegalItem key={right} title={`${right}:`}>
+                {desc}
+              </LegalItem>
+            ))}
+          </LegalList>
+          <p className="m-0">{withEmail(s.gdprRights.outro)}</p>
+        </>
+      ),
+    },
+    { code: 'Keep', heading: s.retention.heading, body: <p className="m-0">{s.retention.body}</p> },
+    { code: 'Chg', heading: s.changes.heading, body: <p className="m-0">{s.changes.body}</p> },
+    { code: 'Ask', heading: s.contact.heading, body: <p className="m-0">{withEmail(s.contact.body)}</p> },
+  ]
 
   return (
-    <div className="min-h-screen bg-truffle-bg text-truffle-text">
-      <LegalNav />
-      <main className="max-w-3xl mx-auto px-6 py-16">
-        <p className="text-truffle-amber text-xs font-semibold uppercase tracking-widest mb-4">
-          Legal
-        </p>
-        <h1 className="text-4xl font-black tracking-tight mb-2">{t.legal.privacy.pageTitle}</h1>
-        <p className="text-truffle-muted text-sm mb-12">
-          {t.legal.lastUpdatedPrefix} {LAST_UPDATED}
-        </p>
-
-        <div className="prose-truffle space-y-10 text-truffle-text-secondary leading-relaxed">
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.whoWeAre.heading}</h2>
-            <p>{s.whoWeAre.body}</p>
-            <p className="mt-3">
-              {s.whoWeAre.contactPrefix}{' '}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-truffle-amber hover:underline">
-                {CONTACT_EMAIL}
-              </a>
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.whatWeCollect.heading}</h2>
-            <ul className="space-y-2 list-none">
-              {s.whatWeCollect.items.map(({ title, desc }) => (
-                <li key={title} className="flex gap-3">
-                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-truffle-amber flex-shrink-0" />
-                  <span>
-                    <span className="font-semibold text-truffle-text">{title}:</span> {desc}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">
-              {s.whatWeDoNotCollect.heading}
-            </h2>
-            <ul className="space-y-2 list-none">
-              {s.whatWeDoNotCollect.items.map((item) => (
-                <li key={item} className="flex gap-3">
-                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-truffle-muted flex-shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.howWeUse.heading}</h2>
-            <p>{s.howWeUse.intro}</p>
-            <ul className="mt-3 space-y-2 list-none">
-              {s.howWeUse.items.map((item) => (
-                <li key={item} className="flex gap-3">
-                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-truffle-amber flex-shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4">{s.howWeUse.outro}</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.thirdParty.heading}</h2>
-            <p>{s.thirdParty.intro}</p>
-            <div className="mt-4 space-y-3">
-              {s.thirdParty.items.map(({ name, desc }) => (
-                <div key={name} className="flex gap-3">
-                  <span className="font-semibold text-truffle-text w-36 flex-shrink-0">{name}</span>
-                  <span>{desc}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.gdprRights.heading}</h2>
-            <p>{s.gdprRights.intro}</p>
-            <ul className="mt-3 space-y-2 list-none">
-              {s.gdprRights.items.map(({ right, desc }) => (
-                <li key={right} className="flex gap-3">
-                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-truffle-amber flex-shrink-0" />
-                  <span>
-                    <span className="font-semibold text-truffle-text">{right}:</span> {desc}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4">
-              {s.gdprRights.outro.split('{email}')[0]}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-truffle-amber hover:underline">
-                {CONTACT_EMAIL}
-              </a>
-              {s.gdprRights.outro.split('{email}')[1]}
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.retention.heading}</h2>
-            <p>{s.retention.body}</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.changes.heading}</h2>
-            <p>{s.changes.body}</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-truffle-text mb-3">{s.contact.heading}</h2>
-            <p>
-              {s.contact.body.split('{email}')[0]}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-truffle-amber hover:underline">
-                {CONTACT_EMAIL}
-              </a>
-              {s.contact.body.split('{email}')[1]}
-            </p>
-          </section>
-        </div>
-      </main>
-
-      <footer className="border-t border-truffle-border/40 mt-16">
-        <div className="max-w-3xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-truffle-muted">© {new Date().getFullYear()} Truffle.</p>
-          <div className="flex gap-6 text-xs text-truffle-muted">
-            <a href="/privacy" className="text-truffle-text-secondary">
-              {t.legal.footerPrivacy}
-            </a>
-            <a href="/terms" className="hover:text-truffle-text-secondary transition-colors">
-              {t.legal.footerTerms}
-            </a>
-          </div>
-        </div>
-      </footer>
-    </div>
+    <LegalPage
+      eyebrow={p.eyebrow}
+      headline={p.headline}
+      meta={t.legal.meta(LAST_UPDATED, sections.length, readMinutes(s))}
+      summary={p.summary}
+      sections={sections}
+      contactEmail={CONTACT_EMAIL}
+    />
   )
 }

@@ -8,8 +8,10 @@ import FinalCTA from '@/components/FinalCTA'
 import Footer from '@/components/Footer'
 
 export default function Page() {
+  // Container queries size the type and spacing (cqi clamps), so the one
+  // layout scales from 390 to 1440 like the design frames.
   return (
-    <main className="min-h-screen bg-truffle-bg text-truffle-text">
+    <main className="[container-type:inline-size] min-h-screen bg-truffle-bg text-truffle-text">
       <Nav />
       <Hero />
       <TrustStrip />

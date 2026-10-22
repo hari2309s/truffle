@@ -1,69 +1,81 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useLanguage } from '@/contexts/LanguageContext'
 
+type Theme = 'light' | 'system' | 'dark'
+
+const STORAGE_KEY = 'truffle-theme'
+// Several toggles can be mounted at once (desktop nav + mobile menu); this
+// event keeps every instance showing the active choice.
+const CHANGE_EVENT = 'truffle-theme-change'
+const OPTIONS: { id: Theme; glyph: string }[] = [
+  { id: 'light', glyph: '☀' },
+  { id: 'system', glyph: '◐' },
+  { id: 'dark', glyph: '☾' },
+]
+
+function applyTheme(theme: Theme) {
+  const root = document.documentElement
+  root.classList.remove('dark', 'light')
+  if (theme !== 'system') root.classList.add(theme)
+}
+
+/** Three-way segmented switch: light · system · dark. */
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const { t } = useLanguage()
+  const [theme, setTheme] = useState<Theme>('dark')
 
   useEffect(() => {
-    const saved = localStorage.getItem('truffle-theme') as 'dark' | 'light' | null
-    const initial =
-      saved ?? (document.documentElement.classList.contains('light') ? 'light' : 'dark')
-    setTheme(initial)
+    let saved: string | null = null
+    try {
+      saved = localStorage.getItem(STORAGE_KEY)
+    } catch {
+      // storage blocked — fall back to the default
+    }
+    if (saved === 'light' || saved === 'dark' || saved === 'system') setTheme(saved)
+
+    const onChange = (e: Event) => setTheme((e as CustomEvent<Theme>).detail)
+    window.addEventListener(CHANGE_EVENT, onChange)
+    return () => window.removeEventListener(CHANGE_EVENT, onChange)
   }, [])
 
-  const toggle = () => {
-    const next = theme === 'dark' ? 'light' : 'dark'
-    document.documentElement.classList.remove('dark', 'light')
-    document.documentElement.classList.add(next)
-    localStorage.setItem('truffle-theme', next)
+  const choose = (next: Theme) => {
+    applyTheme(next)
     setTheme(next)
+    window.dispatchEvent(new CustomEvent<Theme>(CHANGE_EVENT, { detail: next }))
+    try {
+      localStorage.setItem(STORAGE_KEY, next)
+    } catch {
+      // storage blocked — the choice still applies for this visit
+    }
   }
 
   return (
-    <motion.button
-      onClick={toggle}
-      whileTap={{ scale: 0.85, rotate: 20 }}
-      className="w-9 h-9 flex items-center justify-center rounded-xl text-truffle-text-secondary hover:text-truffle-text hover:bg-truffle-surface transition-all"
-      aria-label="Toggle theme"
+    <div
+      role="radiogroup"
+      aria-label={t.nav.theme.label}
+      className="flex p-[3px] border border-truffle-border rounded-lg bg-truffle-card"
     >
-      {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-    </motion.button>
-  )
-}
-
-function SunIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-    </svg>
-  )
-}
-
-function MoonIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
+      {OPTIONS.map(({ id, glyph }) => {
+        const selected = theme === id
+        return (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            aria-label={t.nav.theme[id]}
+            title={t.nav.theme[id]}
+            onClick={() => choose(id)}
+            className={`w-9 h-9 rounded-md grid place-items-center text-sm ${
+              selected ? 'bg-truffle-text text-truffle-bg' : 'text-truffle-text2'
+            }`}
+          >
+            <span aria-hidden>{glyph}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 }
