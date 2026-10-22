@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         target_amount: targetAmount,
         saved_amount: 0,
         deadline: deadline || null,
-        emoji: emoji ?? '🎯',
+        emoji: emoji || '🎯',
       })
       .select()
       .single()

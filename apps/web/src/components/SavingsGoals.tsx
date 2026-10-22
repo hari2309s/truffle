@@ -1,6 +1,6 @@
 'use client'
 
-import { EmojiField, GOAL_SUGGESTIONS } from './EmojiField'
+import { DEFAULT_GOAL_EMOJI, EmojiField } from './EmojiField'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SkeletonPulse } from './PageMotion'
@@ -351,7 +351,7 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
   const { symbol } = useCurrency()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
-  const [form, setForm] = useState({ name: '', targetAmount: '', deadline: '', emoji: '🎯' })
+  const [form, setForm] = useState({ name: '', targetAmount: '', deadline: '', emoji: '' })
   const [isLoading, setIsLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -368,7 +368,7 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
         name,
         targetAmount,
         deadline: deadline || undefined,
-        emoji,
+        emoji: emoji || DEFAULT_GOAL_EMOJI,
       }
 
       const res = await fetch('/api/goals', {
@@ -397,7 +397,7 @@ function AddGoalForm({ userId, onDone }: { userId: string; onDone: () => void })
         value={form.emoji}
         onChange={(emoji) => setForm((f) => ({ ...f, emoji }))}
         label={t.savingsGoals.iconLabel}
-        suggestions={GOAL_SUGGESTIONS}
+        fallback={DEFAULT_GOAL_EMOJI}
       />
 
       <input

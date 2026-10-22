@@ -13,7 +13,7 @@ import type { HabitWithStats } from '@truffle/types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useSectionAddForm } from '@/contexts/SectionAddFormContext'
-import { EmojiField, HABIT_SUGGESTIONS } from './EmojiField'
+import { DEFAULT_HABIT_EMOJI, EmojiField } from './EmojiField'
 
 interface SavingsHabitsProps {
   userId: string
@@ -210,7 +210,7 @@ function AddHabitForm({
   const { t } = useLanguage()
   const { symbol } = useCurrency()
   const queryClient = useQueryClient()
-  const [form, setForm] = useState({ emoji: '💰', name: '', amount: '', frequency: 'weekly' as Frequency })
+  const [form, setForm] = useState({ emoji: '', name: '', amount: '', frequency: 'weekly' as Frequency })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const sh = t.savingsHabits
@@ -229,7 +229,7 @@ function AddHabitForm({
           name: form.name.trim(),
           amount,
           frequency: form.frequency,
-          emoji: form.emoji,
+          emoji: form.emoji || DEFAULT_HABIT_EMOJI,
         }),
       })
       if (!res.ok) throw new Error()
@@ -248,7 +248,7 @@ function AddHabitForm({
         value={form.emoji}
         onChange={(emoji) => setForm((f) => ({ ...f, emoji }))}
         label={sh.iconLabel}
-        suggestions={HABIT_SUGGESTIONS}
+        fallback={DEFAULT_HABIT_EMOJI}
       />
       <input
         type="text"

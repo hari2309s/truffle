@@ -1,6 +1,6 @@
 'use client'
 
-import { EmojiField, HABIT_SUGGESTIONS } from './EmojiField'
+import { DEFAULT_HABIT_EMOJI, EmojiField } from './EmojiField'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { HabitWithStats } from '@truffle/types'
@@ -84,7 +84,7 @@ export function HabitDetailSheet({
     const ok = await call({
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'edit', habitId: habit.id, name: form.name.trim(), emoji: form.emoji, amount }),
+      body: JSON.stringify({ action: 'edit', habitId: habit.id, name: form.name.trim(), emoji: form.emoji || DEFAULT_HABIT_EMOJI, amount }),
     })
     if (ok) onClose()
   }
@@ -134,7 +134,7 @@ export function HabitDetailSheet({
             value={form.emoji}
             onChange={(emoji) => setForm((f) => ({ ...f, emoji }))}
             label={h.icon}
-            suggestions={HABIT_SUGGESTIONS}
+            fallback={DEFAULT_HABIT_EMOJI}
           />
           <input
             value={form.name}

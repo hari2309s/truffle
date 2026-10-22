@@ -509,10 +509,9 @@ export interface Translations {
   }
   emoji: {
     placeholder: string
-    hint: string
+    hint: (fallback: string) => string
     notEmoji: string
     current: (emoji: string) => string
-    pick: (emoji: string) => string
   }
   monthlyBudgets: {
     noBudgets: string
@@ -1156,10 +1155,9 @@ export const translations: Record<Locale, Translations> = {
     },
     emoji: {
       placeholder: 'Type or paste any emoji',
-      hint: 'Use your emoji keyboard, or tap one below.',
+      hint: (fallback) => `Use your emoji keyboard. Leave it empty for ${fallback}.`,
       notEmoji: 'That’s not an emoji — try the emoji keyboard',
       current: (emoji) => `Chosen icon: ${emoji}`,
-      pick: (emoji) => `Use ${emoji}`,
     },
     monthlyBudgets: {
       noBudgets: 'No budgets yet — set one to track category spending',

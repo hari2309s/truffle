@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
         name,
         amount,
         frequency,
-        emoji: emoji ?? '💰',
+        emoji: emoji || '💰',
         is_active: true,
       })
       .select()

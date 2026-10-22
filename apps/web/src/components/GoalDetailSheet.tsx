@@ -1,6 +1,6 @@
 'use client'
 
-import { EmojiField, GOAL_SUGGESTIONS } from './EmojiField'
+import { DEFAULT_GOAL_EMOJI, EmojiField } from './EmojiField'
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { SavingsGoal } from '@truffle/types'
@@ -125,7 +125,7 @@ export function GoalDetailSheet({
     const ok = await patch({
       action: 'edit',
       name: form.name.trim(),
-      emoji: form.emoji,
+      emoji: form.emoji || DEFAULT_GOAL_EMOJI,
       targetAmount: target,
       deadline: form.deadline || null,
     })
@@ -245,7 +245,7 @@ export function GoalDetailSheet({
             value={form.emoji}
             onChange={(emoji) => setForm((f) => ({ ...f, emoji }))}
             label={t.savingsGoals.iconLabel}
-            suggestions={GOAL_SUGGESTIONS}
+            fallback={DEFAULT_GOAL_EMOJI}
           />
           <input
             value={form.name}
