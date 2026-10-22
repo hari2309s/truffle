@@ -14,7 +14,7 @@ interface FinancialBriefProps {
   userId: string
 }
 
-/** The daily statement: balance, this month's run-rate and where it lands. */
+/** The daily statement: net logged, this month's run-rate and where it lands. */
 export function FinancialBrief({ userId }: FinancialBriefProps) {
   const { t, locale } = useLanguage()
   const { formatAmount, currency } = useCurrency()
@@ -56,7 +56,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
           <span>{now.toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
         </div>
         <Rule />
-        <span className="text-xs text-truffle-text2 uppercase">{t.dashboard.balance}</span>
+        <span className="text-xs text-truffle-text2 uppercase">{t.dashboard.netThisMonth}</span>
         <span className="text-[44px] font-bold leading-none text-truffle-text2">
           {formatAmount(0).replace(/[\d.,]+/, '—.——')}
         </span>
@@ -87,7 +87,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
       </div>
       <Rule />
       <span className="text-xs text-truffle-text2 uppercase">
-        {statement.balanceIsAllTime ? t.dashboard.balance : t.dashboard.netThisMonth}
+        {statement.balanceIsAllTime ? t.dashboard.netLogged : t.dashboard.netThisMonth}
       </span>
       <span className="text-[44px] font-bold leading-none break-all">{signed(statement.balance)}</span>
       <Rule className="mt-1.5" />

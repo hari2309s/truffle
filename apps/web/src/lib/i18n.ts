@@ -101,7 +101,7 @@ export interface Translations {
     signOut: string
     settingsLabel: string
     statement: string
-    balance: string
+    netLogged: string
     netThisMonth: string
     spentThisMonth: string
     dailyRate: string
@@ -705,7 +705,7 @@ export const translations: Record<Locale, Translations> = {
       signOut: 'Sign out',
       settingsLabel: 'Settings',
       statement: 'Statement',
-      balance: 'Balance',
+      netLogged: 'Net logged',
       netThisMonth: 'Net this month',
       spentThisMonth: 'Spent this month',
       dailyRate: 'Daily rate',
