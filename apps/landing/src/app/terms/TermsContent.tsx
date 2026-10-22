@@ -1,12 +1,12 @@
+'use client'
+
 import LegalPage, { type LegalSection } from '@/components/LegalPage'
 import { LegalItem, LegalList, MailLink, readMinutes } from '@/components/LegalParts'
-import { translations } from '@/lib/i18n'
+import { useLanguage } from '@/contexts/LanguageContext'
 
-const LAST_UPDATED = 'May 2025'
+/** Month of the last change; shown in the reader's language. */
+const LAST_UPDATED = new Date(2025, 4, 1)
 const CONTACT_EMAIL = 'hello@truffle.finance'
-
-// Server Component — see PrivacyContent.tsx for why this is safe.
-const t = translations.en
 
 /** Drops the "1. " numbering — the section code and index carry it now. */
 const unnumbered = (heading: string) => heading.replace(/^\d+\.\s*/, '')
@@ -26,6 +26,8 @@ function withLink(text: string, token: string, link: React.ReactNode) {
 const linkClass = 'text-truffle-accent-ink underline underline-offset-2'
 
 export default function TermsContent() {
+  const { t, locale } = useLanguage()
+  const updated = LAST_UPDATED.toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-GB', { month: 'long', year: 'numeric' })
   const p = t.legal.terms
   const s = p.sections
 
@@ -122,7 +124,7 @@ export default function TermsContent() {
     <LegalPage
       eyebrow={p.eyebrow}
       headline={p.headline}
-      meta={t.legal.meta(LAST_UPDATED, sections.length, readMinutes(s))}
+      meta={t.legal.meta(updated, sections.length, readMinutes(s))}
       summary={p.summary}
       sections={sections}
       contactEmail={CONTACT_EMAIL}

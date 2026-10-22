@@ -1,14 +1,12 @@
+'use client'
+
 import LegalPage, { type LegalSection } from '@/components/LegalPage'
 import { LegalItem, LegalList, MailLink, readMinutes } from '@/components/LegalParts'
-import { translations } from '@/lib/i18n'
+import { useLanguage } from '@/contexts/LanguageContext'
 
-const LAST_UPDATED = 'May 2025'
+/** Month of the last change; shown in the reader's language. */
+const LAST_UPDATED = new Date(2025, 4, 1)
 const CONTACT_EMAIL = 'hello@truffle.finance'
-
-// Server Component — the page is static legal text; LegalPage is the only
-// client island (for the scroll-tracked section index). Reads the
-// translation table directly since there's only one supported locale today.
-const t = translations.en
 
 /** Splits "text {email} text" around a mail link. */
 function withEmail(text: string) {
@@ -23,6 +21,8 @@ function withEmail(text: string) {
 }
 
 export default function PrivacyContent() {
+  const { t, locale } = useLanguage()
+  const updated = LAST_UPDATED.toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-GB', { month: 'long', year: 'numeric' })
   const p = t.legal.privacy
   const s = p.sections
 
@@ -120,7 +120,7 @@ export default function PrivacyContent() {
     <LegalPage
       eyebrow={p.eyebrow}
       headline={p.headline}
-      meta={t.legal.meta(LAST_UPDATED, sections.length, readMinutes(s))}
+      meta={t.legal.meta(updated, sections.length, readMinutes(s))}
       summary={p.summary}
       sections={sections}
       contactEmail={CONTACT_EMAIL}

@@ -33,6 +33,8 @@ export default function LegalPage({
   contactEmail,
 }: LegalPageProps) {
   const { t } = useLanguage()
+  // Codes stay the anchor ids (#sec-who); the label shown is the reader's language.
+  const label = (code: string) => t.legal.sectionCodes?.[code] ?? code
   const [active, setActive] = useState(sections[0]?.code ?? '')
 
   // The active code is the last section whose top has passed the upper third.
@@ -87,7 +89,7 @@ export default function LegalPage({
                 active === s.code ? 'bg-truffle-text text-truffle-bg' : ''
               }`}
             >
-              {s.code}
+              {label(s.code)}
             </a>
           ))}
         </nav>
@@ -111,7 +113,7 @@ export default function LegalPage({
                     isActive ? 'bg-truffle-text text-truffle-bg' : ''
                   }`}
                 >
-                  <span>{s.code}</span>
+                  <span>{label(s.code)}</span>
                   <span
                     aria-hidden
                     className={`leader !mb-0 mt-1.5 self-center ${isActive ? '!border-truffle-text2' : ''}`}
@@ -136,7 +138,7 @@ export default function LegalPage({
                 >
                   <div className="flex gap-2.5 items-baseline">
                     <span className="text-xs font-bold tracking-[.1em] uppercase py-[3px] px-2 bg-truffle-surface">
-                      {s.code}
+                      {label(s.code)}
                     </span>
                     <h2
                       id={`${sectionId(s.code)}-h`}

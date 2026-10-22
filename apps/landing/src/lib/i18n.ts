@@ -1,4 +1,4 @@
-export type Locale = 'en'
+export type Locale = 'en' | 'de'
 
 export interface HeadlineWord {
   text: string
@@ -136,6 +136,8 @@ export interface LandingTranslations {
     lastUpdatedPrefix: string
     footerPrivacy: string
     footerTerms: string
+    /** Display labels for the section codes ("Who" → "Wer"); codes stay the anchor ids. */
+    sectionCodes?: Record<string, string>
     privacy: {
       pageTitle: string
       eyebrow: string
@@ -612,8 +614,447 @@ export const translations: Record<Locale, LandingTranslations> = {
       },
     },
   },
+  de: {
+    nav: {
+      features: 'Funktionen',
+      howItWorks: 'So funktioniert’s',
+      pricing: 'Preise',
+      signIn: 'Anmelden',
+      getStarted: 'Loslegen',
+      menu: 'Menü öffnen',
+      closeMenu: 'Menü schließen',
+      theme: { label: 'Design', light: 'Hell', system: 'System', dark: 'Dunkel' },
+      language: 'Sprache',
+    },
+    hero: {
+      badge: 'Sprache zuerst · KI-gestützt',
+      headlineWords: [
+        { text: 'Deine', amber: false },
+        { text: 'Finanzen,', amber: false },
+        { text: 'ausgegraben.', amber: true },
+      ],
+      subheadline:
+        'Der KI-Finanzassistent, der mit dir spricht – nicht über deinen Kopf hinweg. Keine Tabellen. Keine Bankverbindung. Einfach sagen.',
+      getStartedFree: 'Kostenlos loslegen →',
+      seeHowItWorks: 'So funktioniert’s',
+      socialProof: 'Kostenlos starten · Keine Kreditkarte · Keine Bankzugangsdaten',
+      mockup: {
+        label: 'Truffle · Chat',
+        reprint: '↻ Neu drucken',
+        question: 'Wie viel habe ich diese Woche für Essen ausgegeben?',
+        prevSlipLabel: 'Woche 41 · Essen',
+        prevSlipTotal: { label: 'Summe', value: '177,00 €' },
+        forLine: 'Für Hari · Woche 42',
+        stamp: 'Mi., 21. Okt. · 18:42',
+        heading: 'Essen diese Woche',
+        lines: [
+          { label: 'Lieferdienst × 5', value: '142,00 €' },
+          { label: 'Lebensmittel × 2', value: '58,00 €' },
+        ],
+        total: { label: 'Summe', value: '200,00 €' },
+        note: '23 € mehr als letzte Woche.',
+      },
+      holdToSpeak: 'Halten · Sprechen',
+    },
+    trustStrip: {
+      badges: [
+        'Keine Bankverbindung nötig',
+        'Eingabe per Sprache',
+        'Deine Daten bleiben deine',
+        'Null Tabellen',
+        'Mit KI',
+      ],
+    },
+    features: {
+      sectionLabel: 'Funktionen · 08 Posten',
+      headline: 'Alles, was du brauchst – nichts, was du nicht brauchst',
+      subheadline: 'Einzeln aufgeführt, wie alles bei Truffle. Keine Extras, die unten im Kleingedruckten lauern.',
+      statementLabel: 'Aufstellung der Funktionen',
+      itemsCount: '08 Posten',
+      items: [
+        {
+          code: 'Chat',
+          title: 'Chat per Sprache',
+          desc: 'Taste halten und reden. Truffle antwortet laut und druckt die Zahlen aus.',
+        },
+        {
+          code: 'Scan',
+          title: 'Belegscanner',
+          desc: 'Kassenbon oder PDF-Kontoauszug fotografieren. Jede Zeile in Sekunden erfasst.',
+        },
+        {
+          code: 'Prü',
+          title: 'KI-Ausgabenanalyse',
+          desc: 'Erkennt ungewöhnliche Abbuchungen und teure Tage – und sagt es dir klar.',
+        },
+        {
+          code: 'Ziel',
+          title: 'Sparziele',
+          desc: 'Erwähne einen Plan, und Truffle schlägt ein Sparziel mit Termin vor.',
+        },
+        {
+          code: 'Gew',
+          title: 'Smarte Gewohnheiten',
+          desc: 'Kleine, wiederholbare Sparbeträge wie „25 € jeden Freitag“, als Serie verfolgt.',
+        },
+        {
+          code: 'Priv',
+          title: 'Datenschutz zuerst',
+          desc: 'Niemals Bank-Logins. Deine Daten kannst du jederzeit exportieren oder löschen.',
+        },
+        {
+          code: 'Wdk',
+          title: 'Wiederkehrende Zahlungen',
+          desc: 'Erkennt Abos und Daueraufträge automatisch und zeigt dir die, die du vergessen hast.',
+        },
+        {
+          code: 'Bud',
+          title: 'Monatsbudgets',
+          desc: 'Weiche Limits pro Kategorie, mit einem freundlichen Hinweis bei 80 %. Nie ein Rüffel.',
+        },
+      ],
+      total: { label: 'Summe zum Start', value: '0,00 €' },
+      demo: {
+        listening: 'Hört zu 0:03',
+        scanLine: { label: 'Lidl × 11 Artikel', value: '45,20 €' },
+        scanStatus: '● 11 von 11 Zeilen gelesen',
+        revStatus: '▲ 1 zu prüfen · 129,00 € neuer Händler',
+        goal: {
+          label: 'Vorgeschlagenes Ziel',
+          line: { label: 'Japanreise', value: '3.600,00 €' },
+          create: 'Ziel anlegen',
+          notNow: 'Nicht jetzt',
+        },
+        habitStreak: '✦ 6 Wochen in Folge',
+        privacy: [
+          { label: 'Gespeicherte Bank-Logins', value: '0' },
+          { label: 'Export', value: 'CSV · JSON' },
+        ],
+        subscriptions: [
+          { label: 'Netflix', value: '13,99 €' },
+          { label: 'Spotify', value: '10,99 €' },
+        ],
+        subscriptionsTotal: { label: 'Monatlich', value: '24,98 €' },
+        budget: {
+          line: { label: 'Lebensmittel', value: '322 €/400 €' },
+          status: '▲ Hinweis 80 % · noch 78 €',
+        },
+      },
+    },
+    howItWorks: {
+      sectionLabel: 'So funktioniert’s · 3 Schritte',
+      headline: 'Vom ersten Wort zur ersten Antwort in einer Minute.',
+      subheadline:
+        'Kein Einrichtungsassistent, keine Bankverbindung, keine Kategorien zum Anlegen. Sprich, und es wird gedruckt.',
+      stepLabel: (n, total) => `Schritt 0${n} von 0${total}`,
+      steps: [
+        {
+          title: 'In Sekunden registriert',
+          desc: 'Nur deine E-Mail und ein Anmeldelink. Kein Passwort, niemals Bankdaten.',
+          meta: { label: 'Zeit', value: '~30 Sekunden · Ohne Karte' },
+        },
+        {
+          title: 'Ausgaben erfassen, wie du willst',
+          desc: 'Sag es, tipp es, fotografiere den Beleg oder importiere eine CSV von deiner Bank.',
+          meta: { label: 'Eingabe', value: 'Sprache · Text · Foto · CSV' },
+        },
+        {
+          title: 'Frag alles, bekomm echte Antworten',
+          desc: '„Kann ich mir Japan im April leisten?“ Truffle prüft deine Zahlen und antwortet in klaren Worten.',
+          meta: { label: 'Währungen', value: 'EUR · GBP · USD' },
+        },
+      ],
+      total: { label: 'Tabellen', value: '0' },
+    },
+    pricing: {
+      sectionLabel: 'Preise · 2 Tarife',
+      headline: 'Einfache, ehrliche Preise',
+      subheadline: 'Kostenlos starten. Upgraden, wenn Truffle es sich verdient hat.',
+      free: {
+        name: 'Free',
+        period: 'für immer',
+        price: '0,00 €',
+        features: [
+          'Manuelle Erfassung',
+          'KI-Chat',
+          'Ausgabenanalyse & Kalender',
+          'Sparziele',
+          'Spargewohnheiten',
+          'CSV-Export',
+        ],
+        total: { label: 'Summe', value: '0,00 €' },
+        cta: 'Kostenlos loslegen',
+      },
+      pro: {
+        name: 'Pro',
+        badge: 'Demnächst',
+        period: 'pro Monat',
+        price: '—,—— €',
+        features: [
+          'Alles aus Free',
+          'Unbegrenzter KI-Chat',
+          'Beleg- & PDF-Scanner',
+          'Spracherkennung',
+          'Unbegrenzte Ziele & Gewohnheiten',
+          'CSV-Export des gesamten Verlaufs',
+          'Monatlicher KI-Finanzbericht',
+        ],
+        total: { label: 'Summe', value: 'Zum Start' },
+        cta: 'Auf die Warteliste',
+      },
+      finePrint: 'Pro ist in Entwicklung · Der kostenlose Tarif bleibt kostenlos',
+    },
+    finalCta: {
+      headline: 'Deine Finanzen warten darauf,',
+      headlineAmber: 'ausgegraben zu werden',
+      subheadline: 'Fang mit einem Satz an. Truffle macht den Rest.',
+      cta: 'Kostenlos loslegen →',
+      total: { label: 'Summe', value: 'Gelassenheit' },
+      finePrint: 'Für immer kostenlos · Keine Kreditkarte · Dauert 30 Sekunden',
+    },
+    footer: {
+      tagline: 'Deine Finanzen, ausgegraben.',
+      groups: {
+        product: {
+          label: 'Produkt',
+          links: [
+            { label: 'Funktionen', href: '#features' },
+            { label: 'So funktioniert’s', href: '#how-it-works' },
+            { label: 'Preise', href: '#pricing' },
+          ],
+        },
+        legal: {
+          label: 'Rechtliches',
+          links: [
+            { label: 'Datenschutz', href: '/privacy' },
+            { label: 'Nutzungsbedingungen', href: '/terms' },
+          ],
+        },
+      },
+      demo: 'Demo ausprobieren',
+      copyright: (year) => `© ${year} Truffle · Alle Rechte vorbehalten`,
+      builtBy: 'Entwickelt von Hariharan Selvaraj',
+      bottomTagline: 'Mit Sorgfalt gedruckt · Keine Bank-Logins gespeichert',
+    },
+    cookieBanner: {
+      title: 'Cookies · einzeln aufgeführt',
+      message:
+        'Wir verwenden Analyse-Cookies, um zu verstehen, wie Truffle genutzt wird, und es zu verbessern.',
+      accept: 'Akzeptieren',
+      reject: 'Ablehnen',
+      privacyLabel: 'Datenschutzerklärung',
+    },
+    legal: {
+      back: '← Zurück',
+      home: '← Start',
+      sectionsLabel: 'Abschnitte',
+      meta: (updated, sections, minutes) =>
+        `Zuletzt aktualisiert: ${updated} · ${sections} Abschnitte · ca. ${minutes} Min. Lesezeit`,
+      questions: (email) => `Fragen? ${email}`,
+      endOfDocument: 'Ende des Dokuments',
+      lastUpdatedPrefix: 'Zuletzt aktualisiert:',
+      footerPrivacy: 'Datenschutz',
+      footerTerms: 'Nutzungsbedingungen',
+      sectionCodes: {
+        Who: 'Wer',
+        What: 'Was',
+        Acct: 'Konto',
+        Plan: 'Tarif',
+        Data: 'Daten',
+        Use: 'Nutz',
+        Up: 'Betr',
+        Liab: 'Haft',
+        End: 'Ende',
+        Law: 'Recht',
+        Ask: 'Frag',
+        Col: 'Erh',
+        Not: 'Nicht',
+        '3rd': 'Dritt',
+        You: 'Rechte',
+        Keep: 'Dauer',
+        Chg: 'Änd',
+      },
+      privacy: {
+        pageTitle: 'Datenschutzerklärung',
+        eyebrow: 'Rechtliches · Datenschutzerklärung',
+        headline: 'Datenschutz, einzeln aufgeführt.',
+        summary:
+          'Kurz gesagt: Truffle fragt nie nach deinem Bank-Login, speichert nur, was es braucht, um dir zu antworten, und du kannst deine Daten in den Einstellungen exportieren oder löschen.',
+        sections: {
+          whoWeAre: {
+            heading: 'Wer wir sind',
+            body: 'Truffle ist ein persönlicher Finanzassistent, entwickelt und betrieben von Hariharan Selvaraj mit Sitz in Berlin, Deutschland. Wenn du Truffle nutzt, ist Hariharan Selvaraj der für deine personenbezogenen Daten Verantwortliche im Sinne der DSGVO.',
+            contactPrefix: 'Kontakt:',
+          },
+          whatWeCollect: {
+            heading: 'Welche Daten wir erheben',
+            items: [
+              {
+                title: 'Deine E-Mail-Adresse',
+                desc: 'Zum Anlegen deines Kontos und zur Anmeldung per Anmeldelink. Wir speichern niemals ein Passwort.',
+              },
+              {
+                title: 'Von dir erfasste Buchungen',
+                desc: 'Die Ausgabendaten, die du eingibst, per CSV importierst oder aus Belegen auslesen lässt. Sie sind der Kern des Dienstes.',
+              },
+              {
+                title: 'Sprachaufnahmen',
+                desc: 'Nur aufgezeichnet, wenn du die Spracheingabe nutzt, zur Transkription an Groq (Whisper) gesendet und nach der Verarbeitung nicht gespeichert.',
+              },
+              {
+                title: 'Belegfotos und PDFs',
+                desc: 'Nur zum Auslesen hochgeladen. Die erkannten Buchungsdaten werden gespeichert, die Originaldatei nicht.',
+              },
+              {
+                title: 'Nutzungsanalyse',
+                desc: 'Anonymisierte Ereignisdaten über PostHog, um zu verstehen, wie Funktionen genutzt werden. Personenbezogene Daten sind nicht enthalten.',
+              },
+            ],
+          },
+          whatWeDoNotCollect: {
+            heading: 'Was wir NICHT erheben',
+            items: [
+              'Bankzugangsdaten oder Kontonummern – es gibt keine Bankanbindung.',
+              'Zahlungskartendaten – Zahlungen (sobald Pro startet) laufen vollständig über Stripe.',
+              'Daten von Drittanbietern oder Datenhändlern.',
+              'Daten von Personen, die sich nicht registriert haben.',
+            ],
+          },
+          howWeUse: {
+            heading: 'Wie wir deine Daten verwenden',
+            intro: 'Deine Daten werden ausschließlich verwendet, um dir den Dienst Truffle bereitzustellen:',
+            items: [
+              'Um deine Fragen im KI-Chat zu beantworten (dein Buchungsverlauf wird dem KI-Modell als Kontext übergeben).',
+              'Für Ausgabenanalysen, Prognosen und das Erkennen von Auffälligkeiten.',
+              'Für proaktive Hinweise zu deinen Sparzielen und Gewohnheiten.',
+              'Damit du deine eigenen Daten exportieren kannst.',
+            ],
+            outro:
+              'Wir verkaufen deine Daten nicht, geben sie nicht für Werbung weiter und verwenden sie nicht zum Trainieren von KI-Modellen.',
+          },
+          thirdParty: {
+            heading: 'Dienste Dritter',
+            intro: 'Für den Betrieb des Dienstes setzen wir folgende Auftragsverarbeiter ein:',
+            items: [
+              { name: 'Supabase', desc: 'Datenbank und Anmeldung (Region EU).' },
+              { name: 'Google Gemini', desc: 'KI-Modell für Chat und Analysen.' },
+              { name: 'Groq / Whisper', desc: 'Transkription von Spracheingaben.' },
+              { name: 'PostHog', desc: 'Anonymisierte Produktanalyse.' },
+              { name: 'Vercel', desc: 'Hosting und Bereitstellung (EU-Edge, wo verfügbar).' },
+              { name: 'Cloudflare Turnstile', desc: 'Schutz vor Bots im Anmeldeformular.' },
+            ],
+          },
+          gdprRights: {
+            heading: 'Deine Rechte nach der DSGVO',
+            intro: 'Als Nutzer:in in der EU hast du das Recht auf:',
+            items: [
+              { right: 'Auskunft', desc: 'Eine Kopie aller Daten, die wir über dich speichern.' },
+              { right: 'Berichtigung', desc: 'Korrektur unrichtiger Daten.' },
+              { right: 'Löschung', desc: 'Löschen deines Kontos und aller zugehörigen Daten.' },
+              {
+                right: 'Datenübertragbarkeit',
+                desc: 'Export deiner Buchungsdaten als CSV direkt in der App.',
+              },
+              {
+                right: 'Widerspruch',
+                desc: 'Widerspruch gegen jede Verarbeitung auf Grundlage berechtigter Interessen.',
+              },
+            ],
+            outro:
+              'Um eines dieser Rechte auszuüben, schreib an {email}. Wir antworten innerhalb von 30 Tagen.',
+          },
+          retention: {
+            heading: 'Speicherdauer',
+            body: 'Deine Daten werden gespeichert, solange dein Konto aktiv ist. Wenn du dein Konto löschst, werden alle zugehörigen Daten innerhalb von 30 Tagen endgültig gelöscht. Anonymisierte Analysedaten (die nicht auf dich zurückgeführt werden können) können zur Verbesserung des Produkts aufbewahrt werden.',
+          },
+          changes: {
+            heading: 'Änderungen dieser Erklärung',
+            body: 'Wenn wir diese Erklärung wesentlich ändern, informieren wir dich per E-Mail, bevor die Änderungen wirksam werden. Nutzt du Truffle nach diesem Zeitpunkt weiter, gilt das als Zustimmung zur aktualisierten Erklärung.',
+          },
+          contact: {
+            heading: 'Kontakt',
+            body: 'Fragen oder Beschwerden? {email}. Du hast außerdem das Recht, dich bei der Berliner Beauftragten für Datenschutz und Informationsfreiheit zu beschweren.',
+          },
+        },
+      },
+      terms: {
+        pageTitle: 'Nutzungsbedingungen',
+        eyebrow: 'Rechtliches · Nutzungsbedingungen',
+        headline: 'Bedingungen, einzeln aufgeführt.',
+        summary:
+          'Kurz gesagt: Truffle hilft dir, den Überblick über dein eigenes Geld zu behalten. Es ist keine Finanzberatung, deine Daten gehören dir, und du kannst jederzeit gehen.',
+        sections: {
+          whoApplies: {
+            heading: '1. Für wen diese Bedingungen gelten',
+            body: 'Diese Nutzungsbedingungen („Bedingungen“) regeln deine Nutzung von Truffle, einem persönlichen Finanzassistenten, betrieben von Hariharan Selvaraj, Berlin, Deutschland („wir“, „uns“, „Truffle“). Mit dem Anlegen eines Kontos stimmst du diesen Bedingungen zu. Wenn du nicht zustimmst, nutze den Dienst bitte nicht.',
+          },
+          whatTruffleIs: {
+            heading: '2. Was Truffle ist',
+            body: 'Truffle ist ein Werkzeug zum Erfassen deiner Finanzen mit KI-Chat. Es hilft dir, Ausgaben festzuhalten, Sparziele zu setzen und Fragen zu deinen eigenen Finanzdaten zu stellen.',
+            notAdvisorLabel: 'Truffle ist keine Finanzberatung.',
+            notAdvisorBody:
+              'Nichts in Truffle stellt eine Finanz-, Anlage-, Steuer- oder Rechtsberatung dar. Alle Analysen, Prognosen und Vorschläge beruhen ausschließlich auf den Daten, die du eingibst, und dienen nur zur Information. Triff finanzielle Entscheidungen nach eigenem Ermessen und, wo angebracht, mit fachkundiger Beratung.',
+          },
+          yourAccount: {
+            heading: '3. Dein Konto',
+            items: [
+              'Du musst mindestens 18 Jahre alt sein, um Truffle zu nutzen.',
+              'Du bist dafür verantwortlich, deine Anmelde-E-Mails privat und dein Konto sicher zu halten.',
+              'Du bist für alle Aktivitäten unter deinem Konto verantwortlich.',
+              'Ein Konto pro Person. Lege keine Konten für andere ohne deren Wissen an.',
+            ],
+          },
+          plans: {
+            heading: '4. Tarife Free und Pro',
+            body: 'Truffle ist mit bestimmten Grenzen kostenlos nutzbar (aktuelle Details auf der {pricingLink}). Ein Pro-Tarif ist in Entwicklung und wird zum Start 9 €/Monat kosten.',
+            pricingLinkLabel: 'Preisseite',
+            body2:
+              'Wir behalten uns vor, Tarifgrenzen und Preise zu ändern. Preiserhöhungen kündigen wir bestehenden zahlenden Abonnent:innen mindestens 30 Tage vor ihrem Wirksamwerden an.',
+          },
+          yourData: {
+            heading: '5. Deine Daten',
+            body: 'Die Daten, die du in Truffle eingibst, gehören dir. Wir beanspruchen keine Rechte an deinen Buchungen, Zielen oder sonstigen persönlichen Daten. Du kannst deine Daten jederzeit exportieren oder löschen.',
+            privacyLinkLabel: 'Datenschutzerklärung',
+            body2: 'Alle Details zum Umgang mit deinen Daten findest du in unserer {privacyLink}.',
+          },
+          acceptableUse: {
+            heading: '6. Zulässige Nutzung',
+            intro: 'Du verpflichtest dich, Folgendes zu unterlassen:',
+            items: [
+              'Truffle für rechtswidrige Zwecke zu nutzen.',
+              'Zu versuchen, auf Daten anderer Nutzer:innen zuzugreifen.',
+              'Die API zurückzuentwickeln, auszulesen oder zu missbrauchen.',
+              'Den Dienst ohne deren Einwilligung zur Verarbeitung von Daten anderer zu nutzen.',
+              'Falsche Angaben zu deiner Identität zu machen oder dich als andere Person auszugeben.',
+            ],
+          },
+          availability: {
+            heading: '7. Verfügbarkeit',
+            body: 'Wir bemühen uns, Truffle verfügbar zu halten, garantieren aber keine Verfügbarkeit. Der Dienst wird „wie besehen“ bereitgestellt. Wir können Funktionen jederzeit ändern, aussetzen oder einstellen, werden bei wesentlichen Änderungen aber versuchen, angemessen vorab zu informieren.',
+          },
+          liability: {
+            heading: '8. Haftungsbeschränkung',
+            body: 'Soweit gesetzlich zulässig, haftet Truffle nicht für mittelbare, zufällige oder Folgeschäden aus der Nutzung des Dienstes – einschließlich finanzieller Verluste aus Entscheidungen, die du auf Grundlage der Ausgaben von Truffle triffst.',
+          },
+          termination: {
+            heading: '9. Kündigung',
+            body: 'Du kannst dein Konto jederzeit in den Einstellungen löschen. Wir können Konten sperren oder kündigen, die gegen diese Bedingungen verstoßen. Bei Kündigung werden deine Daten gemäß unserer Datenschutzerklärung gelöscht.',
+          },
+          governingLaw: {
+            heading: '10. Anwendbares Recht',
+            body: 'Diese Bedingungen unterliegen dem Recht der Bundesrepublik Deutschland. Ausschließlicher Gerichtsstand für Streitigkeiten ist Berlin, Deutschland, sofern zwingende Verbraucherschutzvorschriften deines Wohnsitzlandes nichts anderes vorsehen.',
+          },
+          contact: {
+            heading: '11. Kontakt',
+            body: 'Fragen zu diesen Bedingungen? {email}',
+          },
+        },
+      },
+    },
+  },
 }
 
 export const LOCALE_LABELS: Record<Locale, { flag: string; label: string }> = {
   en: { flag: '🇬🇧', label: 'English' },
+  de: { flag: '🇩🇪', label: 'Deutsch' },
 }
