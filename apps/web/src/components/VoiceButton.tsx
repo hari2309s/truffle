@@ -108,17 +108,22 @@ export function VoiceButton({
       data-pressed={isRecording}
       aria-label={label}
       disabled={isTranscribing}
-      className={`key ${variant} w-full gap-2.5 text-sm uppercase touch-none select-none disabled:!opacity-100 disabled:cursor-wait ${className}`}
+      className={`key ${variant} w-full gap-2.5 text-sm uppercase touch-none select-none disabled:!opacity-100 disabled:cursor-wait ${isSpeaking ? 'px-[18px]' : ''} ${className}`}
     >
-      {isRecording && <span aria-hidden className="w-2.5 h-2.5 rounded-full bg-truffle-on-accent blink" />}
-      {/* Truffle talking: the level meter plays inside the key itself. */}
-      {isSpeaking && (
-        <span aria-hidden className="flex w-16 shrink-0">
-          <Meter bars={9} barClassName="bg-current" />
-        </span>
+      {/* Truffle talking: apricot meter fills the key, label hugs the right. */}
+      {isSpeaking ? (
+        <>
+          <span aria-hidden className="flex flex-1 min-w-0">
+            <Meter bars={18} barClassName="bg-truffle-accent" className="h-10 gap-[3px]" />
+          </span>
+          <span className="shrink-0 text-[11px] tracking-wider">■ STOP</span>
+        </>
+      ) : (
+        <>
+          {isRecording && <span aria-hidden className="w-2.5 h-2.5 rounded-full bg-truffle-on-accent blink" />}
+          <span>{label}</span>
+        </>
       )}
-      {isSpeaking && <span aria-hidden>■</span>}
-      <span>{label}</span>
     </button>
   )
 }

@@ -48,14 +48,17 @@ export function Meter({
   bars = 18,
   active = true,
   barClassName = 'bg-truffle-text',
+  className = 'h-[18px] gap-0.5',
 }: {
   bars?: number
   active?: boolean
   /** Bar colour — `bg-current` takes the surrounding text colour (e.g. on a key). */
   barClassName?: string
+  /** Height and gap overrides — default `h-[18px] gap-0.5`. */
+  className?: string
 }) {
   return (
-    <div aria-hidden className="flex-1 flex gap-0.5 items-center h-[18px]">
+    <div aria-hidden className={`flex-1 flex items-center ${className}`}>
       {Array.from({ length: bars }, (_, i) => (
         <div
           key={i}
