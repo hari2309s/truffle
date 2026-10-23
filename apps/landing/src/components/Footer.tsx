@@ -1,9 +1,11 @@
 'use client'
 
 import Image from 'next/image'
+import { motion } from 'framer-motion'
 import LanguageDropdown from './LanguageDropdown'
 import { APP_URL, TRUFFLE_ICON } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { sectionVariants, staggerContainer, staggerItem, viewportOnce } from '@/lib/motion'
 
 const linkClass = 'min-h-10 flex items-center text-sm hover:underline underline-offset-4'
 
@@ -13,8 +15,17 @@ export default function Footer() {
 
   return (
     <footer className="border-t border-dashed border-truffle-border bg-truffle-surface pt-[clamp(40px,5cqi,64px)] px-[clamp(16px,5.5cqi,80px)] pb-7">
-      <div className="max-w-[1280px] mx-auto flex flex-col gap-10">
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-8">
+      <motion.div
+        className="max-w-[1280px] mx-auto flex flex-col gap-10"
+        variants={staggerContainer(0.08, 0.05)}
+        initial="hidden"
+        whileInView="show"
+        viewport={viewportOnce}
+      >
+        <motion.div
+          variants={staggerItem}
+          className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-8"
+        >
           <div className="flex flex-col gap-3">
             <a href="/" className="flex items-center gap-2.5">
               <Image src={TRUFFLE_ICON} alt="" width={32} height={32} />
@@ -50,9 +61,12 @@ export default function Footer() {
               </a>
             ))}
           </nav>
-        </div>
+        </motion.div>
 
-        <div className="flex flex-wrap justify-between gap-2 border-t border-dashed border-truffle-border pt-4 text-[11px] tracking-[.08em] uppercase text-truffle-text2">
+        <motion.div
+          variants={staggerItem}
+          className="flex flex-wrap justify-between gap-2 border-t border-dashed border-truffle-border pt-4 text-[11px] tracking-[.08em] uppercase text-truffle-text2"
+        >
           <span>
             {t.footer.copyright(new Date().getFullYear())} ·{' '}
             <a
@@ -65,8 +79,8 @@ export default function Footer() {
             </a>
           </span>
           <span>{t.footer.bottomTagline}</span>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </footer>
   )
 }

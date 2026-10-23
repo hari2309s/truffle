@@ -1,8 +1,16 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { Eyebrow, Line } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
 import type { LandingTranslations } from '@/lib/i18n'
+import {
+  sectionVariants,
+  staggerContainer,
+  staggerItem,
+  slipVariants,
+  viewportOnce,
+} from '@/lib/motion'
 
 type Demo = LandingTranslations['features']['demo']
 
@@ -173,7 +181,14 @@ export default function Features() {
   return (
     <section id="features" className="pt-[clamp(64px,8cqi,128px)] px-[clamp(16px,5.5cqi,80px)]">
       <div className="max-w-[1280px] mx-auto flex flex-col gap-[clamp(28px,3cqi,48px)]">
-        <div className="flex flex-col gap-3.5 max-w-[760px]">
+        {/* Section header */}
+        <motion.div
+          className="flex flex-col gap-3.5 max-w-[760px]"
+          variants={sectionVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={viewportOnce}
+        >
           <Eyebrow>{f.sectionLabel}</Eyebrow>
           <h2 className="m-0 font-grotesk font-medium text-[clamp(34px,4.4cqi,64px)] leading-[1.02] tracking-[-.025em] [text-wrap:balance]">
             {f.headline}
@@ -181,19 +196,33 @@ export default function Features() {
           <p className="m-0 font-grotesk text-[clamp(16px,1.3cqi,19px)] leading-normal text-truffle-text2">
             {f.subheadline}
           </p>
-        </div>
+        </motion.div>
 
-        <div className="slip-drop">
+        {/* Features slip */}
+        <motion.div
+          className="slip-drop"
+          variants={slipVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={viewportOnce}
+        >
           <div className="slip pt-[clamp(18px,2.6cqi,40px)] px-[clamp(18px,3cqi,48px)] pb-[clamp(40px,4cqi,56px)]">
             <Line
               label={f.statementLabel}
               value={f.itemsCount}
               className="text-[13px] font-bold tracking-[.1em] uppercase pb-4"
             />
-            <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,480px),1fr))] gap-x-14">
+            <motion.ul
+              className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,480px),1fr))] gap-x-14"
+              variants={staggerContainer(0.07, 0.1)}
+              initial="hidden"
+              whileInView="show"
+              viewport={viewportOnce}
+            >
               {f.items.map((item, i) => (
-                <li
+                <motion.li
                   key={item.code}
+                  variants={staggerItem}
                   className="grid grid-cols-[64px_minmax(0,1fr)] gap-4 py-6 border-t border-dashed border-truffle-text2"
                 >
                   <span className="self-start py-[5px] text-center bg-truffle-surface text-xs font-bold tracking-[.06em] uppercase">
@@ -210,15 +239,15 @@ export default function Features() {
                       <Fragment index={i} demo={f.demo} />
                     </div>
                   </div>
-                </li>
+                </motion.li>
               ))}
-            </ul>
+            </motion.ul>
             <div className="rule mt-2 pt-4 flex flex-wrap justify-between gap-2 text-[15px] font-bold tracking-[.06em] uppercase">
               <span>{f.total.label}</span>
               <span>{f.total.value}</span>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   )

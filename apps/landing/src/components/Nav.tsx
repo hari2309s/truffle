@@ -2,13 +2,21 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
+import { motion, AnimatePresence } from 'framer-motion'
 import ThemeToggle from './ThemeToggle'
 import LanguageDropdown from './LanguageDropdown'
 import { APP_URL, TRUFFLE_ICON } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { truffleEase } from '@/lib/motion'
 
 const SECTIONS = ['features', 'how-it-works', 'pricing'] as const
 type SectionId = (typeof SECTIONS)[number]
+
+const menuVariants = {
+  hidden: { opacity: 0, y: -8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: truffleEase } },
+  exit: { opacity: 0, y: -8, transition: { duration: 0.16, ease: truffleEase } },
+}
 
 export default function Nav() {
   const { t } = useLanguage()
@@ -105,39 +113,45 @@ export default function Nav() {
         </div>
       </div>
 
-      {menuOpen && (
-        <div
-          id="mobile-menu"
-          className="lg:hidden absolute left-0 right-0 top-full px-[clamp(16px,5.5cqi,80px)] slip-drop"
-        >
-          <div className="slip print-in px-[18px] pt-2 pb-8 flex flex-col">
-            {links.map((link) => (
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            id="mobile-menu"
+            className="lg:hidden absolute left-0 right-0 top-full px-[clamp(16px,5.5cqi,80px)] slip-drop"
+            variants={menuVariants}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+          >
+            <div className="slip print-in px-[18px] pt-2 pb-8 flex flex-col">
+              {links.map((link) => (
+                <a
+                  key={link.id}
+                  href={`#${link.id}`}
+                  onClick={() => setMenuOpen(false)}
+                  className="flex gap-2 min-h-12 items-center border-b border-dashed border-truffle-border text-[13px] font-bold tracking-[.1em] uppercase"
+                >
+                  <span>{link.label}</span>
+                  <span aria-hidden className="leader !mb-0 mt-1.5 self-center" />
+                  <span aria-hidden>→</span>
+                </a>
+              ))}
               <a
-                key={link.id}
-                href={`#${link.id}`}
-                onClick={() => setMenuOpen(false)}
-                className="flex gap-2 min-h-12 items-center border-b border-dashed border-truffle-border text-[13px] font-bold tracking-[.1em] uppercase"
+                href={APP_URL}
+                className="flex gap-2 min-h-12 items-center border-b border-dashed border-truffle-border text-[13px] font-bold tracking-[.06em]"
               >
-                <span>{link.label}</span>
+                <span>{t.nav.signIn}</span>
                 <span aria-hidden className="leader !mb-0 mt-1.5 self-center" />
                 <span aria-hidden>→</span>
               </a>
-            ))}
-            <a
-              href={APP_URL}
-              className="flex gap-2 min-h-12 items-center border-b border-dashed border-truffle-border text-[13px] font-bold tracking-[.06em]"
-            >
-              <span>{t.nav.signIn}</span>
-              <span aria-hidden className="leader !mb-0 mt-1.5 self-center" />
-              <span aria-hidden>→</span>
-            </a>
-            <div className="flex items-center justify-between gap-3 pt-4">
-              <ThemeToggle />
-              <LanguageDropdown />
+              <div className="flex items-center justify-between gap-3 pt-4">
+                <ThemeToggle />
+                <LanguageDropdown />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   )
 }

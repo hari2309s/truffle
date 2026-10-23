@@ -1,7 +1,14 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { APP_URL, Eyebrow, Line } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
+import {
+  sectionVariants,
+  slipVariants,
+  staggerContainer,
+  viewportOnce,
+} from '@/lib/motion'
 
 export default function Pricing() {
   const { t } = useLanguage()
@@ -10,7 +17,14 @@ export default function Pricing() {
   return (
     <section id="pricing" className="pt-[clamp(64px,8cqi,128px)] px-[clamp(16px,5.5cqi,80px)]">
       <div className="max-w-[960px] mx-auto flex flex-col gap-[clamp(28px,3cqi,48px)]">
-        <div className="flex flex-col gap-3.5 items-center text-center">
+        {/* Section header */}
+        <motion.div
+          className="flex flex-col gap-3.5 items-center text-center"
+          variants={sectionVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={viewportOnce}
+        >
           <Eyebrow>{p.sectionLabel}</Eyebrow>
           <h2 className="m-0 font-grotesk font-medium text-[clamp(34px,4.4cqi,64px)] leading-[1.02] tracking-[-.025em]">
             {p.headline}
@@ -18,11 +32,18 @@ export default function Pricing() {
           <p className="m-0 font-grotesk text-[clamp(16px,1.3cqi,19px)] leading-normal text-truffle-text2">
             {p.subheadline}
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,330px),1fr))] gap-[clamp(20px,3cqi,40px)] items-start">
+        {/* Pricing cards */}
+        <motion.div
+          className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,330px),1fr))] gap-[clamp(20px,3cqi,40px)] items-start"
+          variants={staggerContainer(0.12, 0.1)}
+          initial="hidden"
+          whileInView="show"
+          viewport={viewportOnce}
+        >
           {/* FREE */}
-          <div className="slip-drop">
+          <motion.div className="slip-drop" variants={slipVariants}>
             <div className="slip pt-7 px-6 pb-11 flex flex-col gap-3 text-sm">
               <div className="flex justify-between items-baseline">
                 <h3 className="m-0 text-lg font-bold tracking-[.2em] uppercase">{p.free.name}</h3>
@@ -50,10 +71,10 @@ export default function Pricing() {
                 {p.free.cta}
               </a>
             </div>
-          </div>
+          </motion.div>
 
           {/* PRO */}
-          <div className="slip-drop">
+          <motion.div className="slip-drop" variants={slipVariants}>
             <div className="slip relative border-t-[6px] border-truffle-accent pt-[22px] px-6 pb-11 flex flex-col gap-3 text-sm">
               <div
                 aria-hidden
@@ -92,12 +113,18 @@ export default function Pricing() {
                 {p.pro.cta}
               </a>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        <p className="m-0 text-center text-xs leading-[1.7] tracking-[.04em] uppercase text-truffle-text2">
+        <motion.p
+          className="m-0 text-center text-xs leading-[1.7] tracking-[.04em] uppercase text-truffle-text2"
+          variants={sectionVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={viewportOnce}
+        >
           {p.finePrint}
-        </p>
+        </motion.p>
       </div>
     </section>
   )

@@ -64,6 +64,9 @@ importers:
       '@truffle/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      framer-motion:
+        specifier: ^12.38.0
+        version: 12.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       next:
         specifier: ^15.5.0
         version: 15.5.25(@opentelemetry/api@1.9.0)(@playwright/test@1.60.0)(@types/node@20.19.37)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
