@@ -463,6 +463,39 @@ export interface Translations {
       hab: { code: string; title: string; heading: string }
       sub: { code: string; title: string; heading: string }
     }
+    /** Four-chapter nav for the redesigned Insights page. */
+    chapters: {
+      review: { num: string; label: string }
+      spending: { num: string; label: string }
+      building: { num: string; label: string }
+      recurring: { num: string; label: string }
+    }
+    hero: {
+      monthSoFar: string
+      dayOf: (day: number, total: number) => string
+      income: string
+      spent: string
+      saved: string
+      dailyRate: string
+      projectedClose: string
+      onTrack: string
+      behind: string
+      aheadOf: (amount: string, month: string) => string
+      behindVs: (amount: string, month: string) => string
+      barSpent: (pct: string) => string
+      barSaved: (pct: string) => string
+      barLeft: (pct: string) => string
+    }
+    buildingHeading: string
+    goalsAndHabits: (goals: number, habits: number) => string
+    standaloneHabit: string
+    endOfInsights: string
+    reviewToCheck: (n: number) => string
+    reviewAllClear: string
+    spendingTitle: string
+    spendingIntro: string
+    budgetsTitle: string
+    recurringTitle: string
     newItem: string
     subsEmpty: string
     recurring: {
@@ -1149,6 +1182,38 @@ export const translations: Record<Locale, Translations> = {
         hab: { code: 'Hab', title: 'Saving habits', heading: 'Habits' },
         sub: { code: 'Rec', title: 'Recurring payments', heading: 'Recurring' },
       },
+      chapters: {
+        review: { num: '01', label: 'Review' },
+        spending: { num: '02', label: 'Spending' },
+        building: { num: '03', label: 'Building' },
+        recurring: { num: '04', label: 'Recurring' },
+      },
+      hero: {
+        monthSoFar: 'Month so far',
+        dayOf: (day, total) => `Day ${day} of ${total}`,
+        income: 'Income',
+        spent: 'Spent',
+        saved: 'Saved',
+        dailyRate: 'Day-to-day rate',
+        projectedClose: 'Projected close',
+        onTrack: 'On track',
+        behind: 'Behind',
+        aheadOf: (amount, month) => `● On track · ${amount} better than ${month}`,
+        behindVs: (amount, month) => `▲ Behind · ${amount} more than ${month}`,
+        barSpent: (pct) => `■ Spent ${pct}`,
+        barSaved: (pct) => `▣ Saved ${pct}`,
+        barLeft: (pct) => `⬚ Left ${pct}`,
+      },
+      buildingHeading: 'Building toward',
+      goalsAndHabits: (goals, habits) => `${goals} goal${goals !== 1 ? 's' : ''} · ${habits} habit${habits !== 1 ? 's' : ''}`,
+      standaloneHabit: 'Standalone habit',
+      endOfInsights: 'End of Insights',
+      reviewToCheck: (n) => `${n} to check`,
+      reviewAllClear: '● All clear',
+      spendingTitle: 'Spending',
+      spendingIntro: 'Day-to-day only. Rent and bills live in Recurring. Tap a day to see what\u2019s on its slip.',
+      budgetsTitle: 'Budgets',
+      recurringTitle: 'Recurring',
       newItem: '+ New',
       subsEmpty: 'I’ll spot recurring payments after the second time they’re charged.',
       recurring: {
