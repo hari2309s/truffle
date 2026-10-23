@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion, useInView } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { setChatHandoff } from '@/lib/chatHandoff'
 import type { Anomaly, Transaction } from '@truffle/types'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { computeStatement } from '@/lib/forecast'
+import { truffleEase, transitionSnappy } from '@/lib/motion'
 import { RecurringSection } from './RecurringSection'
 import { PageEnter, SkeletonPulse } from './PageMotion'
 import { SavingsGoalsEmbedded } from './SavingsGoals'
@@ -198,24 +200,36 @@ export function InsightsPage({ userId }: InsightsPageProps) {
             >
               {CHAPTERS.map((ch) => {
                 const c = t.insights.chapters[ch]
+                const isActive = active === ch
                 return (
                   <button
                     key={ch}
                     type="button"
                     onClick={() => jumpTo(ch)}
-                    aria-current={active === ch ? 'location' : undefined}
-                    className={`relative h-12 rounded-lg flex flex-col items-center justify-center gap-px transition-colors ${
-                      active === ch
-                        ? 'bg-truffle-text text-truffle-bg'
+                    aria-current={isActive ? 'location' : undefined}
+                    className={`relative h-12 rounded-lg flex flex-col items-center justify-center gap-px ${
+                      isActive
+                        ? 'text-truffle-bg'
                         : 'bg-truffle-card border border-truffle-border text-truffle-text'
                     }`}
                   >
-                    <span className="text-[10px] font-bold opacity-70">{c.num}</span>
-                    <span className="font-grotesk text-[13px] font-medium">{c.label}</span>
+                    {isActive && (
+                      <motion.span
+                        layoutId="chapter-active"
+                        className="absolute inset-0 rounded-lg bg-truffle-text"
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative text-[10px] font-bold opacity-70">{c.num}</span>
+                    <span className="relative font-grotesk text-[13px] font-medium">{c.label}</span>
                     {ch === 'review' && unreviewed > 0 && (
-                      <span className="absolute -top-1.5 -right-1 min-w-5 h-5 px-1 rounded-full bg-truffle-accent text-[#302e2b] border-2 border-truffle-bg text-[11px] font-bold grid place-items-center">
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-1.5 -right-1 min-w-5 h-5 px-1 rounded-full bg-truffle-accent text-[#302e2b] border-2 border-truffle-bg text-[11px] font-bold grid place-items-center"
+                      >
                         {unreviewed}
-                      </span>
+                      </motion.span>
                     )}
                   </button>
                 )
@@ -234,8 +248,16 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
           <ErrorBoundary>
             {/* ── Hero: month-so-far KPI slip ── */}
+            <AnimatePresence mode="wait">
             {statement && (
-              <div className="px-4 pt-5 pb-2">
+              <motion.div
+                key={viewYM}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.32, ease: truffleEase }}
+                className="px-4 pt-5 pb-2"
+              >
                 <div className="slip px-[18px] pt-[18px] pb-8 flex flex-col gap-3.5 border-t-[6px] border-truffle-accent">
                   <div className="flex justify-between text-[11px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
                     <span>{t.insights.hero.monthSoFar}</span>
@@ -245,7 +267,13 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   {/* Proportional bar */}
                   {statement.incomeThisMonth > 0 && (
                     <>
-                      <div className="flex gap-[3px] h-5">
+                      <motion.div
+                        className="flex gap-[3px] h-5"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: 1 }}
+                        transition={{ duration: 0.5, ease: truffleEase, delay: 0.15 }}
+                        style={{ transformOrigin: 'left' }}
+                      >
                         <div
                           className="bg-truffle-text"
                           style={{ flex: statement.spentThisMonth }}
@@ -264,7 +292,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                             }}
                           />
                         )}
-                      </div>
+                      </motion.div>
                       <div className="flex justify-between text-[10px] font-bold tracking-wide text-truffle-text2 uppercase">
                         <span>
                           {t.insights.hero.barSpent(
@@ -338,10 +366,16 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                     <span className="text-[13px] font-bold tracking-[.1em] uppercase">
                       {t.insights.hero.projectedClose}
                     </span>
-                    <span className="text-[32px] font-bold tracking-tight">
+                    <motion.span
+                      key={viewYM}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, ease: truffleEase, delay: 0.25 }}
+                      className="text-[32px] font-bold tracking-tight"
+                    >
                       {statement.projectedClose >= 0 ? '+' : ''}
                       {formatAmount(statement.projectedClose)}
-                    </span>
+                    </motion.span>
                   </div>
 
                   {statement.pace && statement.pace !== 'even' && (
@@ -364,8 +398,9 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                     </span>
                   )}
                 </div>
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
 
             {/* ── 01 Review ── */}
             <ChapterSection id="review" num="01" title={t.insights.sections.rev.heading(anomalies.length)} right={unreviewed ? t.insights.reviewToCheck(unreviewed) : t.insights.reviewAllClear}>
@@ -375,13 +410,19 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   <div className="h-3 bg-truffle-border w-2/3" />
                 </SkeletonPulse>
               ) : anomalies.length ? (
-                anomalies.map((a) => (
-                  <AnomalyRow
+                anomalies.map((a, i) => (
+                  <motion.div
                     key={a.id}
-                    anomaly={a}
-                    transactions={transactions}
-                    userId={userId}
-                  />
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ ...transitionSnappy, delay: i * 0.06 }}
+                  >
+                    <AnomalyRow
+                      anomaly={a}
+                      transactions={transactions}
+                      userId={userId}
+                    />
+                  </motion.div>
                 ))
               ) : (
                 <p className="font-grotesk text-sm text-truffle-text2">
@@ -446,11 +487,24 @@ export function InsightsPage({ userId }: InsightsPageProps) {
             </ChapterSection>
 
             {/* End marker */}
-            <div className="flex items-center gap-2.5 text-truffle-text2 text-xs px-4 py-6">
+            <motion.div
+              className="flex items-center gap-2.5 text-truffle-text2 text-xs px-4 py-6"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true, margin: '-20px' }}
+              transition={{ duration: 0.5, ease: truffleEase }}
+            >
               <span>✂</span>
-              <span className="flex-1 border-t-2 border-dashed border-truffle-border" />
+              <motion.span
+                className="flex-1 border-t-2 border-dashed border-truffle-border"
+                initial={{ scaleX: 0 }}
+                whileInView={{ scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, ease: truffleEase, delay: 0.1 }}
+                style={{ transformOrigin: 'left' }}
+              />
               <span className="font-bold tracking-[.1em] uppercase">{t.insights.endOfInsights}</span>
-            </div>
+            </motion.div>
           </ErrorBoundary>
         </main>
       </PageEnter>
@@ -476,13 +530,21 @@ function ChapterSection({
   children: React.ReactNode
 }) {
   const headingId = `${chapterId(id)}-heading`
+  const ref = useRef<HTMLElement>(null)
+  const inView = useInView(ref, { once: true, margin: '-60px 0px' })
   return (
     <section
+      ref={ref}
       id={chapterId(id)}
       aria-labelledby={headingId}
       className="px-4 pt-7 pb-2 flex flex-col gap-3.5 scroll-mt-[140px]"
     >
-      <div className="flex items-baseline gap-2.5 border-b border-dashed border-truffle-text2 pb-2.5">
+      <motion.div
+        className="flex items-baseline gap-2.5 border-b border-dashed border-truffle-text2 pb-2.5"
+        initial={{ opacity: 0, x: -16 }}
+        animate={inView ? { opacity: 1, x: 0 } : undefined}
+        transition={{ duration: 0.35, ease: truffleEase }}
+      >
         <span className="text-[13px] font-bold text-truffle-text2">{num}</span>
         <h2
           id={headingId}
@@ -494,8 +556,15 @@ function ChapterSection({
         {right && (
           <span className="text-xs font-bold text-truffle-text2 uppercase">{right}</span>
         )}
-      </div>
-      {children}
+      </motion.div>
+      <motion.div
+        className="flex flex-col gap-3.5"
+        initial={{ opacity: 0, y: 14 }}
+        animate={inView ? { opacity: 1, y: 0 } : undefined}
+        transition={{ duration: 0.38, ease: truffleEase, delay: 0.08 }}
+      >
+        {children}
+      </motion.div>
     </section>
   )
 }
