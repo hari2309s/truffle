@@ -39,7 +39,16 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
   const queryKey = ['recurringOverrides', userId]
   const [editing, setEditing] = useState<string | null>(null)
   const [showHidden, setShowHidden] = useState(false)
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
+
+  const toggleGroup = (group: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(group)) next.delete(group)
+      else next.add(group)
+      return next
+    })
 
   const { data: overrides = {} } = useQuery({
     queryKey,
@@ -174,14 +183,42 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
       {RECURRING_GROUPS.map((group) => {
         const inGroup = shown.filter((i) => i.group === group)
         if (inGroup.length === 0) return null
+        const isCollapsed = collapsed.has(group)
         return (
           <section key={group} aria-label={r.groups[group]} className="flex flex-col gap-2">
             <Rule soft />
-            <div className="flex justify-between text-[11px] font-bold uppercase text-truffle-text2">
-              <span>{r.groups[group]}</span>
+            <button
+              type="button"
+              onClick={() => toggleGroup(group)}
+              aria-expanded={!isCollapsed}
+              className="flex justify-between items-center text-[11px] font-bold uppercase text-truffle-text2"
+            >
+              <span className="flex items-center gap-1.5">
+                <motion.span
+                  animate={{ rotate: isCollapsed ? -90 : 0 }}
+                  transition={{ duration: 0.18, ease: truffleEase }}
+                  className="inline-block text-[9px]"
+                >
+                  ▼
+                </motion.span>
+                {r.groups[group]} ({inGroup.length})
+              </span>
               <span>{formatAmount(totals[group])}</span>
-            </div>
-            {inGroup.map((item, i) => row(item, i))}
+            </button>
+            <AnimatePresence initial={false}>
+              {!isCollapsed && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: truffleEase }}
+                  style={{ overflow: 'hidden' }}
+                  className="flex flex-col gap-2"
+                >
+                  {inGroup.map((item, i) => row(item, i))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </section>
         )
       })}
@@ -203,23 +240,35 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
           >
             {r.hiddenCount(hidden.length)} · {showHidden ? r.hide : r.show}
           </button>
-          {showHidden &&
-            hidden.map((item) => (
-              <LeaderRow
-                key={item.key}
-                className="text-truffle-text2"
-                left={item.displayName}
-                right={
-                  <button
-                    type="button"
-                    onClick={() => choose(item, null)}
-                    className="text-[11px] font-bold uppercase underline underline-offset-2"
-                  >
-                    {r.restore}
-                  </button>
-                }
-              />
-            ))}
+          <AnimatePresence>
+            {showHidden && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: truffleEase }}
+                style={{ overflow: 'hidden' }}
+                className="flex flex-col gap-2"
+              >
+                {hidden.map((item) => (
+                  <LeaderRow
+                    key={item.key}
+                    className="text-truffle-text2"
+                    left={item.displayName}
+                    right={
+                      <button
+                        type="button"
+                        onClick={() => choose(item, null)}
+                        className="text-[11px] font-bold uppercase underline underline-offset-2"
+                      >
+                        {r.restore}
+                      </button>
+                    }
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </div>

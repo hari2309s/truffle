@@ -249,7 +249,29 @@ export function InsightsPage({ userId }: InsightsPageProps) {
           <ErrorBoundary>
             {/* ── Hero: month-so-far KPI slip ── */}
             <AnimatePresence mode="wait">
-            {statement && (
+            {isLoading ? (
+              <div key="hero-skeleton" className="px-4 pt-5 pb-2">
+                <SkeletonPulse className="slip px-[18px] pt-[18px] pb-8 flex flex-col gap-4 border-t-[6px] border-truffle-accent">
+                  <div className="flex justify-between">
+                    <div className="h-3 bg-truffle-border w-24" />
+                    <div className="h-3 bg-truffle-border w-16" />
+                  </div>
+                  <div className="h-5 bg-truffle-border" />
+                  <div className="h-px border-t border-dashed border-truffle-border" />
+                  <div className="flex flex-col gap-2.5">
+                    <div className="h-3.5 bg-truffle-border" />
+                    <div className="h-3.5 bg-truffle-border" />
+                    <div className="h-3.5 bg-truffle-border" />
+                    <div className="h-3 bg-truffle-border w-2/3" />
+                  </div>
+                  <div className="h-px border-t border-dashed border-truffle-border" />
+                  <div className="flex justify-between items-baseline">
+                    <div className="h-4 bg-truffle-border w-28" />
+                    <div className="h-8 bg-truffle-border w-32" />
+                  </div>
+                </SkeletonPulse>
+              </div>
+            ) : statement ? (
               <motion.div
                 key={viewYM}
                 initial={{ opacity: 0, y: 18 }}
@@ -330,53 +352,60 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
                   <div className="border-t border-dashed border-truffle-text2" />
 
-                  {/* Leader-dot KPI rows */}
+                  {/* Leader-dot KPI rows — stagger like FinancialBrief */}
                   <div className="flex flex-col gap-2 text-sm">
-                    <LeaderRow
-                      left={t.insights.hero.income}
-                      right={
-                        <b className="text-truffle-positive">
-                          ↑ {formatAmount(statement.incomeThisMonth)}
-                        </b>
-                      }
-                    />
-                    <LeaderRow
-                      left={t.insights.hero.spent}
-                      right={<b>↓ {formatAmount(statement.spentThisMonth)}</b>}
-                    />
-                    <LeaderRow
-                      left={t.insights.hero.saved}
-                      right={
-                        <b className="text-truffle-accent-ink">
-                          → {formatAmount(Math.max(statement.savedThisMonth, 0))}
-                        </b>
-                      }
-                    />
-                    <LeaderRow
-                      className="text-xs text-truffle-text2"
-                      left={t.insights.hero.dailyRate}
-                      right={`${formatAmount(statement.dailyRate)}/day`}
-                    />
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.08 }}>
+                      <LeaderRow
+                        left={t.insights.hero.income}
+                        right={
+                          <b className="text-truffle-positive">
+                            ↑ {formatAmount(statement.incomeThisMonth)}
+                          </b>
+                        }
+                      />
+                    </motion.div>
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.12 }}>
+                      <LeaderRow
+                        left={t.insights.hero.spent}
+                        right={<b>↓ {formatAmount(statement.spentThisMonth)}</b>}
+                      />
+                    </motion.div>
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.16 }}>
+                      <LeaderRow
+                        left={t.insights.hero.saved}
+                        right={
+                          <b className="text-truffle-accent-ink">
+                            → {formatAmount(Math.max(statement.savedThisMonth, 0))}
+                          </b>
+                        }
+                      />
+                    </motion.div>
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.20 }}>
+                      <LeaderRow
+                        className="text-xs text-truffle-text2"
+                        left={t.insights.hero.dailyRate}
+                        right={`${formatAmount(statement.dailyRate)}/day`}
+                      />
+                    </motion.div>
                   </div>
 
                   <div className="border-t border-dashed border-truffle-text2" />
 
                   {/* Projected close */}
-                  <div className="flex justify-between items-baseline">
+                  <motion.div
+                    className="flex justify-between items-baseline"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.28, ease: truffleEase, delay: 0.26 }}
+                  >
                     <span className="text-[13px] font-bold tracking-[.1em] uppercase">
                       {t.insights.hero.projectedClose}
                     </span>
-                    <motion.span
-                      key={viewYM}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, ease: truffleEase, delay: 0.25 }}
-                      className="text-[32px] font-bold tracking-tight"
-                    >
+                    <span className="text-[32px] font-bold tracking-tight">
                       {statement.projectedClose >= 0 ? '+' : ''}
                       {formatAmount(statement.projectedClose)}
-                    </motion.span>
-                  </div>
+                    </span>
+                  </motion.div>
 
                   {statement.pace && statement.pace !== 'even' && (
                     <span
@@ -399,7 +428,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   )}
                 </div>
               </motion.div>
-            )}
+            ) : null}
             </AnimatePresence>
 
             {/* ── 01 Review ── */}
