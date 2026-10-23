@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Transaction } from '@truffle/types'
 import { useCurrency } from '@/contexts/CurrencyContext'
@@ -10,6 +10,8 @@ import { LeaderRow, MINUS } from './Tally'
 
 interface Props {
   transactions: Transaction[]
+  /** When set, the heatmap opens on this month instead of the current one. */
+  month?: { year: number; month: number }
 }
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
@@ -34,16 +36,25 @@ const HEAT_BG: Record<0 | 1 | 2 | 3 | 4, string> = {
 }
 
 /** CAL · by day — the month as a grid of spend intensity. */
-export function SpendingHeatmap({ transactions }: Props) {
+export function SpendingHeatmap({ transactions, month }: Props) {
   const { formatAmount } = useCurrency()
   const { t, locale } = useLanguage()
   const today = new Date()
   const todayStr = today.toISOString().slice(0, 10)
   const dateLocale = toDateLocale(locale)
 
-  const [viewYear, setViewYear] = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth() + 1) // 1-indexed
+  const [viewYear, setViewYear] = useState(month?.year ?? today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(month?.month ?? today.getMonth() + 1) // 1-indexed
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+
+  // Sync with parent month prop when it changes
+  useEffect(() => {
+    if (month) {
+      setViewYear(month.year)
+      setViewMonth(month.month)
+      setSelectedDate(null)
+    }
+  }, [month?.year, month?.month])
 
   const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1
 
@@ -112,26 +123,30 @@ export function SpendingHeatmap({ transactions }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between text-truffle-text2 uppercase">
-        <span className="flex items-center">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            aria-label={t.insights.previousMonth}
-            className="w-8 h-8 -ml-2 grid place-items-center text-base hover:text-truffle-text"
-          >
-            ‹
-          </button>
-          <span className="min-w-[72px] text-center">{monthLabel}</span>
-          <button
-            type="button"
-            onClick={() => navigate(1)}
-            disabled={isCurrentMonth}
-            aria-label={t.insights.nextMonth}
-            className="w-8 h-8 grid place-items-center text-base hover:text-truffle-text disabled:opacity-25"
-          >
-            ›
-          </button>
-        </span>
+        {month ? (
+          <span className="min-w-[72px]">{monthLabel}</span>
+        ) : (
+          <span className="flex items-center">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              aria-label={t.insights.previousMonth}
+              className="w-8 h-8 -ml-2 grid place-items-center text-base hover:text-truffle-text"
+            >
+              ‹
+            </button>
+            <span className="min-w-[72px] text-center">{monthLabel}</span>
+            <button
+              type="button"
+              onClick={() => navigate(1)}
+              disabled={isCurrentMonth}
+              aria-label={t.insights.nextMonth}
+              className="w-8 h-8 grid place-items-center text-base hover:text-truffle-text disabled:opacity-25"
+            >
+              ›
+            </button>
+          </span>
+        )}
         {peakDay && (
           <span>{t.insights.peak(Number(peakDay.slice(8, 10)), formatAmount(maxSpend))}</span>
         )}

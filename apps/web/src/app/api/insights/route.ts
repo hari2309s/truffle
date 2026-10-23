@@ -23,7 +23,14 @@ export async function GET(request: NextRequest) {
     }
 
     const db = createServerClient()
-    const currentMonth = currentYearMonth()
+    const monthParam = request.nextUrl.searchParams.get('month')
+    const isValidMonth =
+      monthParam &&
+      /^\d{4}-\d{2}$/.test(monthParam) &&
+      parseInt(monthParam.slice(5), 10) >= 1 &&
+      parseInt(monthParam.slice(5), 10) <= 12 &&
+      monthParam <= currentYearMonth()
+    const currentMonth = isValidMonth ? monthParam : currentYearMonth()
     // Compute next month start using Date.UTC so arithmetic is timezone-independent
     const [ymYear, ymMonth] = currentMonth.split('-')
     const year = parseInt(ymYear!, 10)
@@ -80,15 +87,16 @@ export async function GET(request: NextRequest) {
     let forecast: Forecast | null = null
     if (transactionCount > 0) {
       const today = new Date()
-      const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-      const daysElapsed = today.getDate()
-      const daysRemaining = daysInMonth - daysElapsed
+      const isPastMonth = currentMonth !== currentYearMonth()
+      const fmDaysInMonth = new Date(year, month + 1, 0).getDate()
+      const fmDaysElapsed = isPastMonth ? fmDaysInMonth : today.getDate()
+      const fmDaysRemaining = isPastMonth ? 0 : fmDaysInMonth - fmDaysElapsed
 
-      const dailySpendRate = daysElapsed > 0 ? totalExpenses / daysElapsed : 0
-      const projectedRemainingSpend = dailySpendRate * daysRemaining
+      const dailySpendRate = fmDaysElapsed > 0 ? totalExpenses / fmDaysElapsed : 0
+      const projectedRemainingSpend = dailySpendRate * fmDaysRemaining
       const projectedEndOfMonth = balance + projectedRemainingSpend
 
-      const monthName = today.toLocaleString('default', { month: 'long' })
+      const monthName = new Date(year, month, 1).toLocaleString('default', { month: 'long' })
 
       forecast = {
         currentBalance: balance,
@@ -98,7 +106,7 @@ export async function GET(request: NextRequest) {
         assumptions: [
           `Based on ${transactionCount} transaction${transactionCount !== 1 ? 's' : ''} in ${monthName}`,
           `Daily spend rate: €${Math.abs(dailySpendRate).toFixed(2)}`,
-          `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`,
+          `${fmDaysRemaining} day${fmDaysRemaining !== 1 ? 's' : ''} remaining`,
           `Income this month: €${totalIncome.toFixed(2)}`,
         ],
         generatedAt: new Date().toISOString(),

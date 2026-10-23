@@ -58,15 +58,24 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   const mainRef = useRef<HTMLElement>(null)
   const [active, setActive] = useState<Chapter>('review')
   const [scrollPct, setScrollPct] = useState(0)
+  const [monthOffset, setMonthOffset] = useState(0)
+
+  const now = useMemo(() => new Date(), [])
+  const viewDate = useMemo(() => {
+    const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
+    return d
+  }, [now, monthOffset])
+  const viewYM = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`
+  const isCurrentMonth = monthOffset === 0
 
   const { data: txData, isLoading } = useTransactionsQuery(userId)
   const { data: goalsData } = useGoalsQuery(userId)
   const { data: habitsData } = useHabitsQuery(userId)
 
   const { data: anomalyData, isLoading: anomalyLoading } = useQuery({
-    queryKey: ['anomalies', userId],
+    queryKey: ['anomalies', userId, viewYM],
     queryFn: async () => {
-      const res = await fetch('/api/insights', { cache: 'no-store' })
+      const res = await fetch(`/api/insights?month=${viewYM}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to fetch anomalies')
       const json = await res.json()
       return ((json.anomalies ?? []) as Record<string, unknown>[]).map(mapAnomaly)
@@ -78,7 +87,10 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   const goals = goalsData ?? []
   const habits = habitsData ?? []
 
-  const statement = useMemo(() => computeStatement(transactions), [transactions])
+  const statement = useMemo(
+    () => computeStatement(transactions, isCurrentMonth ? new Date() : new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0)),
+    [transactions, viewDate, isCurrentMonth]
+  )
 
   // Scroll-spy: track which chapter's heading has scrolled past the sticky nav.
   useEffect(() => {
@@ -118,17 +130,19 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
   const dateLocale = toDateLocale(locale)
   const { monthLabel, dayOfMonth, daysInMonth, lastMonthName } = useMemo(() => {
-    const now = new Date()
+    const target = isCurrentMonth ? new Date() : viewDate
     return {
-      monthLabel: now.toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' }),
-      dayOfMonth: now.getDate(),
-      daysInMonth: new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(),
-      lastMonthName: new Date(now.getFullYear(), now.getMonth() - 1, 1).toLocaleDateString(
+      monthLabel: target.toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' }),
+      dayOfMonth: isCurrentMonth
+        ? new Date().getDate()
+        : new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate(),
+      daysInMonth: new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate(),
+      lastMonthName: new Date(target.getFullYear(), target.getMonth() - 1, 1).toLocaleDateString(
         dateLocale,
         { month: 'long' }
       ),
     }
-  }, [dateLocale])
+  }, [dateLocale, viewDate, isCurrentMonth])
 
   const unreviewed = anomalies.length
 
@@ -159,7 +173,8 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                 <button
                   type="button"
                   aria-label={t.insights.previousMonth}
-                  disabled
+                  disabled={monthOffset <= -11}
+                  onClick={() => setMonthOffset((o) => o - 1)}
                   className="key key-line w-11 h-11 text-base disabled:opacity-30"
                 >
                   ‹
@@ -167,7 +182,8 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                 <button
                   type="button"
                   aria-label={t.insights.nextMonth}
-                  disabled
+                  disabled={isCurrentMonth}
+                  onClick={() => setMonthOffset((o) => o + 1)}
                   className="key key-line w-11 h-11 text-base text-truffle-text2 disabled:opacity-30"
                 >
                   ›
@@ -387,7 +403,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               {isLoading ? (
                 <SkeletonPulse className="h-48 bg-truffle-surface" />
               ) : (
-                <SpendingHeatmap transactions={transactions} />
+                <SpendingHeatmap transactions={transactions} month={{ year: viewDate.getFullYear(), month: viewDate.getMonth() + 1 }} />
               )}
 
               {/* Budgets — inline under spending */}
@@ -396,7 +412,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   <span className="text-xs font-bold tracking-[.12em] uppercase">{t.insights.budgetsTitle}</span>
                 </div>
                 <SectionAddFormProvider>
-                  <BudgetsInline userId={userId} transactions={transactions} />
+                  <BudgetsInline userId={userId} transactions={transactions} viewDate={viewDate} />
                 </SectionAddFormProvider>
               </div>
             </ChapterSection>
@@ -426,7 +442,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
             {/* ── 04 Recurring ── */}
             <ChapterSection id="recurring" num="04" title={t.insights.recurringTitle}>
-              <RecurringSection userId={userId} transactions={transactions} />
+              <RecurringSection userId={userId} transactions={transactions} viewDate={viewDate} />
             </ChapterSection>
 
             {/* End marker */}
@@ -505,7 +521,7 @@ function BuildingAddButton() {
 
 /* ── Budgets inline with add toggle ── */
 
-function BudgetsInline({ userId, transactions }: { userId: string; transactions: Transaction[] }) {
+function BudgetsInline({ userId, transactions, viewDate }: { userId: string; transactions: Transaction[]; viewDate?: Date }) {
   const { t } = useLanguage()
   const { open, setOpen } = useSectionAddForm()
   return (
@@ -520,7 +536,7 @@ function BudgetsInline({ userId, transactions }: { userId: string; transactions:
           {open ? t.savingsGoals.cancel : t.insights.newItem}
         </button>
       </div>
-      <MonthlyBudgets userId={userId} transactions={transactions} />
+      <MonthlyBudgets userId={userId} transactions={transactions} viewDate={viewDate} />
     </>
   )
 }

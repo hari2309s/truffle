@@ -29,7 +29,7 @@ interface Tx {
  * subscriptions and other, with a monthly total. Every item can be moved to
  * another group or marked not recurring; the choice is saved per user.
  */
-export function RecurringSection({ userId, transactions }: { userId: string; transactions: Tx[] }) {
+export function RecurringSection({ userId, transactions, viewDate }: { userId: string; transactions: Tx[]; viewDate?: Date }) {
   const { t, locale } = useLanguage()
   const { formatAmount } = useCurrency()
   const queryClient = useQueryClient()
@@ -48,7 +48,7 @@ export function RecurringSection({ userId, transactions }: { userId: string; tra
     },
   })
 
-  const items = useMemo(() => detectRecurring(transactions, new Date(), overrides), [transactions, overrides])
+  const items = useMemo(() => detectRecurring(transactions, viewDate ?? new Date(), overrides), [transactions, overrides, viewDate])
   const shown = items.filter((i) => !i.hidden)
   const hidden = items.filter((i) => i.hidden)
   const totals = recurringTotals(items)

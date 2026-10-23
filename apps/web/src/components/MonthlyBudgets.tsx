@@ -17,9 +17,11 @@ import { useSectionAddForm } from '@/contexts/SectionAddFormContext'
 interface MonthlyBudgetsProps {
   userId: string
   transactions: Transaction[]
+  /** When viewing a past month, pass its first-of-month date for budget calculation. */
+  viewDate?: Date
 }
 
-export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
+export function MonthlyBudgets({ userId, transactions, viewDate }: MonthlyBudgetsProps) {
   const { t } = useLanguage()
   const queryClient = useQueryClient()
   const { open: showAdd, setOpen: setShowAdd } = useSectionAddForm()
@@ -65,7 +67,7 @@ export function MonthlyBudgets({ userId, transactions }: MonthlyBudgetsProps) {
           <BudgetRow
             key={budget.id}
             budget={budget}
-            view={budgetView(budget, transactions)}
+            view={budgetView(budget, transactions, viewDate)}
             onDelete={() => handleDelete(budget.id)}
             isDeleting={deletingId === budget.id}
             isConfirmingDelete={confirmDeleteId === budget.id}
