@@ -173,7 +173,7 @@ export function SpendingHeatmap({ transactions, month }: Props) {
             return (
               <div
                 key={dateStr}
-                className="h-[38px] grid place-items-center text-[11px] font-bold text-truffle-text2 border border-dashed border-truffle-border"
+                className="h-[38px] md:h-[46px] xl:h-[52px] grid place-items-center text-[11px] font-bold text-truffle-text2 border border-dashed border-truffle-border"
               >
                 {day}
               </div>
@@ -187,7 +187,7 @@ export function SpendingHeatmap({ transactions, month }: Props) {
               onClick={() => setSelectedDate(isSelected ? null : dateStr)}
               aria-pressed={isSelected}
               aria-label={`${day}: ${data ? formatAmount(data.spend) : t.insights.noSpending}`}
-              className={`h-[38px] flex items-center justify-center gap-px text-[11px] font-bold ${HEAT_BG[bucket]} ${
+              className={`h-[38px] md:h-[46px] xl:h-[52px] flex items-center justify-center gap-px text-[11px] font-bold ${HEAT_BG[bucket]} ${
                 bucket >= 3 ? 'text-truffle-on-heat' : 'text-truffle-text'
               } ${isToday ? 'border-2 border-truffle-text' : 'border border-transparent'} ${
                 isSelected ? 'outline outline-2 outline-offset-1 outline-truffle-accent-ink' : ''

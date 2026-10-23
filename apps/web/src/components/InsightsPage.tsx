@@ -155,15 +155,15 @@ export function InsightsPage({ userId }: InsightsPageProps) {
           ref={mainRef}
           className="flex-1 overflow-y-auto min-h-0 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+28px)] md:pb-7"
         >
-          <div className="max-w-[1000px] w-full mx-auto md:px-8 xl:px-10">
+          <div className="max-w-[1000px] w-full mx-auto md:px-8 xl:px-10 md:pt-7 xl:pt-8">
           {/* ── Sticky header + chapter nav ── */}
-          <div className="sticky top-0 z-10 bg-truffle-bg">
-            <header className="flex items-center justify-between px-4 md:px-0 pt-1 md:pt-6 pb-2">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-bold tracking-[.14em] text-truffle-text2 uppercase">
+          <div className="sticky top-0 md:top-[72px] xl:top-0 z-10 bg-truffle-bg md:flex md:flex-col md:gap-3 md:pt-1">
+            <header className="flex items-center md:items-end justify-between px-4 md:px-0 pt-1 md:pt-0 pb-2 md:gap-3">
+              <div className="flex flex-col gap-0.5 md:gap-1">
+                <span className="text-[11px] font-bold tracking-[.12em] text-truffle-text2 uppercase">
                   {t.insights.title}
                 </span>
-                <span className="font-grotesk text-2xl md:text-[36px] xl:text-[44px] font-medium tracking-[-.025em] leading-tight">
+                <span className="font-grotesk text-2xl md:text-[36px] xl:text-[44px] font-medium tracking-[-.025em] leading-tight md:leading-none">
                   {monthLabel}
                 </span>
               </div>
@@ -189,10 +189,53 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               </div>
             </header>
 
-            {/* Four-chapter nav */}
+            {/* Four-chapter nav — mobile: pill buttons with layoutId; md+: flat tab strip */}
+            {/* Mobile pill tabs */}
             <nav
               aria-label={t.insights.sectionsLabel}
-              className="grid grid-cols-4 border-b border-dashed border-truffle-border px-4 md:px-0"
+              className="grid grid-cols-4 gap-1 px-4 pt-1 md:hidden"
+            >
+              {CHAPTERS.map((ch) => {
+                const c = t.insights.chapters[ch]
+                const isActive = active === ch
+                return (
+                  <button
+                    key={ch}
+                    type="button"
+                    onClick={() => jumpTo(ch)}
+                    aria-current={isActive ? 'location' : undefined}
+                    className={`relative h-12 rounded-lg flex flex-col items-center justify-center gap-px ${
+                      isActive
+                        ? 'text-truffle-bg'
+                        : 'bg-truffle-card border border-truffle-border text-truffle-text'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="chapter-active"
+                        className="absolute inset-0 rounded-lg bg-truffle-text"
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative text-[10px] font-bold opacity-70">{c.num}</span>
+                    <span className="relative font-grotesk text-[13px] font-medium">{c.label}</span>
+                    {ch === 'review' && unreviewed > 0 && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-1.5 -right-1 min-w-5 h-5 px-1 rounded-full bg-truffle-accent text-[#302e2b] border-2 border-truffle-bg text-[11px] font-bold grid place-items-center"
+                      >
+                        {unreviewed}
+                      </motion.span>
+                    )}
+                  </button>
+                )
+              })}
+            </nav>
+            {/* md+ flat tab strip */}
+            <nav
+              aria-label={t.insights.sectionsLabel}
+              className="hidden md:grid grid-cols-4 border-b border-dashed border-truffle-border"
             >
               {CHAPTERS.map((ch) => {
                 const c = t.insights.chapters[ch]
@@ -265,7 +308,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                 transition={{ duration: 0.32, ease: truffleEase }}
                 className="px-4 md:px-0 pt-5 pb-2"
               >
-                <div className="slip px-[18px] pt-[18px] pb-8 grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5 md:gap-x-10 items-center border-t-[6px] border-truffle-accent">
+                <div className="slip px-[18px] pt-[18px] pb-8 md:px-6 md:pt-[22px] md:pb-9 grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5 md:gap-x-10 items-center border-t-[6px] border-truffle-accent">
                   {/* Left column: label + proportional bar + legend */}
                   <div className="flex flex-col gap-3.5">
                     <div className="flex justify-between text-[11px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
@@ -386,7 +429,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                       <span className="text-[12px] font-bold tracking-[.1em] uppercase">
                         {t.insights.hero.projectedClose}
                       </span>
-                      <span className="text-[34px] font-bold tracking-tight">
+                      <span className="text-[34px] font-bold tracking-[-.02em]">
                         {statement.projectedClose >= 0 ? '+' : ''}
                         {formatAmount(statement.projectedClose)}
                       </span>

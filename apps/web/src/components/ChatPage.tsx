@@ -253,15 +253,15 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
     <AppShell active="chat" userId={userId} name={name}>
       <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))] md:pb-0">
 
-      <div className="max-w-[1000px] w-full mx-auto flex-1 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 xl:items-start min-h-0 md:px-8 xl:px-10">
+      <div className="max-w-[1000px] w-full mx-auto flex-1 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 xl:items-start min-h-0 md:px-8 xl:px-10 md:pt-7 xl:pt-8">
         {/* ── Chat column ── */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden max-w-[640px] xl:max-w-none w-full md:mx-auto xl:mx-0">
-          <header className="flex justify-between items-center pt-2 pb-3 pr-4 pl-5 md:px-0 border-b border-dashed border-truffle-border flex-shrink-0">
-            <div className="flex flex-col">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden max-w-[640px] w-full md:mx-auto xl:justify-self-center">
+          <header className="flex justify-between items-center pt-2 pb-3 md:pb-[14px] pr-4 pl-5 md:px-0 border-b border-dashed border-truffle-border md:border-truffle-text2 flex-shrink-0 md:gap-3">
+            <div className="flex flex-col md:gap-1">
               <span className="hidden md:block text-[11px] font-bold tracking-[.12em] text-truffle-text2 uppercase">
                 {t.chat.voiceLabel(persona.name)}
               </span>
-              <h1 className="font-grotesk text-2xl md:text-[32px] font-medium">{t.chat.title}</h1>
+              <h1 className="font-grotesk text-2xl md:text-[32px] font-medium md:tracking-[-.02em] md:leading-none">{t.chat.title}</h1>
               <span className="md:hidden text-[11px] text-truffle-text2 uppercase">
                 {t.chat.voiceLabel(persona.name)}
               </span>
@@ -575,7 +575,7 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
 
             {/* Desktop: text input row */}
             <form
-              className="hidden xl:grid grid-cols-[1fr_56px] gap-2"
+              className="hidden xl:grid grid-cols-[1fr_56px] gap-2 border-t border-dashed border-truffle-border pt-4 mt-2"
               onSubmit={(e) => {
                 e.preventDefault()
                 const text = input.trim()

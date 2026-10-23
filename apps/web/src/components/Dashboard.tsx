@@ -78,15 +78,15 @@ export function Dashboard({ userId, name }: DashboardProps) {
 
       <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <main className="flex-1 overflow-y-auto min-h-0 flex flex-col pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))] md:pb-0">
-          <div className="max-w-[960px] w-full mx-auto md:px-8 xl:px-10">
+          <div className="max-w-[960px] w-full mx-auto md:px-8 xl:px-10 md:pt-7 xl:pt-8 md:pb-8 xl:pb-14 md:flex md:flex-col md:gap-7">
 
             {/* Header row: greeting + action buttons */}
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between md:gap-4 md:flex-wrap px-6 md:px-0 pt-5 md:pt-8 xl:pt-8">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between md:gap-4 md:flex-wrap px-6 md:px-0 pt-5 md:pt-0">
               <div className="flex flex-col gap-1.5">
                 <span className="hidden md:block text-[11px] font-bold tracking-[.12em] text-truffle-text2">
                   {dayStr} · {t.insights.hero.dayOf(dayOfMonth, daysInMonth)}
                 </span>
-                <h1 className="font-grotesk text-[32px] md:text-[36px] xl:text-[44px] font-medium tracking-[-.025em] leading-tight">
+                <h1 className="font-grotesk text-[32px] md:text-[36px] xl:text-[44px] font-medium tracking-[-.025em] leading-tight md:leading-[1.02]">
                   {greeting}
                 </h1>
               </div>
@@ -96,21 +96,21 @@ export function Dashboard({ userId, name }: DashboardProps) {
                   <button
                     type="button"
                     onClick={() => setActivePanel('add')}
-                    className="key key-line h-11 px-3.5 text-xs font-bold"
+                    className="key key-plain h-11 px-3.5 text-xs font-bold"
                   >
                     + {t.dashboard.add}
                   </button>
                   <button
                     type="button"
                     onClick={() => setActivePanel('receipt')}
-                    className="key key-line h-11 px-3.5 text-xs font-bold"
+                    className="key key-plain h-11 px-3.5 text-xs font-bold"
                   >
                     {t.dashboard.scan}
                   </button>
                   <button
                     type="button"
                     onClick={() => setActivePanel('csv')}
-                    className="key key-line h-11 px-3.5 text-xs font-bold"
+                    className="key key-plain h-11 px-3.5 text-xs font-bold"
                   >
                     {t.dashboard.csv}
                   </button>
@@ -119,7 +119,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
             </div>
 
             {/* 2-column grid on md+, single column on mobile */}
-            <div className="md:grid md:grid-cols-2 md:gap-4 xl:gap-6 md:items-start md:mt-7">
+            <div className="md:grid md:grid-cols-2 md:gap-4 xl:gap-6 md:items-start mt-5 md:mt-0">
               {/* Left column */}
               <div className="flex flex-col md:gap-4 xl:gap-6">
                 <ErrorBoundary>
