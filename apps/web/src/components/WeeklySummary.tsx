@@ -49,7 +49,7 @@ export function WeeklySummary({ userId, name }: WeeklySummaryProps) {
           <motion.section
             key="recap"
             aria-label={t.recap.title(recap.facts.week)}
-            className="paper mx-4 mt-4 px-[18px] py-4 flex flex-col gap-3 border-t-[6px] border-truffle-accent touch-pan-y"
+            className="paper mx-4 mt-4 md:mx-0 md:mt-0 px-[18px] py-4 flex flex-col gap-3 border-t-[6px] border-truffle-accent touch-pan-y"
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             drag="x"
