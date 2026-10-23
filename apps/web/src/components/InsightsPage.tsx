@@ -104,7 +104,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
         let current: Chapter = CHAPTERS[0]
         for (const ch of CHAPTERS) {
           const el = document.getElementById(chapterId(ch))
-          if (el && el.getBoundingClientRect().top - rootTop <= 140) current = ch
+          if (el && el.getBoundingClientRect().top - rootTop <= 160) current = ch
         }
         if (root.scrollTop + root.clientHeight >= root.scrollHeight - 2) {
           current = 'recurring'
