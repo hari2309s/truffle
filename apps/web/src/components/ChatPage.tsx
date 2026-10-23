@@ -10,8 +10,7 @@ import { GoalProposalCard } from './GoalProposalCard'
 import { TransactionProposalCard } from './TransactionProposalCard'
 import { HabitProposalCard } from './HabitProposalCard'
 import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
-import { BottomNav } from './BottomNav'
-import { TopBar } from './TopBar'
+import { AppShell } from './AppShell'
 import { OfflineBar } from './OfflineBar'
 import { PageEnter } from './PageMotion'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -251,40 +250,59 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
   const persona = getPersona(voiceId)
 
   return (
-    <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto overflow-hidden min-h-0 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))]">
-      <TopBar>
-        <TopBar.ThemeToggle />
-        <TopBar.Settings userId={userId} />
-      </TopBar>
+    <AppShell active="chat" userId={userId} name={name}>
+      <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))] md:pb-0">
 
-      <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="max-w-[1000px] w-full mx-auto flex-1 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 xl:items-start min-h-0 md:px-8 xl:px-10">
+        {/* ── Chat column ── */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden max-w-[640px] xl:max-w-none w-full md:mx-auto xl:mx-0">
+          <header className="flex justify-between items-center pt-2 pb-3 pr-4 pl-5 md:px-0 border-b border-dashed border-truffle-border flex-shrink-0">
+            <div className="flex flex-col">
+              <span className="hidden md:block text-[11px] font-bold tracking-[.12em] text-truffle-text2 uppercase">
+                {t.chat.voiceLabel(persona.name)}
+              </span>
+              <h1 className="font-grotesk text-2xl md:text-[32px] font-medium">{t.chat.title}</h1>
+              <span className="md:hidden text-[11px] text-truffle-text2 uppercase">
+                {t.chat.voiceLabel(persona.name)}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <div className="hidden md:flex p-[3px] border border-truffle-border rounded-lg bg-truffle-card">
+                <button
+                  type="button"
+                  onClick={() => setTyping(false)}
+                  className={`h-[38px] px-2.5 rounded-md grid place-items-center text-[11px] font-bold ${!typing ? 'bg-truffle-text text-truffle-bg' : 'text-truffle-text2'}`}
+                >
+                  {t.chat.soundOn.split(' ')[0] ?? 'VOICE'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTyping(true)}
+                  className={`h-[38px] px-2.5 rounded-md grid place-items-center text-[11px] font-bold ${typing ? 'bg-truffle-text text-truffle-bg' : 'text-truffle-text2'}`}
+                >
+                  TEXT
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={chat.toggleMute}
+                aria-pressed={!chat.isMuted}
+                aria-label={chat.isMuted ? t.chat.unmute : t.chat.mute}
+                className="key key-plain key-3 h-11 px-3 text-xs uppercase"
+              >
+                {chat.isMuted ? t.chat.soundOff : t.chat.soundOn}
+                <span
+                  aria-hidden
+                  className={`w-2.5 h-2.5 ${chat.isMuted ? 'border-2 border-truffle-text2' : 'bg-truffle-positive'}`}
+                />
+              </button>
+            </div>
+          </header>
+          <OfflineBar userId={userId} />
 
-      <header className="flex justify-between items-center pt-2 pb-3 pr-4 pl-5 border-b border-dashed border-truffle-border flex-shrink-0">
-        <div className="flex flex-col">
-          <h1 className="font-grotesk text-2xl font-medium">{t.chat.title}</h1>
-          <span className="text-[11px] text-truffle-text2 uppercase">
-            {t.chat.voiceLabel(persona.name)}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={chat.toggleMute}
-          aria-pressed={!chat.isMuted}
-          aria-label={chat.isMuted ? t.chat.unmute : t.chat.mute}
-          className="key key-plain key-3 h-11 px-3 text-xs uppercase"
-        >
-          {chat.isMuted ? t.chat.soundOff : t.chat.soundOn}
-          <span
-            aria-hidden
-            className={`w-2.5 h-2.5 ${chat.isMuted ? 'border-2 border-truffle-text2' : 'bg-truffle-positive'}`}
-          />
-        </button>
-      </header>
-      <OfflineBar userId={userId} />
-
-      {/* Messages */}
-      <ErrorBoundary>
-        <main className="flex-1 overflow-y-auto min-h-0 px-4 pt-4 pb-4 flex flex-col gap-3.5">
+          {/* Messages */}
+          <ErrorBoundary>
+            <main className="flex-1 overflow-y-auto min-h-0 px-4 md:px-0 pt-4 pb-4 flex flex-col gap-3.5">
           {chat.messages.length === 0 && !initialPrompt && (
             <div className="flex flex-col gap-2 pt-4">
               <p className="font-grotesk text-[17px] leading-normal text-truffle-text2 px-1 pb-2">
@@ -301,7 +319,7 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.04 }}
                 >
-                  “{suggestion}”
+                  "{suggestion}"
                 </motion.button>
               ))}
             </div>
@@ -476,88 +494,137 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
         </main>
       </ErrorBoundary>
 
-      {/* Composer */}
-      <div className="flex-shrink-0 px-4 pt-6 pb-2.5 flex flex-col gap-2">
-        {voice.error && (
-          <NoticeSlip
-            tone={voice.error === MIC_UNAVAILABLE_ERROR ? 'muted' : 'warning'}
-            title={voice.error === MIC_UNAVAILABLE_ERROR ? t.voice.micOff : t.voice.didntCatch}
-            actions={
-              voice.error === MIC_UNAVAILABLE_ERROR && !typing ? (
+          {/* Composer */}
+          <div className="flex-shrink-0 px-4 md:px-0 pt-6 pb-2.5 flex flex-col gap-2">
+            {voice.error && (
+              <NoticeSlip
+                tone={voice.error === MIC_UNAVAILABLE_ERROR ? 'muted' : 'warning'}
+                title={voice.error === MIC_UNAVAILABLE_ERROR ? t.voice.micOff : t.voice.didntCatch}
+                actions={
+                  voice.error === MIC_UNAVAILABLE_ERROR && !typing ? (
+                    <button
+                      type="button"
+                      onClick={() => setTyping(true)}
+                      className="key key-line key-3 h-11 text-xs uppercase"
+                    >
+                      {t.voice.typeInstead}
+                    </button>
+                  ) : undefined
+                }
+              >
+                {voice.error === MIC_UNAVAILABLE_ERROR ? t.voice.micOffBody : voice.error}
+              </NoticeSlip>
+            )}
+
+            {voice.isRecording && (
+              <div className="paper px-3.5 py-2.5 text-[13px]" aria-hidden>
+                {t.voice.releaseToPrint}
+                <span className="caret ml-0.5" />
+              </div>
+            )}
+
+            {typing && (
+              <form
+                id="chat-form"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const text = input.trim()
+                  if (!text) return
+                  setInput('')
+                  sendText(text)
+                }}
+                className="grid grid-cols-[1fr_64px] gap-2"
+              >
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={t.chat.typePlaceholder}
+                  aria-label={t.chat.typePlaceholder}
+                  autoFocus
+                  className="field h-[52px] font-grotesk text-base"
+                />
                 <button
-                  type="button"
-                  onClick={() => setTyping(true)}
-                  className="key key-line key-3 h-11 text-xs uppercase"
+                  type="submit"
+                  disabled={chat.isLoading || !input.trim()}
+                  aria-label={t.chat.send}
+                  className="key key-ink h-[52px] text-lg"
                 >
-                  {t.voice.typeInstead}
+                  ↵
                 </button>
-              ) : undefined
-            }
-          >
-            {voice.error === MIC_UNAVAILABLE_ERROR ? t.voice.micOffBody : voice.error}
-          </NoticeSlip>
-        )}
+              </form>
+            )}
 
-        {voice.isRecording && (
-          <div className="paper px-3.5 py-2.5 text-[13px]" aria-hidden>
-            {t.voice.releaseToPrint}
-            <span className="caret ml-0.5" />
-          </div>
-        )}
+            {/* Mobile/tablet: inline voice + type toggle */}
+            <div className="grid grid-cols-[1fr_64px] gap-2 xl:hidden">
+              <VoiceButton
+                status={voiceButtonStatus}
+                onStart={voice.startRecording}
+                onStop={voice.stopRecording}
+                onStopSpeaking={chat.cancelSpeech}
+              />
+              <button
+                type="button"
+                onClick={() => setTyping((v) => !v)}
+                aria-pressed={typing}
+                aria-label={t.voice.typeInstead}
+                className={`key h-[72px] text-sm ${typing ? 'key-ink' : 'key-plain'}`}
+              >
+                Aa
+              </button>
+            </div>
 
-        {typing && (
-          <form
-            id="chat-form"
-            onSubmit={(e) => {
-              e.preventDefault()
-              const text = input.trim()
-              if (!text) return
-              setInput('')
-              sendText(text)
-            }}
-            className="grid grid-cols-[1fr_64px] gap-2"
-          >
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={t.chat.typePlaceholder}
-              aria-label={t.chat.typePlaceholder}
-              autoFocus
-              className="field h-[52px] font-grotesk text-base"
-            />
-            <button
-              type="submit"
-              disabled={chat.isLoading || !input.trim()}
-              aria-label={t.chat.send}
-              className="key key-ink h-[52px] text-lg"
+            {/* Desktop: text input row */}
+            <form
+              className="hidden xl:grid grid-cols-[1fr_56px] gap-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                const text = input.trim()
+                if (!text) return
+                setInput('')
+                sendText(text)
+              }}
             >
-              ↵
-            </button>
-          </form>
-        )}
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={t.chat.typePlaceholder}
+                aria-label={t.chat.typePlaceholder}
+                className="field h-14 font-grotesk text-base"
+              />
+              <button
+                type="submit"
+                className="key key-line h-14 text-base font-bold"
+                disabled={chat.isLoading || !input.trim()}
+              >
+                ↵
+              </button>
+            </form>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-[1fr_64px] gap-2">
+        {/* ── Desktop context panel (xl+) ── */}
+        <aside className="hidden xl:flex sticky top-6 flex-col gap-4 pt-6">
+          {/* Voice key */}
           <VoiceButton
             status={voiceButtonStatus}
             onStart={voice.startRecording}
             onStop={voice.stopRecording}
             onStopSpeaking={chat.cancelSpeech}
+            className="h-[120px] flex-col"
           />
-          <button
-            type="button"
-            onClick={() => setTyping((v) => !v)}
-            aria-pressed={typing}
-            aria-label={t.voice.typeInstead}
-            className={`key h-[72px] text-sm ${typing ? 'key-ink' : 'key-plain'}`}
-          >
-            Aa
-          </button>
-        </div>
+          <div className="grid grid-cols-4 gap-1 text-[9px] font-bold tracking-[.06em] text-truffle-text2 text-center">
+            <span className={voiceButtonStatus === 'idle' ? 'text-truffle-accent-ink' : ''}>● IDLE</span>
+            <span className={voiceButtonStatus === 'recording' ? 'text-truffle-accent-ink' : ''}>● LISTEN</span>
+            <span className={voiceButtonStatus === 'transcribing' ? 'text-truffle-accent-ink' : ''}>● THINK</span>
+            <span className={voiceButtonStatus === 'speaking' ? 'text-truffle-accent-ink' : ''}>● SPEAK</span>
+          </div>
+          <span className="text-[10px] tracking-[.06em] text-truffle-text2 text-center">
+            HOLD SPACE ANYWHERE · CLICK KEY TO CYCLE STATES
+          </span>
+        </aside>
       </div>
 
       </PageEnter>
-
-      <BottomNav active="chat" />
-    </div>
+    </AppShell>
   )
 }

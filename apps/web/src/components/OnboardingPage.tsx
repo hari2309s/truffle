@@ -154,7 +154,7 @@ export function OnboardingPage({ userId, onComplete }: OnboardingPageProps) {
   const primaryAccent = step === 'voice' || isLast
 
   return (
-    <div className="min-h-dvh w-full max-w-lg mx-auto bg-truffle-bg flex flex-col overflow-y-auto">
+    <div className="min-h-dvh w-full max-w-lg md:max-w-[1120px] mx-auto bg-truffle-bg flex flex-col overflow-y-auto md:px-8 xl:px-10">
       <div className="flex justify-between items-center pt-[max(12px,env(safe-area-inset-top))] pr-5 pl-6">
         <span className="text-[13px] font-bold uppercase">{o.stepOf(stepIndex + 1, STEPS.length)}</span>
         {step === 'budgets' ? (

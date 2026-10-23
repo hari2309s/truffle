@@ -15,8 +15,7 @@ import { SavingsGoalsEmbedded } from './SavingsGoals'
 import { SavingsHabits } from './SavingsHabits'
 import { SpendingHeatmap } from './SpendingHeatmap'
 import { MonthlyBudgets } from './MonthlyBudgets'
-import { BottomNav } from './BottomNav'
-import { TopBar } from './TopBar'
+import { AppShell } from './AppShell'
 import { ErrorBoundary } from './ErrorBoundary'
 import { LeaderRow, MINUS, Rule } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -149,25 +148,22 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   const unreviewed = anomalies.length
 
   return (
-    <div className="flex-1 w-full bg-truffle-bg flex flex-col max-w-lg mx-auto min-h-0">
-      <TopBar>
-        <TopBar.ThemeToggle />
-        <TopBar.Settings userId={userId} />
-      </TopBar>
+    <AppShell active="insights" userId={userId}>
 
       <PageEnter className="flex flex-col flex-1 min-h-0 overflow-hidden">
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto min-h-0 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+28px)]"
+          className="flex-1 overflow-y-auto min-h-0 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+28px)] md:pb-7"
         >
+          <div className="max-w-[1000px] w-full mx-auto md:px-8 xl:px-10">
           {/* ── Sticky header + chapter nav ── */}
           <div className="sticky top-0 z-10 bg-truffle-bg">
-            <header className="flex items-center justify-between px-4 pt-1 pb-2">
+            <header className="flex items-center justify-between px-4 md:px-0 pt-1 md:pt-6 pb-2">
               <div className="flex flex-col gap-0.5">
                 <span className="text-[11px] font-bold tracking-[.14em] text-truffle-text2 uppercase">
                   {t.insights.title}
                 </span>
-                <span className="font-grotesk text-2xl font-medium tracking-tight leading-tight">
+                <span className="font-grotesk text-2xl md:text-[40px] font-medium tracking-tight leading-tight">
                   {monthLabel}
                 </span>
               </div>
@@ -196,7 +192,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
             {/* Four-chapter nav */}
             <nav
               aria-label={t.insights.sectionsLabel}
-              className="grid grid-cols-4 gap-1 px-4 pt-1"
+              className="grid grid-cols-4 gap-1 px-4 md:px-0 pt-1"
             >
               {CHAPTERS.map((ch) => {
                 const c = t.insights.chapters[ch]
@@ -237,7 +233,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
             </nav>
 
             {/* Scroll progress rail */}
-            <div className="mx-4 mt-2 h-0.5 bg-truffle-border">
+            <div className="mx-4 md:mx-0 mt-2 h-0.5 bg-truffle-border">
               <div
                 className="h-0.5 bg-truffle-text transition-[width] duration-100"
                 style={{ width: `${Math.round(scrollPct * 100)}%` }}
@@ -250,7 +246,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
             {/* ── Hero: month-so-far KPI slip ── */}
             <AnimatePresence mode="wait">
             {isLoading ? (
-              <div key="hero-skeleton" className="px-4 pt-5 pb-2">
+              <div key="hero-skeleton" className="px-4 md:px-0 pt-5 pb-2">
                 <SkeletonPulse className="slip px-[18px] pt-[18px] pb-8 flex flex-col gap-4 border-t-[6px] border-truffle-accent">
                   <div className="flex justify-between">
                     <div className="h-3 bg-truffle-border w-24" />
@@ -278,7 +274,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.32, ease: truffleEase }}
-                className="px-4 pt-5 pb-2"
+                className="px-4 md:px-0 pt-5 pb-2"
               >
                 <div className="slip px-[18px] pt-[18px] pb-8 flex flex-col gap-3.5 border-t-[6px] border-truffle-accent">
                   <div className="flex justify-between text-[11px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
@@ -517,7 +513,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
             {/* End marker */}
             <motion.div
-              className="flex items-center gap-2.5 text-truffle-text2 text-xs px-4 py-6"
+              className="flex items-center gap-2.5 text-truffle-text2 text-xs px-4 md:px-0 py-6"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, margin: '-20px' }}
@@ -535,11 +531,11 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               <span className="font-bold tracking-[.1em] uppercase">{t.insights.endOfInsights}</span>
             </motion.div>
           </ErrorBoundary>
+          </div>
         </main>
       </PageEnter>
 
-      <BottomNav active="insights" />
-    </div>
+    </AppShell>
   )
 }
 
@@ -566,7 +562,7 @@ function ChapterSection({
       ref={ref}
       id={chapterId(id)}
       aria-labelledby={headingId}
-      className="px-4 pt-7 pb-2 flex flex-col gap-3.5 scroll-mt-[140px]"
+      className="px-4 md:px-0 pt-7 pb-2 flex flex-col gap-3.5 scroll-mt-[140px]"
     >
       <motion.div
         className="flex items-baseline gap-2.5 border-b border-dashed border-truffle-text2 pb-2.5"

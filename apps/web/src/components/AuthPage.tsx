@@ -61,7 +61,7 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
   const demoEnabled = process.env.NEXT_PUBLIC_DEMO_ENABLED === '1'
 
   return (
-    <div className="min-h-dvh w-full max-w-lg mx-auto flex flex-col bg-truffle-bg overflow-y-auto">
+    <div className="min-h-dvh w-full max-w-lg md:max-w-2xl mx-auto flex flex-col bg-truffle-bg overflow-y-auto md:px-8">
       <PageEnter className="flex-1 flex flex-col">
         <div className="slip mx-8 mt-[max(36px,env(safe-area-inset-top))] px-6 pt-7 pb-9 flex flex-col items-center gap-3.5">
           <Image src={TRUFFLE_ICON} alt="" width={88} height={88} priority />

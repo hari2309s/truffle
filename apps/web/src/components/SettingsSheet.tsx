@@ -142,7 +142,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 max-w-lg mx-auto" onClick={onClose}>
+    <div className="fixed inset-0 z-50" onClick={onClose}>
       <motion.div
         className="absolute inset-0"
         style={{ background: 'var(--t-scrim)' }}
@@ -155,7 +155,7 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-sheet-title"
-        className="absolute left-3 right-3 bottom-0 top-24 bg-truffle-card flex flex-col gap-4 px-[18px] pt-5 pb-[max(28px,env(safe-area-inset-bottom))] text-sm overflow-y-auto"
+        className="absolute left-3 right-3 bottom-0 top-24 md:left-auto md:right-auto md:bottom-auto md:top-[10vh] md:w-[480px] md:max-w-[calc(100%-48px)] md:max-h-[80vh] md:mx-auto md:inset-x-0 md:rounded-lg bg-truffle-card flex flex-col gap-4 px-[18px] pt-5 pb-[max(28px,env(safe-area-inset-bottom))] text-sm overflow-y-auto slip md:slip"
         style={{ overscrollBehavior: 'contain' }}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
