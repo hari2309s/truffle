@@ -155,9 +155,9 @@ export function InsightsPage({ userId }: InsightsPageProps) {
           ref={mainRef}
           className="flex-1 overflow-y-auto min-h-0 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+28px)] md:pb-7"
         >
-          <div className="max-w-[1000px] w-full mx-auto md:px-8 xl:px-10 md:pt-7 xl:pt-8">
+          <div className="max-w-[1000px] w-full mx-auto md:px-8 xl:px-10 md:pt-7 xl:pt-8 md:flex md:flex-col md:gap-7">
           {/* ── Sticky header + chapter nav ── */}
-          <div className="sticky top-0 md:top-[72px] xl:top-0 z-10 bg-truffle-bg md:flex md:flex-col md:gap-3 md:pt-1">
+          <div className="sticky top-0 md:top-[72px] xl:top-0 z-10 md:z-[4] bg-truffle-bg md:flex md:flex-col md:gap-3 md:pt-1">
             <header className="flex items-center md:items-end justify-between px-4 md:px-0 pt-1 md:pt-0 pb-2 md:gap-3">
               <div className="flex flex-col gap-0.5 md:gap-1">
                 <span className="text-[11px] font-bold tracking-[.12em] text-truffle-text2 uppercase">
@@ -173,7 +173,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   aria-label={t.insights.previousMonth}
                   disabled={monthOffset <= -11}
                   onClick={() => setMonthOffset((o) => o - 1)}
-                  className="key key-line w-11 h-11 text-base disabled:opacity-30"
+                  className="key key-line w-11 h-11 text-base disabled:opacity-30 md:bg-truffle-card md:border-truffle-border md:shadow-[0_1px_2px_rgba(0,0,0,.06)]"
                 >
                   ‹
                 </button>
@@ -308,13 +308,27 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                 transition={{ duration: 0.32, ease: truffleEase }}
                 className="px-4 md:px-0 pt-5 pb-2"
               >
-                <div className="slip px-[18px] pt-[18px] pb-8 md:px-6 md:pt-[22px] md:pb-9 grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5 md:gap-x-10 items-center border-t-[6px] border-truffle-accent">
-                  {/* Left column: label + proportional bar + legend */}
+                <div className="slip md:border md:border-truffle-border px-[18px] pt-[18px] pb-8 md:px-6 md:pt-[22px] md:pb-9 grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5 md:gap-x-10 items-center border-t-[6px] border-truffle-accent">
+                  {/* Left column: label + summary + proportional bar + legend */}
                   <div className="flex flex-col gap-3.5">
                     <div className="flex justify-between text-[11px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
                       <span>{t.insights.hero.monthSoFar}</span>
                       <span>{t.insights.hero.dayOf(dayOfMonth, daysInMonth)}</span>
                     </div>
+
+                    {/* Hero summary sentence (md+ only) */}
+                    {statement.incomeThisMonth > 0 && (
+                      <span className="hidden md:block font-grotesk text-[30px] font-medium leading-[1.1] tracking-[-.02em]" style={{ textWrap: 'pretty' } as React.CSSProperties}>
+                        {statement.pace === 'ahead'
+                          ? t.insights.hero.aheadOf(formatAmount(statement.paceDelta), lastMonthName)
+                          : statement.pace === 'behind'
+                            ? t.insights.hero.behindVs(formatAmount(statement.paceDelta), lastMonthName)
+                            : t.insights.hero.projectedClose}{'. '}
+                        <span className="bg-truffle-accent-soft text-truffle-accent-ink" style={{ boxShadow: '-.08em 0 0 var(--t-accent-soft), .08em 0 0 var(--t-accent-soft)' }}>
+                          {statement.projectedClose >= 0 ? '+' : MINUS}{formatAmount(statement.projectedClose)}{' '}{statement.pace === 'ahead' ? '↑' : statement.pace === 'behind' ? '↓' : ''}
+                        </span>
+                      </span>
+                    )}
 
                     {/* Proportional bar */}
                     {statement.incomeThisMonth > 0 && (
@@ -468,20 +482,22 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   <div className="h-3 bg-truffle-border w-2/3" />
                 </SkeletonPulse>
               ) : anomalies.length ? (
-                anomalies.map((a, i) => (
-                  <motion.div
-                    key={a.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ ...transitionSnappy, delay: i * 0.06 }}
-                  >
-                    <AnomalyRow
-                      anomaly={a}
-                      transactions={transactions}
-                      userId={userId}
-                    />
-                  </motion.div>
-                ))
+                <div className="grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
+                  {anomalies.map((a, i) => (
+                    <motion.div
+                      key={a.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ ...transitionSnappy, delay: i * 0.06 }}
+                    >
+                      <AnomalyRow
+                        anomaly={a}
+                        transactions={transactions}
+                        userId={userId}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
               ) : (
                 <p className="font-grotesk text-sm text-truffle-text2">
                   {t.insights.noUnusualActivity}
@@ -496,23 +512,28 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               title={t.insights.spendingTitle}
               right={isLoading ? '' : formatAmount(statement?.spentThisMonth ?? 0)}
             >
-              <span className="font-grotesk text-[15px] leading-[1.45] text-truffle-text2">
-                {t.insights.spendingIntro}
-              </span>
-              {isLoading ? (
-                <SkeletonPulse className="h-48 bg-truffle-surface" />
-              ) : (
-                <SpendingHeatmap transactions={transactions} month={{ year: viewDate.getFullYear(), month: viewDate.getMonth() + 1 }} />
-              )}
-
-              {/* Budgets — inline under spending */}
-              <div className="flex flex-col gap-0 mt-2">
-                <div className="flex justify-between items-baseline pb-2">
-                  <span className="text-xs font-bold tracking-[.12em] uppercase">{t.insights.budgetsTitle}</span>
+              <div className="grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(320px,1fr))] md:gap-x-10 md:gap-y-6 gap-3.5 md:items-start">
+                {/* Left: heatmap */}
+                <div className="flex flex-col gap-3">
+                  <span className="font-grotesk text-[15px] leading-[1.45] text-truffle-text2">
+                    {t.insights.spendingIntro}
+                  </span>
+                  {isLoading ? (
+                    <SkeletonPulse className="h-48 bg-truffle-surface" />
+                  ) : (
+                    <SpendingHeatmap transactions={transactions} month={{ year: viewDate.getFullYear(), month: viewDate.getMonth() + 1 }} />
+                  )}
                 </div>
-                <SectionAddFormProvider>
-                  <BudgetsInline userId={userId} transactions={transactions} viewDate={viewDate} />
-                </SectionAddFormProvider>
+
+                {/* Right: budgets */}
+                <div className="flex flex-col gap-0 mt-2 md:mt-0">
+                  <div className="flex justify-between items-baseline pb-2">
+                    <span className="text-xs font-bold tracking-[.12em] uppercase">{t.insights.budgetsTitle}</span>
+                  </div>
+                  <SectionAddFormProvider>
+                    <BudgetsInline userId={userId} transactions={transactions} viewDate={viewDate} />
+                  </SectionAddFormProvider>
+                </div>
               </div>
             </ChapterSection>
 

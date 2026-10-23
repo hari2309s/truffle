@@ -255,7 +255,7 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
 
       <div className="max-w-[1000px] w-full mx-auto flex-1 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 xl:items-start min-h-0 md:px-8 xl:px-10 md:pt-7 xl:pt-8">
         {/* ── Chat column ── */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden max-w-[640px] w-full md:mx-auto xl:justify-self-center">
+        <div className="flex-1 flex flex-col md:gap-4 min-h-0 overflow-hidden max-w-[640px] w-full md:mx-auto xl:justify-self-center">
           <header className="flex justify-between items-center pt-2 pb-3 md:pb-[14px] pr-4 pl-5 md:px-0 border-b border-dashed border-truffle-border md:border-truffle-text2 flex-shrink-0 md:gap-3">
             <div className="flex flex-col md:gap-1">
               <span className="hidden md:block text-[11px] font-bold tracking-[.12em] text-truffle-text2 uppercase">
@@ -554,8 +554,8 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
               </form>
             )}
 
-            {/* Mobile/tablet: inline voice + type toggle */}
-            <div className="grid grid-cols-[1fr_64px] gap-2 xl:hidden">
+            {/* Mobile: voice + type toggle */}
+            <div className="grid grid-cols-[1fr_64px] gap-2 md:hidden">
               <VoiceButton
                 status={voiceButtonStatus}
                 onStart={voice.startRecording}
@@ -572,6 +572,40 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
                 Aa
               </button>
             </div>
+
+            {/* Tablet: input + send + voice inline */}
+            <form
+              className="hidden md:flex xl:hidden gap-2 items-center border-t border-dashed border-truffle-border pt-4 mt-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                const text = input.trim()
+                if (!text) return
+                setInput('')
+                sendText(text)
+              }}
+            >
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={t.chat.typePlaceholder}
+                aria-label={t.chat.typePlaceholder}
+                className="field h-14 flex-1 min-w-0 font-grotesk text-base"
+              />
+              <button
+                type="submit"
+                className="key key-line h-14 w-14 flex-none text-base font-bold"
+                disabled={chat.isLoading || !input.trim()}
+              >
+                ↵
+              </button>
+              <VoiceButton
+                status={voiceButtonStatus}
+                onStart={voice.startRecording}
+                onStop={voice.stopRecording}
+                onStopSpeaking={chat.cancelSpeech}
+                className="h-14 w-[180px] flex-none"
+              />
+            </form>
 
             {/* Desktop: text input row */}
             <form
