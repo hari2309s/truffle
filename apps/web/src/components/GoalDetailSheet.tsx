@@ -1,6 +1,7 @@
 'use client'
 
 import { DEFAULT_GOAL_EMOJI, EmojiField } from './EmojiField'
+import { motion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { SavingsGoal } from '@truffle/types'
@@ -8,6 +9,7 @@ import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
+import { truffleEase } from '@/lib/motion'
 import { LeaderRow, MINUS, Rule, Sheet } from './Tally'
 import { GoalStatus } from './GoalStatus'
 import { goalPlan } from '@/lib/goalPlan'
@@ -322,8 +324,8 @@ export function GoalDetailSheet({
 
           <div className="paper print-in mx-4 mt-4 p-[18px] flex flex-col gap-2.5 border-t-[6px] border-truffle-accent">
             <div className="flex justify-between items-baseline">
-              <span className="text-[40px] font-bold leading-none">{formatAmount(goal.savedAmount)}</span>
-              <span className="text-[22px] font-bold">{Math.round(pct)}%</span>
+              <motion.span initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.28, ease: truffleEase }} className="text-[40px] font-bold leading-none">{formatAmount(goal.savedAmount)}</motion.span>
+              <motion.span initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.28, ease: truffleEase }} className="text-[22px] font-bold">{Math.round(pct)}%</motion.span>
             </div>
             <div
               role="progressbar"
@@ -333,12 +335,22 @@ export function GoalDetailSheet({
               aria-label={goal.name}
               className="grid grid-cols-10 gap-[3px]"
             >
-              {Array.from({ length: 10 }, (_, i) => (
-                <div
-                  key={i}
-                  className={`h-[18px] border ${i < filled ? 'bg-truffle-accent border-truffle-accent-edge' : 'border-truffle-border'}`}
-                />
-              ))}
+              {Array.from({ length: 10 }, (_, i) =>
+                i < filled ? (
+                  <motion.div
+                    key={i}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: i * 0.04, duration: 0.25, ease: truffleEase }}
+                    className="h-[18px] border bg-truffle-accent border-truffle-accent-edge"
+                  />
+                ) : (
+                  <div
+                    key={i}
+                    className="h-[18px] border border-truffle-border"
+                  />
+                )
+              )}
             </div>
             <span className="text-xs text-truffle-text2 uppercase">
               {done ? `● ${t.savingsGoals.complete}` : g.toGo(formatAmount(remaining))}

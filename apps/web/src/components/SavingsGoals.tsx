@@ -5,6 +5,7 @@ import { GoalStatus } from './GoalStatus'
 import { goalPlan } from '@/lib/goalPlan'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { truffleEase, transitionSnappy } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGoalsQuery } from '@/hooks/useGoalsQuery'
@@ -113,18 +114,24 @@ function SavingsGoalsBody({ userId, showAdd, onShowAddChange }: SavingsGoalsBody
           </button>
         </>
       ) : (
-        goals.map((goal) => (
-          <GoalRow
+        goals.map((goal, i) => (
+          <motion.div
             key={goal.id}
-            goal={goal}
-            onAddFunds={(amount) => handleAddFunds(goal.id, goal.savedAmount, amount)}
-            onDelete={() => handleDelete(goal.id)}
-            isDeleting={deletingId === goal.id}
-            isConfirmingDelete={confirmDeleteId === goal.id}
-            onRequestDelete={() => setConfirmDeleteId(goal.id)}
-            onCancelDelete={() => setConfirmDeleteId(null)}
-            onOpen={() => setOpenId(goal.id)}
-          />
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ ...transitionSnappy, delay: i * 0.06 }}
+          >
+            <GoalRow
+              goal={goal}
+              onAddFunds={(amount) => handleAddFunds(goal.id, goal.savedAmount, amount)}
+              onDelete={() => handleDelete(goal.id)}
+              isDeleting={deletingId === goal.id}
+              isConfirmingDelete={confirmDeleteId === goal.id}
+              onRequestDelete={() => setConfirmDeleteId(goal.id)}
+              onCancelDelete={() => setConfirmDeleteId(null)}
+              onOpen={() => setOpenId(goal.id)}
+            />
+          </motion.div>
         ))
       )}
 
@@ -243,9 +250,12 @@ function GoalRow({
         aria-label={goal.name}
         className="h-3.5 bg-truffle-surface border border-truffle-border"
       >
-        <div
-          className={`h-full transition-[width] duration-500 ${done ? 'bg-truffle-positive' : 'bg-truffle-accent'}`}
-          style={{ width: `${progress}%` }}
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 0.6, ease: truffleEase, delay: 0.1 }}
+          className={`h-full ${done ? 'bg-truffle-positive' : 'bg-truffle-accent'}`}
+          style={{ transformOrigin: 'left', width: `${progress}%` }}
         />
       </div>
       <span className="text-[11px] text-truffle-text2">

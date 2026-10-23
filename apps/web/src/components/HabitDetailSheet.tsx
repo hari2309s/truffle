@@ -1,6 +1,7 @@
 'use client'
 
 import { DEFAULT_HABIT_EMOJI, EmojiField } from './EmojiField'
+import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { HabitWithStats } from '@truffle/types'
@@ -8,6 +9,7 @@ import { getCurrentPeriod, periodName, recentPeriods } from '@/lib/habits'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { toDateLocale } from '@/lib/date'
+import { truffleEase } from '@/lib/motion'
 import { LeaderRow, Rule, Sheet } from './Tally'
 
 /** How many recent periods the boxes show. */
@@ -196,22 +198,34 @@ export function HabitDetailSheet({
 
           <div className="paper print-in mx-4 mt-4 p-[18px] flex flex-col gap-3 border-t-[6px] border-truffle-accent">
             <div className="flex items-baseline gap-3">
-              <span className="text-[40px] font-bold leading-none">×{habit.streak}</span>
+              <motion.span initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.28, ease: truffleEase }} className="text-[40px] font-bold leading-none">×{habit.streak}</motion.span>
               <span className="text-xs font-bold uppercase text-truffle-text2">{h.inARow(period)}</span>
             </div>
             <span className="text-[11px] font-bold uppercase text-truffle-text2">
               {t.savingsHabits.lastN(RECENT_PERIODS, period)}
             </span>
-            <ul className="m-0 p-0 list-none flex gap-[3px]">
-              {periods.map((p) => (
-                <li
-                  key={p}
-                  aria-label={t.savingsHabits.boxLabel(periodName(p, h.week, dateLocale), logged.has(p))}
-                  title={periodName(p, h.week, dateLocale)}
-                  className={`flex-1 h-[18px] border-2 ${logged.has(p) ? 'bg-truffle-accent border-truffle-accent' : 'border-truffle-border'}`}
-                />
-              ))}
-            </ul>
+            <motion.ul className="m-0 p-0 list-none flex gap-[3px]">
+              {periods.map((p, i) =>
+                logged.has(p) ? (
+                  <motion.li
+                    key={p}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: i * 0.04, duration: 0.25, ease: truffleEase }}
+                    aria-label={t.savingsHabits.boxLabel(periodName(p, h.week, dateLocale), true)}
+                    title={periodName(p, h.week, dateLocale)}
+                    className="flex-1 h-[18px] border-2 bg-truffle-accent border-truffle-accent"
+                  />
+                ) : (
+                  <li
+                    key={p}
+                    aria-label={t.savingsHabits.boxLabel(periodName(p, h.week, dateLocale), false)}
+                    title={periodName(p, h.week, dateLocale)}
+                    className="flex-1 h-[18px] border-2 border-truffle-border"
+                  />
+                )
+              )}
+            </motion.ul>
             <span className="text-[11px] text-truffle-text2">{h.boxesCaption(period)}</span>
             <LeaderRow
               className="text-[13px]"

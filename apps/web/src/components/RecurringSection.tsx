@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   detectRecurring,
@@ -14,6 +15,7 @@ import { parseLocalDay } from '@/lib/toolArgs'
 import { toDateLocale } from '@/lib/date'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { truffleEase, transitionSnappy } from '@/lib/motion'
 import { LeaderRow, Rule } from './Tally'
 
 interface Tx {
@@ -88,8 +90,14 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
   const lastCharged = (date: string) =>
     parseLocalDay(date).toLocaleDateString(toDateLocale(locale), { day: 'numeric', month: 'short' })
 
-  const row = (item: RecurringItem) => (
-    <div key={item.key} className="flex flex-col gap-1.5">
+  const row = (item: RecurringItem, idx: number) => (
+    <motion.div
+      key={item.key}
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ ...transitionSnappy, delay: idx * 0.04 }}
+      className="flex flex-col gap-1.5"
+    >
       <LeaderRow
         left={
           <span>
@@ -118,29 +126,39 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
           </span>
         }
       />
-      {editing === item.key && (
-        <div role="group" aria-label={r.changeFor(item.displayName)} className="flex flex-wrap gap-1.5">
-          {RECURRING_GROUPS.filter((g) => g !== item.group || item.confidence === 'possible').map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => choose(item, g)}
-              className="key key-line h-9 px-3 text-[11px] uppercase"
-            >
-              {g === item.group ? r.confirm : r.moveTo(r.groups[g])}
-            </button>
-          ))}
-          <button type="button" onClick={() => choose(item, 'none')} className="key key-line h-9 px-3 text-[11px] uppercase">
-            ✕ {r.notRecurring}
-          </button>
-          {item.overridden && (
-            <button type="button" onClick={() => choose(item, null)} className="key key-plain h-9 px-3 text-[11px] uppercase">
-              {r.reset}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+      <AnimatePresence>
+        {editing === item.key && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: truffleEase }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div role="group" aria-label={r.changeFor(item.displayName)} className="flex flex-wrap gap-1.5">
+              {RECURRING_GROUPS.filter((g) => g !== item.group || item.confidence === 'possible').map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => choose(item, g)}
+                  className="key key-line h-9 px-3 text-[11px] uppercase"
+                >
+                  {g === item.group ? r.confirm : r.moveTo(r.groups[g])}
+                </button>
+              ))}
+              <button type="button" onClick={() => choose(item, 'none')} className="key key-line h-9 px-3 text-[11px] uppercase">
+                ✕ {r.notRecurring}
+              </button>
+              {item.overridden && (
+                <button type="button" onClick={() => choose(item, null)} className="key key-plain h-9 px-3 text-[11px] uppercase">
+                  {r.reset}
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 
   return (
@@ -163,7 +181,7 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
               <span>{r.groups[group]}</span>
               <span>{formatAmount(totals[group])}</span>
             </div>
-            {inGroup.map(row)}
+            {inGroup.map((item, i) => row(item, i))}
           </section>
         )
       })}

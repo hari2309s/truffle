@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { truffleEase, transitionSnappy } from '@/lib/motion'
 import { useQueryClient } from '@tanstack/react-query'
 import type { CategoryBudget, Transaction, TransactionCategory } from '@truffle/types'
 import { TRANSACTION_CATEGORIES } from '@truffle/types'
@@ -63,18 +64,24 @@ export function MonthlyBudgets({ userId, transactions, viewDate }: MonthlyBudget
       ) : budgets.length === 0 && !showAdd ? (
         <p className="font-grotesk text-sm text-truffle-text2">{t.monthlyBudgets.noBudgets}</p>
       ) : (
-        budgets.map((budget) => (
-          <BudgetRow
+        budgets.map((budget, i) => (
+          <motion.div
             key={budget.id}
-            budget={budget}
-            view={budgetView(budget, transactions, viewDate)}
-            onDelete={() => handleDelete(budget.id)}
-            isDeleting={deletingId === budget.id}
-            isConfirmingDelete={confirmDeleteId === budget.id}
-            onRequestDelete={() => setConfirmDeleteId(budget.id)}
-            onCancelDelete={() => setConfirmDeleteId(null)}
-            onOpen={() => setEditing(budget)}
-          />
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ ...transitionSnappy, delay: i * 0.06 }}
+          >
+            <BudgetRow
+              budget={budget}
+              view={budgetView(budget, transactions, viewDate)}
+              onDelete={() => handleDelete(budget.id)}
+              isDeleting={deletingId === budget.id}
+              isConfirmingDelete={confirmDeleteId === budget.id}
+              onRequestDelete={() => setConfirmDeleteId(budget.id)}
+              onCancelDelete={() => setConfirmDeleteId(null)}
+              onOpen={() => setEditing(budget)}
+            />
+          </motion.div>
         ))
       )}
 
@@ -168,8 +175,12 @@ function BudgetRow({
         className="grid grid-cols-10 gap-0.5"
       >
         {Array.from({ length: 10 }, (_, i) => (
-          <div
+          <motion.div
             key={i}
+            initial={i < filled ? { scaleX: 0 } : false}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.25, ease: truffleEase, delay: i < filled ? i * 0.04 : 0 }}
+            style={{ transformOrigin: 'left' }}
             className={`h-3.5 border ${i < filled ? status.fill : 'border-truffle-border'}`}
           />
         ))}

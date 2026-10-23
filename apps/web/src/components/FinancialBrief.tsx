@@ -1,7 +1,9 @@
 'use client'
 
 import { useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { computeStatement } from '@/lib/forecast'
+import { truffleEase } from '@/lib/motion'
 import { SkeletonPulse } from './PageMotion'
 import { LeaderRow, MINUS, Rule } from './Tally'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
@@ -94,27 +96,49 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
       <span className="text-xs text-truffle-text2 uppercase">
         {statement.balanceIsAllTime ? t.dashboard.netLogged : t.dashboard.netThisMonth}
       </span>
-      <span className="text-[44px] font-bold leading-none break-all">{signed(statement.balance)}</span>
+      <motion.span
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: truffleEase }}
+        className="text-[44px] font-bold leading-none break-all"
+      >
+        {signed(statement.balance)}
+      </motion.span>
       <Rule className="mt-1.5" />
-      <LeaderRow strong left={t.dashboard.incomeThisMonth} right={formatAmount(statement.incomeThisMonth)} />
-      <LeaderRow strong left={t.dashboard.spentThisMonth} right={formatAmount(statement.spentThisMonth)} />
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.08 }}>
+        <LeaderRow strong left={t.dashboard.incomeThisMonth} right={formatAmount(statement.incomeThisMonth)} />
+      </motion.div>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.12 }}>
+        <LeaderRow strong left={t.dashboard.spentThisMonth} right={formatAmount(statement.spentThisMonth)} />
+      </motion.div>
       {statement.savedThisMonth !== 0 && (
-        <LeaderRow strong left={t.dashboard.savedThisMonth} right={signed(statement.savedThisMonth)} />
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.16 }}>
+          <LeaderRow strong left={t.dashboard.savedThisMonth} right={signed(statement.savedThisMonth)} />
+        </motion.div>
       )}
-      <LeaderRow
-        strong
-        left={t.dashboard.dailyRate}
-        right={`${formatAmount(statement.dailyRate)}${t.dashboard.perDay}`}
-      />
-      <LeaderRow
-        strong
-        left={t.dashboard.projectedSpendOn(
-          statement.monthEnd.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })
-        )}
-        right={formatAmount(statement.forecastMonthSpend)}
-      />
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.20 }}>
+        <LeaderRow
+          strong
+          left={t.dashboard.dailyRate}
+          right={`${formatAmount(statement.dailyRate)}${t.dashboard.perDay}`}
+        />
+      </motion.div>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.24 }}>
+        <LeaderRow
+          strong
+          left={t.dashboard.projectedSpendOn(
+            statement.monthEnd.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })
+          )}
+          right={formatAmount(statement.forecastMonthSpend)}
+        />
+      </motion.div>
       <Rule />
-      <div className="flex flex-col">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: truffleEase, delay: 0.3 }}
+        className="flex flex-col"
+      >
         <div className="flex justify-between font-bold text-[15px] uppercase">
           <span>{t.dashboard.projectedClose}</span>
           <span>{signed(statement.projectedClose)}</span>
@@ -122,7 +146,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
         <span className="text-[11px] text-truffle-text2 uppercase">
           {statement.savedThisMonth !== 0 ? t.dashboard.projectedCloseHowSaved : t.dashboard.projectedCloseHow}
         </span>
-      </div>
+      </motion.div>
       <p className="font-grotesk text-sm text-truffle-text2">{paceNote}</p>
     </section>
   )
