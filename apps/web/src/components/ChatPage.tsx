@@ -15,7 +15,7 @@ import { TopBar } from './TopBar'
 import { OfflineBar } from './OfflineBar'
 import { PageEnter } from './PageMotion'
 import { ErrorBoundary } from './ErrorBoundary'
-import { LeaderRow, Meter, MINUS, NoticeSlip, Tallying } from './Tally'
+import { LeaderRow, MINUS, NoticeSlip, Tallying } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useVoicePreference } from '@/contexts/VoiceContext'
@@ -496,15 +496,6 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
           >
             {voice.error === MIC_UNAVAILABLE_ERROR ? t.voice.micOffBody : voice.error}
           </NoticeSlip>
-        )}
-
-        {chat.isSpeaking && (
-          <div className="paper px-3.5 py-2.5 flex items-center gap-2.5" aria-hidden>
-            <span className="text-[11px] font-bold uppercase whitespace-nowrap">
-              {t.chat.speaking(persona.name)}
-            </span>
-            <Meter />
-          </div>
         )}
 
         {voice.isRecording && (

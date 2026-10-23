@@ -44,13 +44,22 @@ export function Rule({ soft = false, className = '' }: { soft?: boolean; classNa
 }
 
 /** Animated level meter — Truffle speaking / a voice preview playing. */
-export function Meter({ bars = 18, active = true }: { bars?: number; active?: boolean }) {
+export function Meter({
+  bars = 18,
+  active = true,
+  barClassName = 'bg-truffle-text',
+}: {
+  bars?: number
+  active?: boolean
+  /** Bar colour — `bg-current` takes the surrounding text colour (e.g. on a key). */
+  barClassName?: string
+}) {
   return (
     <div aria-hidden className="flex-1 flex gap-0.5 items-center h-[18px]">
       {Array.from({ length: bars }, (_, i) => (
         <div
           key={i}
-          className="flex-1 h-full bg-truffle-text"
+          className={`flex-1 h-full ${barClassName}`}
           style={
             active
               ? {

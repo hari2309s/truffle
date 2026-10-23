@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { Meter } from './Tally'
 
 export type VoiceButtonStatus = 'idle' | 'recording' | 'transcribing' | 'speaking'
 
@@ -110,6 +111,12 @@ export function VoiceButton({
       className={`key ${variant} w-full gap-2.5 text-sm uppercase touch-none select-none disabled:!opacity-100 disabled:cursor-wait ${className}`}
     >
       {isRecording && <span aria-hidden className="w-2.5 h-2.5 rounded-full bg-truffle-on-accent blink" />}
+      {/* Truffle talking: the level meter plays inside the key itself. */}
+      {isSpeaking && (
+        <span aria-hidden className="flex w-16 shrink-0">
+          <Meter bars={9} barClassName="bg-current" />
+        </span>
+      )}
       {isSpeaking && <span aria-hidden>■</span>}
       <span>{label}</span>
     </button>

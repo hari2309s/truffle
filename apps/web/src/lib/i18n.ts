@@ -593,7 +593,6 @@ export interface Translations {
     tallying: string
     notices: string
     newCount: (n: number) => string
-    speaking: (name: string) => string
   }
   proposals: {
     goal: {
@@ -1298,7 +1297,6 @@ export const translations: Record<Locale, Translations> = {
       tallying: 'Tallying',
       notices: 'Notices',
       newCount: (n) => `${n} new`,
-      speaking: (name) => `${name} · speaking`,
     },
     proposals: {
       goal: {
