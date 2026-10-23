@@ -204,9 +204,9 @@ export function AppShell({ active, userId, name, children }: AppShellProps) {
                   key={item.id}
                   href={item.href}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`relative flex items-center gap-1.5 px-4 text-[13px] font-bold tracking-[.08em] uppercase border-b-[3px] box-border ${
+                  className={`relative flex items-center gap-1.5 px-4 text-[13px] font-bold tracking-[.08em] uppercase border-b-[3px] border-solid box-border ${
                     isActive
-                      ? 'text-truffle-text border-truffle-text border-dashed'
+                      ? 'text-truffle-text border-truffle-text'
                       : 'text-truffle-text2 border-transparent'
                   }`}
                 >

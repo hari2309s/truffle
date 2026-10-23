@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 /** The padded truffle mark the Tally Receipt design uses everywhere in-app. */
 export const TRUFFLE_ICON = '/web-app-manifest-512x512.png'
@@ -188,6 +189,7 @@ export function Sheet({
   /** Always-dark chrome (the camera viewfinder), whatever the theme. */
   dark?: boolean
 }) {
+  const { t } = useLanguage()
   const ref = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   // Callers often pass a fresh onClose each render; read it through a ref so
@@ -239,37 +241,60 @@ export function Sheet({
   if (!mounted) return null
 
   return createPortal(
-    <motion.div
-      ref={ref}
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      className={`fixed inset-0 z-50 mx-auto w-full max-w-lg flex flex-col ${dark ? 'bg-[#121211] text-[#efe9de]' : 'bg-truffle-bg'}`}
-      initial={{ y: '100%' }}
-      animate={{ y: 0 }}
-      exit={{ y: '100%' }}
-      transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-    >
-      <div className="flex justify-between items-center pt-[max(8px,env(safe-area-inset-top))] pr-4 pl-5 flex-shrink-0">
-        <button
-          ref={closeRef}
-          type="button"
-          onClick={onClose}
-          aria-label={closeLabel}
-          className="w-11 h-11 grid place-items-center text-lg"
+    <div className="fixed inset-0 z-50">
+      {/* Scrim backdrop — md+ only, click to close */}
+      <motion.div
+        className="absolute inset-0 hidden md:block"
+        style={{ background: 'var(--t-scrim)' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      />
+
+      {/* Mobile: full-screen slide-up | md+: centered 480px overlay */}
+      <div className="h-full md:h-auto md:flex md:flex-col md:items-center md:pt-[120px] xl:pt-8 pointer-events-none">
+        <motion.div
+          ref={ref}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          className={`pointer-events-auto mx-auto w-full max-w-lg h-full md:h-auto md:w-[480px] md:max-w-[calc(100%-48px)] md:max-h-[calc(100dvh-168px)] xl:max-h-[calc(100dvh-80px)] flex flex-col ${dark ? 'bg-[#121211] text-[#efe9de]' : 'bg-truffle-bg md:bg-truffle-card'} md:slip md:overflow-hidden`}
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 32, stiffness: 320 }}
         >
-          {closeGlyph}
-        </button>
-        <span className="text-sm font-bold tracking-[.1em] uppercase">{title}</span>
-        <div className="w-11 h-11 grid place-items-center text-xs font-bold">{right}</div>
+          <div className="flex justify-between items-center pt-[max(8px,env(safe-area-inset-top))] md:pt-2 pr-4 pl-5 flex-shrink-0">
+            <button
+              ref={closeRef}
+              type="button"
+              onClick={onClose}
+              aria-label={closeLabel}
+              className="w-11 h-11 grid place-items-center text-lg"
+            >
+              {closeGlyph}
+            </button>
+            <span className="text-sm font-bold tracking-[.1em] uppercase">{title}</span>
+            <div className="w-11 h-11 grid place-items-center text-xs font-bold">{right}</div>
+          </div>
+          <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">{children}</div>
+          {footer && (
+            <div className="flex-shrink-0 px-4 pt-3 pb-[max(28px,env(safe-area-inset-bottom))] md:pb-5">
+              {footer}
+            </div>
+          )}
+        </motion.div>
+
+        {/* ESC hint — md+ only */}
+        <span
+          className="hidden md:block pointer-events-none mt-3 text-center text-[10px] font-bold tracking-[.1em]"
+          style={{ color: 'var(--t-esc-hint)' }}
+        >
+          {t.common.escHint}
+        </span>
       </div>
-      <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">{children}</div>
-      {footer && (
-        <div className="flex-shrink-0 px-4 pt-3 pb-[max(28px,env(safe-area-inset-bottom))]">
-          {footer}
-        </div>
-      )}
-    </motion.div>,
+    </div>,
     document.body
   )
 }

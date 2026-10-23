@@ -139,6 +139,7 @@ export interface Translations {
     close: string
     cancel: string
     saving: string
+    escHint: string
   }
   offline: {
     offline: string
@@ -825,6 +826,7 @@ export const translations: Record<Locale, Translations> = {
       close: 'Close',
       cancel: 'Cancel',
       saving: 'Saving…',
+      escHint: 'ESC OR CLICK OUTSIDE TO CLOSE',
     },
     offline: {
       offline: 'Offline',

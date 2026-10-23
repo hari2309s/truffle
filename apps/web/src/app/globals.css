@@ -33,6 +33,7 @@
   --t-on-heat: #121211;
   --t-e1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.35);
   --t-scrim: rgba(0, 0, 0, 0.6);
+  --t-esc-hint: #b0a899;
 }
 
 /* ── Light theme ── */
@@ -61,6 +62,7 @@
   --t-on-heat: #ffffff;
   --t-e1: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 10px rgba(0, 0, 0, 0.06);
   --t-scrim: rgba(27, 26, 24, 0.4);
+  --t-esc-hint: #faf6ee;
 }
 
 /* ── System theme (no class set) — respects OS preference ── */
@@ -90,6 +92,7 @@
     --t-on-heat: #ffffff;
     --t-e1: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 10px rgba(0, 0, 0, 0.06);
     --t-scrim: rgba(27, 26, 24, 0.4);
+    --t-esc-hint: #faf6ee;
   }
 }
 

@@ -86,7 +86,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
                 <span className="hidden md:block text-[11px] font-bold tracking-[.12em] text-truffle-text2">
                   {dayStr} · {t.insights.hero.dayOf(dayOfMonth, daysInMonth)}
                 </span>
-                <h1 className="font-grotesk text-[32px] md:text-[40px] font-medium tracking-[-.01em] leading-tight">
+                <h1 className="font-grotesk text-[32px] md:text-[36px] xl:text-[44px] font-medium tracking-[-.025em] leading-tight">
                   {greeting}
                 </h1>
               </div>
@@ -119,9 +119,9 @@ export function Dashboard({ userId, name }: DashboardProps) {
             </div>
 
             {/* 2-column grid on md+, single column on mobile */}
-            <div className="md:grid md:grid-cols-2 md:gap-5 xl:gap-6 md:items-start md:mt-7">
+            <div className="md:grid md:grid-cols-2 md:gap-4 xl:gap-6 md:items-start md:mt-7">
               {/* Left column */}
-              <div className="flex flex-col md:gap-5 xl:gap-6">
+              <div className="flex flex-col md:gap-4 xl:gap-6">
                 <ErrorBoundary>
                   <FinancialBrief userId={userId} />
                 </ErrorBoundary>
@@ -213,7 +213,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
               </div>
 
               {/* Right column (md+) */}
-              <div className="flex flex-col md:gap-5 xl:gap-6">
+              <div className="flex flex-col md:gap-4 xl:gap-6">
                 <ErrorBoundary>
                   <WeeklySummary userId={userId} name={name} />
                 </ErrorBoundary>

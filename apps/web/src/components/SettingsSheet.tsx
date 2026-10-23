@@ -144,25 +144,27 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
   return (
     <div className="fixed inset-0 z-50" onClick={onClose}>
       <motion.div
-        className="absolute inset-0"
+        className="absolute inset-0 hidden md:block"
         style={{ background: 'var(--t-scrim)' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       />
-      <motion.div
-        ref={sheetRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="settings-sheet-title"
-        className="absolute left-3 right-3 bottom-0 top-24 md:left-auto md:right-auto md:bottom-auto md:top-[10vh] md:w-[480px] md:max-w-[calc(100%-48px)] md:max-h-[80vh] md:mx-auto md:inset-x-0 md:rounded-lg bg-truffle-card flex flex-col gap-4 px-[18px] pt-5 pb-[max(28px,env(safe-area-inset-bottom))] text-sm overflow-y-auto slip md:slip"
-        style={{ overscrollBehavior: 'contain' }}
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        onClick={(e) => e.stopPropagation()}
-      >
+
+      <div className="h-full md:h-auto md:flex md:flex-col md:items-center md:pt-[120px] xl:pt-8 pointer-events-none">
+        <motion.div
+          ref={sheetRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settings-sheet-title"
+          className="pointer-events-auto absolute left-3 right-3 bottom-0 top-24 md:static md:w-[480px] md:max-w-[calc(100%-48px)] md:max-h-[calc(100dvh-168px)] xl:max-h-[calc(100dvh-80px)] bg-truffle-card flex flex-col gap-4 px-[18px] pt-5 pb-[max(28px,env(safe-area-inset-bottom))] md:pb-5 text-sm overflow-y-auto slip md:slip"
+          style={{ overscrollBehavior: 'contain' }}
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex justify-between items-center">
           <h2 id="settings-sheet-title" className="text-base font-bold tracking-[.12em] uppercase">
             {t.settings.title}
@@ -278,6 +280,15 @@ export function SettingsSheet({ userId, onClose }: SettingsSheetProps) {
           </div>
         )}
       </motion.div>
+
+        {/* ESC hint — md+ only */}
+        <span
+          className="hidden md:block pointer-events-none mt-3 text-center text-[10px] font-bold tracking-[.1em]"
+          style={{ color: 'var(--t-esc-hint)' }}
+        >
+          {t.common.escHint}
+        </span>
+      </div>
     </div>
   )
 }

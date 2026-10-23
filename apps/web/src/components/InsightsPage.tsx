@@ -163,7 +163,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                 <span className="text-[11px] font-bold tracking-[.14em] text-truffle-text2 uppercase">
                   {t.insights.title}
                 </span>
-                <span className="font-grotesk text-2xl md:text-[40px] font-medium tracking-tight leading-tight">
+                <span className="font-grotesk text-2xl md:text-[36px] xl:text-[44px] font-medium tracking-[-.025em] leading-tight">
                   {monthLabel}
                 </span>
               </div>
@@ -192,7 +192,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
             {/* Four-chapter nav */}
             <nav
               aria-label={t.insights.sectionsLabel}
-              className="grid grid-cols-4 gap-1 px-4 md:px-0 pt-1"
+              className="grid grid-cols-4 border-b border-dashed border-truffle-border px-4 md:px-0"
             >
               {CHAPTERS.map((ch) => {
                 const c = t.insights.chapters[ch]
@@ -203,29 +203,18 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                     type="button"
                     onClick={() => jumpTo(ch)}
                     aria-current={isActive ? 'location' : undefined}
-                    className={`relative h-12 rounded-lg flex flex-col items-center justify-center gap-px ${
+                    className={`flex items-center gap-2 min-h-[48px] border-b-[3px] border-solid box-border text-[13px] font-bold tracking-[.06em] cursor-pointer ${
                       isActive
-                        ? 'text-truffle-bg'
-                        : 'bg-truffle-card border border-truffle-border text-truffle-text'
+                        ? 'text-truffle-text border-truffle-text'
+                        : 'text-truffle-text2 border-transparent'
                     }`}
                   >
-                    {isActive && (
-                      <motion.span
-                        layoutId="chapter-active"
-                        className="absolute inset-0 rounded-lg bg-truffle-text"
-                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                    <span className="relative text-[10px] font-bold opacity-70">{c.num}</span>
-                    <span className="relative font-grotesk text-[13px] font-medium">{c.label}</span>
+                    <span className="text-[11px] opacity-70">{c.num}</span>
+                    <span className="font-grotesk text-[15px] font-medium tracking-normal">{c.label}</span>
                     {ch === 'review' && unreviewed > 0 && (
-                      <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-1.5 -right-1 min-w-5 h-5 px-1 rounded-full bg-truffle-accent text-[#302e2b] border-2 border-truffle-bg text-[11px] font-bold grid place-items-center"
-                      >
+                      <span className="min-w-[18px] h-[18px] rounded-full bg-truffle-accent text-[#302e2b] text-[10px] font-bold grid place-items-center">
                         {unreviewed}
-                      </motion.span>
+                      </span>
                     )}
                   </button>
                 )
@@ -276,80 +265,81 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                 transition={{ duration: 0.32, ease: truffleEase }}
                 className="px-4 md:px-0 pt-5 pb-2"
               >
-                <div className="slip px-[18px] pt-[18px] pb-8 flex flex-col gap-3.5 border-t-[6px] border-truffle-accent">
-                  <div className="flex justify-between text-[11px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
-                    <span>{t.insights.hero.monthSoFar}</span>
-                    <span>{t.insights.hero.dayOf(dayOfMonth, daysInMonth)}</span>
-                  </div>
+                <div className="slip px-[18px] pt-[18px] pb-8 grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5 md:gap-x-10 items-center border-t-[6px] border-truffle-accent">
+                  {/* Left column: label + proportional bar + legend */}
+                  <div className="flex flex-col gap-3.5">
+                    <div className="flex justify-between text-[11px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
+                      <span>{t.insights.hero.monthSoFar}</span>
+                      <span>{t.insights.hero.dayOf(dayOfMonth, daysInMonth)}</span>
+                    </div>
 
-                  {/* Proportional bar */}
-                  {statement.incomeThisMonth > 0 && (
-                    <>
-                      <motion.div
-                        className="flex gap-[3px] h-5"
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: 1 }}
-                        transition={{ duration: 0.5, ease: truffleEase, delay: 0.15 }}
-                        style={{ transformOrigin: 'left' }}
-                      >
-                        <div
-                          className="bg-truffle-text"
-                          style={{ flex: statement.spentThisMonth }}
-                        />
-                        <div
-                          className="bg-truffle-accent border-2 border-truffle-accent-edge box-border"
-                          style={{ flex: Math.max(statement.savedThisMonth, 0) }}
-                        />
-                        {statement.incomeThisMonth - statement.spentThisMonth - Math.max(statement.savedThisMonth, 0) > 0 && (
+                    {/* Proportional bar */}
+                    {statement.incomeThisMonth > 0 && (
+                      <>
+                        <motion.div
+                          className="flex gap-[3px] h-[22px]"
+                          initial={{ scaleX: 0 }}
+                          animate={{ scaleX: 1 }}
+                          transition={{ duration: 0.5, ease: truffleEase, delay: 0.15 }}
+                          style={{ transformOrigin: 'left' }}
+                        >
                           <div
-                            className="border-2 border-dashed border-truffle-text2 box-border"
-                            style={{
-                              flex: statement.incomeThisMonth -
-                                statement.spentThisMonth -
-                                Math.max(statement.savedThisMonth, 0),
-                            }}
+                            className="bg-truffle-text"
+                            style={{ flex: statement.spentThisMonth }}
                           />
-                        )}
-                      </motion.div>
-                      <div className="flex justify-between text-[10px] font-bold tracking-wide text-truffle-text2 uppercase">
-                        <span>
-                          {t.insights.hero.barSpent(
-                            Math.round(
-                              (statement.spentThisMonth / statement.incomeThisMonth) * 100
-                            ) + '%'
-                          )}
-                        </span>
-                        <span className="text-truffle-accent-ink">
-                          {t.insights.hero.barSaved(
-                            Math.round(
-                              (Math.max(statement.savedThisMonth, 0) /
-                                statement.incomeThisMonth) *
-                                100
-                            ) + '%'
-                          )}
-                        </span>
-                        <span>
-                          {t.insights.hero.barLeft(
-                            Math.round(
-                              (Math.max(
-                                statement.incomeThisMonth -
+                          <div
+                            className="bg-truffle-accent border-2 border-truffle-accent-edge box-border"
+                            style={{ flex: Math.max(statement.savedThisMonth, 0) }}
+                          />
+                          {statement.incomeThisMonth - statement.spentThisMonth - Math.max(statement.savedThisMonth, 0) > 0 && (
+                            <div
+                              className="border-2 border-dashed border-truffle-text2 box-border"
+                              style={{
+                                flex: statement.incomeThisMonth -
                                   statement.spentThisMonth -
                                   Math.max(statement.savedThisMonth, 0),
-                                0
-                              ) /
-                                statement.incomeThisMonth) *
-                                100
-                            ) + '%'
+                              }}
+                            />
                           )}
-                        </span>
-                      </div>
-                    </>
-                  )}
+                        </motion.div>
+                        <div className="flex justify-between text-[10px] font-bold tracking-[.06em] text-truffle-text2 uppercase">
+                          <span>
+                            {t.insights.hero.barSpent(
+                              Math.round(
+                                (statement.spentThisMonth / statement.incomeThisMonth) * 100
+                              ) + '%'
+                            )}
+                          </span>
+                          <span className="text-truffle-accent-ink">
+                            {t.insights.hero.barSaved(
+                              Math.round(
+                                (Math.max(statement.savedThisMonth, 0) /
+                                  statement.incomeThisMonth) *
+                                  100
+                              ) + '%'
+                            )}
+                          </span>
+                          <span>
+                            {t.insights.hero.barLeft(
+                              Math.round(
+                                (Math.max(
+                                  statement.incomeThisMonth -
+                                    statement.spentThisMonth -
+                                    Math.max(statement.savedThisMonth, 0),
+                                  0
+                                ) /
+                                  statement.incomeThisMonth) *
+                                  100
+                              ) + '%'
+                            )}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
-                  <div className="border-t border-dashed border-truffle-text2" />
-
-                  {/* Leader-dot KPI rows — stagger like FinancialBrief */}
-                  <div className="flex flex-col gap-2 text-sm">
+                  {/* Right column: KPI rows + projected close */}
+                  <div className="flex flex-col gap-[9px] text-sm">
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.08 }}>
                       <LeaderRow
                         left={t.insights.hero.income}
@@ -383,45 +373,45 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                         right={`${formatAmount(statement.dailyRate)}/day`}
                       />
                     </motion.div>
-                  </div>
 
-                  <div className="border-t border-dashed border-truffle-text2" />
+                    <div className="border-t border-dashed border-truffle-text2" />
 
-                  {/* Projected close */}
-                  <motion.div
-                    className="flex justify-between items-baseline"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.28, ease: truffleEase, delay: 0.26 }}
-                  >
-                    <span className="text-[13px] font-bold tracking-[.1em] uppercase">
-                      {t.insights.hero.projectedClose}
-                    </span>
-                    <span className="text-[32px] font-bold tracking-tight">
-                      {statement.projectedClose >= 0 ? '+' : ''}
-                      {formatAmount(statement.projectedClose)}
-                    </span>
-                  </motion.div>
-
-                  {statement.pace && statement.pace !== 'even' && (
-                    <span
-                      className={`text-[11px] font-bold tracking-wide uppercase ${
-                        statement.pace === 'ahead'
-                          ? 'text-truffle-positive'
-                          : 'text-truffle-warning'
-                      }`}
+                    {/* Projected close */}
+                    <motion.div
+                      className="flex justify-between items-baseline"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.28, ease: truffleEase, delay: 0.26 }}
                     >
-                      {statement.pace === 'ahead'
-                        ? t.insights.hero.aheadOf(
-                            formatAmount(statement.paceDelta),
-                            lastMonthName
-                          )
-                        : t.insights.hero.behindVs(
-                            formatAmount(statement.paceDelta),
-                            lastMonthName
-                          )}
-                    </span>
-                  )}
+                      <span className="text-[12px] font-bold tracking-[.1em] uppercase">
+                        {t.insights.hero.projectedClose}
+                      </span>
+                      <span className="text-[34px] font-bold tracking-tight">
+                        {statement.projectedClose >= 0 ? '+' : ''}
+                        {formatAmount(statement.projectedClose)}
+                      </span>
+                    </motion.div>
+
+                    {statement.pace && statement.pace !== 'even' && (
+                      <span
+                        className={`text-[11px] font-bold tracking-wide uppercase ${
+                          statement.pace === 'ahead'
+                            ? 'text-truffle-positive'
+                            : 'text-truffle-warning'
+                        }`}
+                      >
+                        {statement.pace === 'ahead'
+                          ? t.insights.hero.aheadOf(
+                              formatAmount(statement.paceDelta),
+                              lastMonthName
+                            )
+                          : t.insights.hero.behindVs(
+                              formatAmount(statement.paceDelta),
+                              lastMonthName
+                            )}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             ) : null}
@@ -573,7 +563,7 @@ function ChapterSection({
         <span className="text-[13px] font-bold text-truffle-text2">{num}</span>
         <h2
           id={headingId}
-          className="font-grotesk text-2xl font-medium tracking-tight"
+          className="font-grotesk text-[26px] font-medium tracking-[-.02em]"
         >
           {title}
         </h2>
