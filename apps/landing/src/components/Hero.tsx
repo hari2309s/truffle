@@ -6,11 +6,8 @@ import { APP_URL, Line } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
 import {
   truffleEase,
-  sectionVariants,
   staggerContainer,
   staggerItem,
-  slipVariants,
-  viewportOnce,
 } from '@/lib/motion'
 
 /** Print-in with the hero's stretched stagger (90ms a line). */

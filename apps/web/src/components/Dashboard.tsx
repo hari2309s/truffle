@@ -137,7 +137,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
                           onClick={() => openChatWith(router, s)}
                           className="bg-truffle-surface px-3.5 py-3 font-grotesk text-[15px] text-left"
                         >
-                          "{s}"
+                          &ldquo;{s}&rdquo;
                         </button>
                       ))}
                     </div>

@@ -167,8 +167,13 @@ export function RecapSheet({
             {WAVE.map((h, i) => (
               <div
                 key={i}
-                className={`flex-1 transition-colors ${i / WAVE.length < progress ? 'bg-truffle-text' : 'bg-truffle-border'}`}
-                style={{ height: h }}
+                className={`flex-1 rounded-full transition-colors ${i / WAVE.length < progress ? 'bg-truffle-text' : 'bg-truffle-border'}`}
+                style={{
+                  height: h,
+                  ...(player.playing && !player.paused
+                    ? { animation: `tr-bar 1.2s ease-in-out ${(i * 0.05).toFixed(2)}s infinite` }
+                    : {}),
+                }}
               />
             ))}
           </div>

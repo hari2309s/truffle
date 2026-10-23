@@ -319,7 +319,7 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.04 }}
                 >
-                  "{suggestion}"
+                  &ldquo;{suggestion}&rdquo;
                 </motion.button>
               ))}
             </div>

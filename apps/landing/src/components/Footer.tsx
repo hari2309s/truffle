@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import LanguageDropdown from './LanguageDropdown'
 import { APP_URL, TRUFFLE_ICON } from './Tally'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { sectionVariants, staggerContainer, staggerItem, viewportOnce } from '@/lib/motion'
+import { staggerContainer, staggerItem, viewportOnce } from '@/lib/motion'
 
 const linkClass = 'min-h-10 flex items-center text-sm hover:underline underline-offset-4'
 

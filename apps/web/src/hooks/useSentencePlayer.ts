@@ -51,7 +51,7 @@ export function useSentencePlayer(sentences: string[]) {
           return
         }
         const u = new SpeechSynthesisUtterance(text)
-        const resolved = resolvedRef.current.voice ? resolvedRef.current : resolveVoice(voiceId)
+        const resolved = resolvedRef.current
         if (resolved.voice) u.voice = resolved.voice
         u.rate = resolved.rate * rateRef.current
         u.pitch = resolved.pitch
@@ -66,7 +66,14 @@ export function useSentencePlayer(sentences: string[]) {
       }
       setPlaying(true)
       setPaused(false)
-      say(Math.max(0, Math.min(start, sentencesRef.current.length - 1)))
+      // Wait for browser voices to load before speaking the first sentence.
+      // Chrome returns [] from getVoices() until voiceschanged fires; without
+      // this gate the first utterance falls back to the default (male) voice.
+      onVoicesReady(() => {
+        if (run !== runRef.current) return
+        resolvedRef.current = resolveVoice(voiceId)
+        say(Math.max(0, Math.min(start, sentencesRef.current.length - 1)))
+      })
     },
     [supported, voiceId]
   )
