@@ -313,7 +313,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   {/* Left column: label + summary + proportional bar + legend */}
                   <div className="flex flex-col gap-3.5">
                     <div className="flex justify-between text-[11px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
-                      <span>{t.insights.hero.monthSoFar}</span>
+                      <span>{monthLabel}</span>
                       <span>{t.insights.hero.dayOf(dayOfMonth, daysInMonth)}</span>
                     </div>
 

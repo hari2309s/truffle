@@ -253,7 +253,7 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
     <AppShell active="chat" userId={userId} name={name}>
       <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))] md:pb-0">
 
-      <div className="max-w-[1000px] w-full mx-auto flex-1 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 xl:items-start min-h-0 md:px-8 xl:px-10 md:pt-7 xl:pt-8">
+      <div className="max-w-[1000px] w-full mx-auto flex-1 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 min-h-0 md:px-8 xl:px-10 md:pt-7 xl:pt-8">
         {/* ── Chat column ── */}
         <div className="flex-1 flex flex-col md:gap-4 min-h-0 overflow-hidden max-w-[640px] w-full md:mx-auto xl:justify-self-center">
           <header className="flex justify-between items-center pt-2 pb-3 md:pb-[14px] pr-4 pl-5 md:px-0 border-b border-dashed border-truffle-border md:border-truffle-text2 flex-shrink-0 md:gap-3">
@@ -621,7 +621,7 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
         </div>
 
         {/* ── Desktop context panel (xl+) ── */}
-        <aside className="hidden xl:flex sticky top-6 flex-col gap-4 pt-6">
+        <aside className="hidden xl:flex xl:self-start sticky top-6 flex-col gap-4 pt-6">
           {/* Voice key */}
           <VoiceButton
             status={voiceButtonStatus}

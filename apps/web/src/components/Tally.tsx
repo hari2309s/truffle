@@ -262,7 +262,7 @@ export function Sheet({
           role="dialog"
           aria-modal="true"
           aria-label={title}
-          className={`pointer-events-auto mx-auto w-full max-w-lg h-full md:h-auto ${wide ? 'md:w-[640px]' : 'md:w-[480px]'} md:max-w-[calc(100%-48px)] md:max-h-[calc(100dvh-168px)] xl:max-h-[calc(100dvh-80px)] flex flex-col ${dark ? 'bg-[#121211] text-[#efe9de]' : 'bg-truffle-bg md:bg-truffle-card'} md:slip md:overflow-hidden`}
+          className={`pointer-events-auto mx-auto w-full max-w-lg h-full md:h-auto ${wide ? 'md:w-[640px] md:min-h-[70dvh]' : 'md:w-[480px]'} md:max-w-[calc(100%-48px)] md:max-h-[calc(100dvh-168px)] xl:max-h-[calc(100dvh-80px)] flex flex-col ${dark ? 'bg-[#121211] text-[#efe9de]' : 'bg-truffle-bg md:bg-truffle-card'} md:slip md:overflow-hidden`}
           initial={{ y: '100%' }}
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
