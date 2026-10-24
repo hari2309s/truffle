@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useInView } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { setChatHandoff } from '@/lib/chatHandoff'
-import type { Anomaly, Transaction } from '@truffle/types'
+import type { Anomaly, HabitWithStats, SavingsGoal, Transaction } from '@truffle/types'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { computeStatement } from '@/lib/forecast'
 import { truffleEase, transitionSnappy } from '@/lib/motion'
@@ -22,6 +22,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { SectionAddFormProvider, useSectionAddForm } from '@/contexts/SectionAddFormContext'
 import { toDateLocale } from '@/lib/date'
+import { goalPlan } from '@/lib/goalPlan'
 import { useGoalsQuery } from '@/hooks/useGoalsQuery'
 import { useHabitsQuery } from '@/hooks/useHabitsQuery'
 
@@ -544,18 +545,34 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               title={t.insights.buildingHeading}
               right={t.insights.goalsAndHabits(goals.length, habits.length)}
             >
-              <SectionAddFormProvider>
-                <BuildingAddButton />
-                <SavingsGoalsEmbedded userId={userId} />
-              </SectionAddFormProvider>
-
-              {/* Standalone habits (not linked to a goal) */}
-              <div className="bg-truffle-surface border border-dashed border-truffle-border px-4 py-3.5 flex flex-col gap-2.5">
-                <span className="text-[10px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
-                  {t.insights.standaloneHabit}
-                </span>
+              {/* Mobile: existing inline layout */}
+              <div className="md:hidden flex flex-col gap-3.5">
                 <SectionAddFormProvider>
-                  <SavingsHabits userId={userId} />
+                  <BuildingAddButton />
+                  <SavingsGoalsEmbedded userId={userId} />
+                </SectionAddFormProvider>
+                <div className="bg-truffle-surface border border-dashed border-truffle-border px-4 py-3.5 flex flex-col gap-2.5">
+                  <span className="text-[10px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
+                    {t.insights.standaloneHabit}
+                  </span>
+                  <SectionAddFormProvider>
+                    <SavingsHabits userId={userId} />
+                  </SectionAddFormProvider>
+                </div>
+              </div>
+
+              {/* Desktop/tablet: goal cards + habit cards in responsive grid */}
+              <div className="hidden md:block">
+                <div className="grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5 items-start">
+                  {goals.map((goal, i) => (
+                    <InsightsGoalCard key={goal.id} goal={goal} index={i} />
+                  ))}
+                  {habits.map((habit, i) => (
+                    <InsightsStandaloneHabit key={habit.id} habit={habit} index={goals.length + i} />
+                  ))}
+                </div>
+                <SectionAddFormProvider>
+                  <BuildingAddButton />
                 </SectionAddFormProvider>
               </div>
             </ChapterSection>
@@ -766,5 +783,108 @@ function AnomalyRow({
         </button>
       </div>
     </div>
+  )
+}
+
+/* ── Goal card for desktop Insights ── */
+
+const GOAL_SEGS = 20
+
+function InsightsGoalCard({
+  goal,
+  index,
+}: {
+  goal: SavingsGoal
+  index: number
+}) {
+  const { formatAmount } = useCurrency()
+  const { t } = useLanguage()
+  const plan = goalPlan(goal)
+  const progress = goal.targetAmount > 0 ? Math.min(100, (goal.savedAmount / goal.targetAmount) * 100) : 0
+  const filledSegs = Math.round((progress / 100) * GOAL_SEGS)
+  const done = plan.status === 'reached'
+
+  const deadlineLabel = goal.deadline
+    ? new Date(goal.deadline).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }).toUpperCase()
+    : t.insights.noDeadline.toUpperCase()
+
+  return (
+    <motion.div
+      className="slip border border-truffle-border px-[18px] pt-4 pb-[30px] flex flex-col gap-2.5"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...transitionSnappy, delay: index * 0.06 }}
+    >
+      {/* Header */}
+      <div className="flex justify-between text-[10px] font-bold tracking-[.1em] text-truffle-text2">
+        <span>GOAL · {deadlineLabel}</span>
+        <span>{Math.round(progress)}%</span>
+      </div>
+
+      {/* Name + saved / target */}
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="flex-1 min-w-0 font-grotesk text-[22px] font-medium truncate">
+          {goal.emoji} {goal.name}
+        </span>
+        <span className="text-sm whitespace-nowrap">
+          <b>{formatAmount(goal.savedAmount)}</b>
+          <span className="text-truffle-text2"> / {formatAmount(goal.targetAmount)}</span>
+        </span>
+      </div>
+
+      {/* Progress bar — 20 segments */}
+      <div className="grid grid-cols-[repeat(20,1fr)] gap-0.5">
+        {Array.from({ length: GOAL_SEGS }, (_, i) => (
+          <motion.div
+            key={i}
+            initial={i < filledSegs ? { scaleX: 0 } : false}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.25, ease: truffleEase, delay: i < filledSegs ? i * 0.025 : 0 }}
+            style={{ transformOrigin: 'left' }}
+            className={`h-3.5 border ${
+              i < filledSegs
+                ? done
+                  ? 'bg-truffle-positive border-truffle-positive'
+                  : 'bg-truffle-accent border-truffle-accent-edge'
+                : 'border-truffle-border'
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Leader rows */}
+      <LeaderRow
+        className="text-[13px]"
+        left={plan.perMonth != null ? t.insights.perMonthLabel : t.savingsGoals.statusOnTrack}
+        right={plan.perMonth != null ? <b>{formatAmount(plan.perMonth)}{t.insights.perMonthUnit}</b> : null}
+      />
+
+    </motion.div>
+  )
+}
+
+function InsightsStandaloneHabit({ habit, index }: { habit: HabitWithStats; index: number }) {
+  const { t } = useLanguage()
+
+  return (
+    <motion.div
+      className="bg-truffle-surface border border-dashed border-truffle-border px-4 py-3.5 flex items-center gap-3"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...transitionSnappy, delay: index * 0.06 }}
+    >
+      <div className="flex-none w-11 h-11 rounded-lg bg-truffle-card border-2 border-truffle-text shadow-[0_4px_0_var(--t-border)] grid place-items-center text-lg font-bold">
+        {habit.emoji}
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <span className="text-[10px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
+          {t.insights.standaloneHabit}
+        </span>
+        <span className="font-grotesk text-[15px] font-medium truncate">{habit.name}</span>
+      </div>
+      <span className="text-[11px] font-bold text-truffle-accent-ink whitespace-nowrap">
+        ✦ {habit.streak} {habit.frequency === 'weekly' ? t.savingsHabits.periodWeek.toUpperCase() : t.savingsHabits.periodMonth.toUpperCase()}
+      </span>
+    </motion.div>
   )
 }

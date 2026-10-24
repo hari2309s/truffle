@@ -490,6 +490,9 @@ export interface Translations {
     buildingHeading: string
     goalsAndHabits: (goals: number, habits: number) => string
     standaloneHabit: string
+    perMonthLabel: string
+    perMonthUnit: string
+    noDeadline: string
     endOfInsights: string
     reviewToCheck: (n: number) => string
     reviewAllClear: string
@@ -1209,6 +1212,9 @@ export const translations: Record<Locale, Translations> = {
       buildingHeading: 'Building toward',
       goalsAndHabits: (goals, habits) => `${goals} goal${goals !== 1 ? 's' : ''} · ${habits} habit${habits !== 1 ? 's' : ''}`,
       standaloneHabit: 'Standalone habit',
+      perMonthLabel: 'To hit target',
+      perMonthUnit: '/mo',
+      noDeadline: 'No deadline',
       endOfInsights: 'End of Insights',
       reviewToCheck: (n) => `${n} to check`,
       reviewAllClear: '● All clear',

@@ -179,23 +179,18 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
     </motion.div>
   )
 
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col">
-        <div className="flex justify-between font-bold text-[15px] uppercase">
-          <span>{r.total}</span>
-          <span>{formatAmount(totals.total)}</span>
-        </div>
-        {hasPossible && <span className="text-[11px] text-truffle-text2">{r.confirmedOnly}</span>}
-      </div>
+  const activeGroups = RECURRING_GROUPS.filter((g) => shown.some((i) => i.group === g))
 
-      {RECURRING_GROUPS.map((group) => {
+  /* ── Detail panel: group headers + expandable rows ── */
+  const detailPanel = (
+    <div className="flex flex-col gap-3">
+      {RECURRING_GROUPS.map((group, gi) => {
         const inGroup = shown.filter((i) => i.group === group)
         if (inGroup.length === 0) return null
         const isCollapsed = collapsed.has(group)
         return (
           <section key={group} aria-label={r.groups[group]} className="flex flex-col gap-2">
-            <Rule soft />
+            <Rule soft className={gi === 0 ? 'md:hidden' : ''} />
             <button
               type="button"
               onClick={() => toggleGroup(group)}
@@ -208,16 +203,18 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
                   style={{ background: GROUP_SWATCH[group].bg, border: GROUP_SWATCH[group].border, boxSizing: 'border-box' }}
                 />
                 {r.groups[group]}
-                <span className="text-truffle-text2 font-normal">x{inGroup.length}</span>
+                <span className="text-truffle-text2 font-normal">× {inGroup.length}</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span>{formatAmount(totals[group])}</span>
                 <motion.span
                   animate={{ rotate: isCollapsed ? -90 : 0 }}
                   transition={{ duration: 0.18, ease: truffleEase }}
-                  className="inline-block text-[9px]"
+                  className="inline-block text-xs text-truffle-text2"
                 >
-                  ▼
+                  ▾
                 </motion.span>
               </span>
-              <span>{formatAmount(totals[group])}</span>
             </button>
             <AnimatePresence initial={false}>
               {!isCollapsed && (
@@ -227,7 +224,7 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.25, ease: truffleEase }}
                   style={{ overflow: 'hidden' }}
-                  className="flex flex-col gap-2"
+                  className="flex flex-col gap-2 md:pl-6"
                 >
                   {inGroup.map((item, i) => row(item, i))}
                 </motion.div>
@@ -236,6 +233,12 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
           </section>
         )
       })}
+
+      {/* TOTAL / MONTH footer (md+) */}
+      <div className="hidden md:flex justify-between border-t border-dashed border-truffle-text2 pt-3 text-sm font-bold">
+        <span>{r.total.toUpperCase()}</span>
+        <span>{formatAmount(totals.total)}</span>
+      </div>
 
       {error && (
         <p role="alert" className="text-[11px] font-bold uppercase text-truffle-negative">
@@ -286,5 +289,78 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
         </div>
       )}
     </div>
+  )
+
+  return (
+    <>
+      {/* ── Mobile: flat layout ── */}
+      <div className="md:hidden flex flex-col gap-3">
+        <div className="flex flex-col">
+          <div className="flex justify-between font-bold text-[15px] uppercase">
+            <span>{r.total}</span>
+            <span>{formatAmount(totals.total)}</span>
+          </div>
+          {hasPossible && <span className="text-[11px] text-truffle-text2">{r.confirmedOnly}</span>}
+        </div>
+        {detailPanel}
+      </div>
+
+      {/* ── Tablet / Desktop: summary + detail in grid ── */}
+      <div className="hidden md:grid md:grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-10 items-start">
+        {/* Summary panel */}
+        <div className="flex flex-col gap-3.5">
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs font-bold tracking-[.1em]">EVERY MONTH</span>
+            <span className="text-[36px] font-bold tracking-[-.02em] whitespace-nowrap">{formatAmount(totals.total)}</span>
+          </div>
+
+          {/* Proportional bar */}
+          <div className="flex gap-[3px] h-[22px]">
+            {activeGroups.map((group) => (
+              <div
+                key={group}
+                style={{
+                  flex: totals[group],
+                  minWidth: 8,
+                  background: GROUP_SWATCH[group].bg,
+                  border: GROUP_SWATCH[group].border,
+                  boxSizing: 'border-box',
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-col gap-1.5 text-[13px]">
+            {activeGroups.map((group) => {
+              const pct = totals.total > 0 ? Math.round((totals[group] / totals.total) * 100) : 0
+              return (
+                <div key={group} className="flex items-center gap-2">
+                  <span
+                    className="flex-none w-3 h-3"
+                    style={{ background: GROUP_SWATCH[group].bg, border: GROUP_SWATCH[group].border, boxSizing: 'border-box' }}
+                  />
+                  <span>{r.groups[group]}</span>
+                  <span className="flex-1 min-w-3 border-b-2 border-dotted border-truffle-border mt-1.5" />
+                  <span className="font-bold">{formatAmount(totals[group])}</span>
+                  <span className="w-10 text-right text-[11px] text-truffle-text2">{pct}%</span>
+                </div>
+              )
+            })}
+          </div>
+
+          {hasPossible && (
+            <span className="font-grotesk text-[15px] leading-[1.45] text-truffle-text2">
+              {r.confirmedOnly}
+            </span>
+          )}
+        </div>
+
+        {/* Detail panel in slip card */}
+        <div className="slip border border-truffle-border px-[18px] pt-1 pb-7">
+          {detailPanel}
+        </div>
+      </div>
+    </>
   )
 }
