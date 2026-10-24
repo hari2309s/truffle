@@ -139,7 +139,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
 
   if (flow.imported) {
     return (
-      <Sheet title={c.title} onClose={onClose} closeLabel={t.common.close} wide>
+      <Sheet title={c.title} onClose={onClose} closeLabel={t.common.close}>
         <ImportSuccess message={c.imported(selectedRows.length)} doneLabel={c.done} onDone={onClose} />
       </Sheet>
     )
@@ -159,7 +159,6 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       onClose={table ? handleReset : onClose}
       closeLabel={table ? c.cancel : t.common.close}
       closeGlyph={table ? '←' : '✕'}
-      wide
       footer={
         table && (
           <button
