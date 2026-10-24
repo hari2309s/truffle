@@ -267,22 +267,6 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
               </span>
             </div>
             <div className="flex gap-2">
-              <div className="hidden md:flex p-[3px] border border-truffle-border rounded-lg bg-truffle-card">
-                <button
-                  type="button"
-                  onClick={() => setTyping(false)}
-                  className={`h-[38px] px-2.5 rounded-md grid place-items-center text-[11px] font-bold ${!typing ? 'bg-truffle-text text-truffle-bg' : 'text-truffle-text2'}`}
-                >
-                  {t.chat.soundOn.split(' ')[0] ?? 'VOICE'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTyping(true)}
-                  className={`h-[38px] px-2.5 rounded-md grid place-items-center text-[11px] font-bold ${typing ? 'bg-truffle-text text-truffle-bg' : 'text-truffle-text2'}`}
-                >
-                  TEXT
-                </button>
-              </div>
               <button
                 type="button"
                 onClick={chat.toggleMute}
@@ -533,7 +517,7 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
                   setInput('')
                   sendText(text)
                 }}
-                className="grid grid-cols-[1fr_64px] gap-2"
+                className="grid grid-cols-[1fr_64px] gap-2 md:hidden"
               >
                 <input
                   value={input}

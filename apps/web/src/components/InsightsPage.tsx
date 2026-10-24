@@ -573,6 +573,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                 </div>
                 <SectionAddFormProvider>
                   <BuildingAddButton />
+                  <SavingsGoalsEmbedded userId={userId} />
                 </SectionAddFormProvider>
               </div>
             </ChapterSection>

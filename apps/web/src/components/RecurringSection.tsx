@@ -294,7 +294,7 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
   return (
     <>
       {/* ── Mobile: flat layout ── */}
-      <div className="md:hidden flex flex-col gap-3">
+      <div className="md:hidden flex flex-col gap-3 pb-4">
         <div className="flex flex-col">
           <div className="flex justify-between font-bold text-[15px] uppercase">
             <span>{r.total}</span>
@@ -357,7 +357,7 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
         </div>
 
         {/* Detail panel in slip card */}
-        <div className="slip border border-truffle-border px-[18px] pt-1 pb-7">
+        <div className="slip border border-truffle-border px-[18px] pt-1 pb-10">
           {detailPanel}
         </div>
       </div>

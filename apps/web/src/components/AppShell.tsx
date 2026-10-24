@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { BottomNav } from './BottomNav'
@@ -209,19 +209,24 @@ export function AppShell({ active, userId, name, children }: AppShellProps) {
                   key={item.id}
                   href={item.href}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`flex items-center px-4 text-[12px] font-bold tracking-[.12em] uppercase box-border ${
+                  className={`relative flex items-center px-4 text-[12px] font-bold tracking-[.12em] uppercase box-border ${
                     isActive
                       ? 'text-truffle-text'
                       : 'text-truffle-text2'
                   }`}
                 >
                   <span className={`py-1.5 ${
-                    isActive
-                      ? 'border-b-[3px] border-solid border-truffle-text'
-                      : 'pb-2 border-b border-dashed border-truffle-text2'
+                    !isActive ? 'pb-2 border-b border-dashed border-truffle-text2' : ''
                   }`}>
                     {tab.label}{badgeText}
                   </span>
+                  {isActive && (
+                    <motion.span
+                      layoutId="shell-tab-active"
+                      className="absolute bottom-0 left-4 right-4 h-[3px] bg-truffle-text"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
                 </Link>
               )
             })}
