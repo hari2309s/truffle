@@ -56,12 +56,47 @@ export function useTheme() {
     return () => mq.removeEventListener('change', onChange)
   }, [theme])
 
-  const cycleTheme = () => {
-    const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length] ?? 'dark'
-    setTheme(next)
-    applyTheme(next)
-    localStorage.setItem(STORAGE_KEY, next)
+  /** Apply a specific theme, optionally with a radial-wipe View Transition
+   *  originating from the pointer event's target (falls back to instant). */
+  const switchTo = (next: Theme, e?: React.MouseEvent) => {
+    if (next === theme) return
+    const commit = () => {
+      setTheme(next)
+      applyTheme(next)
+      localStorage.setItem(STORAGE_KEY, next)
+    }
+    // Try a radial clip-path wipe via the View Transitions API
+    const reduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (
+      !reduce &&
+      e?.currentTarget &&
+      typeof document !== 'undefined' &&
+      'startViewTransition' in document
+    ) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+      const x = rect.left + rect.width / 2
+      const y = rect.top + rect.height / 2
+      const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
+      const vt = (document as any).startViewTransition(() => commit())
+      vt.ready
+        .then(() =>
+          document.documentElement.animate(
+            { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${R}px at ${x}px ${y}px)`] },
+            { duration: 400, easing: 'ease-out', pseudoElement: '::view-transition-new(root)' }
+          )
+        )
+        .catch(() => {})
+      return
+    }
+    commit()
   }
 
-  return { theme, cycleTheme }
+  const cycleTheme = (e?: React.MouseEvent) => {
+    const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length] ?? 'dark'
+    switchTo(next, e)
+  }
+
+  return { theme, cycleTheme, switchTo }
 }

@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* View Transition: disable default cross-fade so the radial wipe takes over */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 /* ── Tally Receipt tokens ──────────────────────────────────────────────────
    Money as a friendly till receipt. Dark is the default theme; light is set
    by the .light class or, with no class, by the OS preference. Every value

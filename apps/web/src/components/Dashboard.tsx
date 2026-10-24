@@ -15,6 +15,9 @@ import { NoticeSlip } from './Tally'
 import { OfflineBar } from './OfflineBar'
 import { PageEnter } from './PageMotion'
 import { HomeBudgets, HomeSavingsGoals, HomeSavingsHabits } from './HomeCards'
+import { RecurringSnapshot } from './RecurringSnapshot'
+import { ChatRail } from './ChatRail'
+import { ChatDrawer } from './ChatDrawer'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { MIC_UNAVAILABLE_ERROR, useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -77,9 +80,19 @@ export function Dashboard({ userId, name }: DashboardProps) {
     <AppShell active="home" userId={userId} name={name}>
       <OfflineBar userId={userId} />
 
-      <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <main className="flex-1 overflow-y-auto min-h-0 flex flex-col pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))] md:pb-0">
-          <div className="max-w-[960px] w-full mx-auto md:px-8 xl:px-10 md:pt-7 xl:pt-8 md:pb-8 xl:pb-14 md:flex md:flex-col md:gap-7">
+      <PageEnter className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+        {/* Desktop chat rail (xl+) */}
+        <div className="hidden xl:block">
+          <ChatRail userId={userId} />
+        </div>
+
+        {/* Tablet chat drawer (md–xl) */}
+        <div className="hidden md:block xl:hidden">
+          <ChatDrawer userId={userId} />
+        </div>
+
+        <main className="flex-1 overflow-y-auto min-h-0 flex flex-col pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))] md:pb-0 xl:mr-[380px]">
+          <div className="max-w-[960px] w-full mx-auto md:px-8 xl:px-10 md:pt-7 xl:pt-8 md:pb-8 xl:pb-14 md:flex md:flex-col md:gap-5">
 
             {/* Header row: greeting + action buttons */}
             <div className="flex flex-col md:flex-row md:items-end md:justify-between md:gap-4 md:flex-wrap px-6 md:px-0 pt-5 md:pt-0">
@@ -119,130 +132,90 @@ export function Dashboard({ userId, name }: DashboardProps) {
               )}
             </div>
 
-            {/* 2-column grid on md+, single column on mobile */}
-            <div className="md:grid md:grid-cols-2 md:gap-4 xl:gap-6 md:items-start mt-5 md:mt-0">
-              {/* Left column */}
-              <div className="flex flex-col md:gap-4 xl:gap-6">
-                <ErrorBoundary>
-                  <FinancialBrief userId={userId} />
-                </ErrorBoundary>
+            {/* ── Mobile layout (unchanged) ── */}
+            <div className="md:hidden mt-5">
+              <ErrorBoundary>
+                <FinancialBrief userId={userId} />
+              </ErrorBoundary>
 
-                {isEmpty ? (
-                  <>
-                    <div className="mx-4 md:mx-0 mt-5 md:mt-0 flex flex-col gap-2">
-                      <span className="px-1 text-xs font-bold uppercase">{t.dashboard.trySaying}</span>
-                      {t.dashboard.trySuggestions.map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => openChatWith(router, s)}
-                          className="bg-truffle-surface px-3.5 py-3 font-grotesk text-[15px] text-left"
-                        >
-                          &ldquo;{s}&rdquo;
-                        </button>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 mx-4 md:mx-0 mt-4 md:mt-0">
+              {isEmpty ? (
+                <>
+                  <div className="mx-4 mt-5 flex flex-col gap-2">
+                    <span className="px-1 text-xs font-bold uppercase">{t.dashboard.trySaying}</span>
+                    {t.dashboard.trySuggestions.map((s) => (
                       <button
+                        key={s}
                         type="button"
-                        onClick={() => setActivePanel('receipt')}
-                        className="key key-plain h-[52px] text-xs uppercase"
+                        onClick={() => openChatWith(router, s)}
+                        className="bg-truffle-surface px-3.5 py-3 font-grotesk text-[15px] text-left"
                       >
-                        {t.dashboard.scanStatement}
+                        &ldquo;{s}&rdquo;
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setActivePanel('csv')}
-                        className="key key-plain h-[52px] text-xs uppercase"
-                      >
-                        {t.dashboard.csv}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {/* Mobile-only action buttons */}
-                    <div className="grid grid-cols-3 gap-2 mx-4 mt-5 md:hidden">
-                      <button
-                        type="button"
-                        onClick={() => setActivePanel('add')}
-                        className="key key-accent h-[60px] flex-col !gap-0 text-xs uppercase"
-                      >
-                        <span aria-hidden className="text-lg leading-none">
-                          +
-                        </span>
-                        {t.dashboard.add}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActivePanel('receipt')}
-                        className="key key-plain h-[60px] flex-col !gap-0 text-xs uppercase"
-                      >
-                        <span aria-hidden className="text-base leading-[1.1]">
-                          ▤
-                        </span>
-                        {t.dashboard.scan}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActivePanel('csv')}
-                        className="key key-plain h-[60px] flex-col !gap-0 text-xs uppercase"
-                      >
-                        <span aria-hidden className="text-base leading-[1.1]">
-                          ⇣
-                        </span>
-                        {t.dashboard.csv}
-                      </button>
-                    </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mx-4 mt-4">
+                    <button type="button" onClick={() => setActivePanel('receipt')} className="key key-plain h-[52px] text-xs uppercase">{t.dashboard.scanStatement}</button>
+                    <button type="button" onClick={() => setActivePanel('csv')} className="key key-plain h-[52px] text-xs uppercase">{t.dashboard.csv}</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2 mx-4 mt-5">
+                    <button type="button" onClick={() => setActivePanel('add')} className="key key-accent h-[60px] flex-col !gap-0 text-xs uppercase">
+                      <span aria-hidden className="text-lg leading-none">+</span>{t.dashboard.add}
+                    </button>
+                    <button type="button" onClick={() => setActivePanel('receipt')} className="key key-plain h-[60px] flex-col !gap-0 text-xs uppercase">
+                      <span aria-hidden className="text-base leading-[1.1]">▤</span>{t.dashboard.scan}
+                    </button>
+                    <button type="button" onClick={() => setActivePanel('csv')} className="key key-plain h-[60px] flex-col !gap-0 text-xs uppercase">
+                      <span aria-hidden className="text-base leading-[1.1]">⇣</span>{t.dashboard.csv}
+                    </button>
+                  </div>
+                  <ErrorBoundary>
+                    <section aria-labelledby="itemised-heading" className="slip mx-4 mt-6 px-4 pt-4 pb-7 flex flex-col">
+                      <h2 id="itemised-heading" className="text-[15px] font-bold tracking-[.08em] uppercase pb-2">{t.dashboard.recent}</h2>
+                      <TransactionList userId={userId} />
+                    </section>
+                  </ErrorBoundary>
+                </>
+              )}
 
-                    {/* Mobile-only: recent transactions */}
-                    <ErrorBoundary>
-                      <section
-                        aria-labelledby="itemised-heading"
-                        className="slip mx-4 mt-6 px-4 pt-4 pb-7 flex flex-col md:hidden"
-                      >
-                        <h2
-                          id="itemised-heading"
-                          className="text-[15px] font-bold tracking-[.08em] uppercase pb-2"
-                        >
-                          {t.dashboard.recent}
-                        </h2>
-                        <TransactionList userId={userId} />
-                      </section>
-                    </ErrorBoundary>
-                  </>
-                )}
+              <ErrorBoundary>
+                <WeeklySummary userId={userId} name={name} />
+              </ErrorBoundary>
+            </div>
 
-                {/* Desktop/tablet: Budgets top 4 */}
-                {!isEmpty && (
-                  <div className="hidden md:block">
+            {/* ── Desktop / Tablet layout (md+) ── */}
+            <div className="hidden md:flex md:flex-col md:gap-5">
+              {/* Statement — full width */}
+              <ErrorBoundary>
+                <FinancialBrief userId={userId} />
+              </ErrorBoundary>
+
+              {/* Weekly Recap — full width, accent top border */}
+              <ErrorBoundary>
+                <WeeklySummary userId={userId} name={name} />
+              </ErrorBoundary>
+
+              {!isEmpty && (
+                <>
+                  {/* 2×2 card grid */}
+                  <div className="grid grid-cols-2 gap-5 items-start">
                     <ErrorBoundary>
                       <HomeBudgets userId={userId} transactions={data?.transactions ?? []} />
                     </ErrorBoundary>
+                    <ErrorBoundary>
+                      <HomeSavingsGoals userId={userId} />
+                    </ErrorBoundary>
+                    <ErrorBoundary>
+                      <HomeSavingsHabits userId={userId} />
+                    </ErrorBoundary>
+                    <ErrorBoundary>
+                      <RecurringSnapshot userId={userId} transactions={data?.transactions ?? []} />
+                    </ErrorBoundary>
                   </div>
-                )}
-              </div>
-
-              {/* Right column */}
-              <div className="flex flex-col md:gap-4 xl:gap-6">
-                {!isEmpty && (
-                  <>
-                    <div className="hidden md:block">
-                      <ErrorBoundary>
-                        <HomeSavingsGoals userId={userId} />
-                      </ErrorBoundary>
-                    </div>
-                    <div className="hidden md:block">
-                      <ErrorBoundary>
-                        <HomeSavingsHabits userId={userId} />
-                      </ErrorBoundary>
-                    </div>
-                  </>
-                )}
-                <ErrorBoundary>
-                  <WeeklySummary userId={userId} name={name} />
-                </ErrorBoundary>
-              </div>
+                </>
+              )}
             </div>
           </div>
 

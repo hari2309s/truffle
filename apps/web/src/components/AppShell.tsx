@@ -12,6 +12,7 @@ import { TopBar } from './TopBar'
 import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
 import { SettingsSheet } from './SettingsSheet'
 import { ThemeToggle } from './ThemeToggle'
+import { ThemeToggleStrip } from './ThemeToggleStrip'
 import { TRUFFLE_ICON } from './Tally'
 import { useVoiceRecorder, MIC_UNAVAILABLE_ERROR } from '@/hooks/useVoiceRecorder'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -45,6 +46,12 @@ const NAV_ITEMS: { id: NavTab; num: string; href: string }[] = [
   { id: 'home', num: '01', href: '/' },
   { id: 'chat', num: '02', href: '/chat' },
   { id: 'insights', num: '03', href: '/insights' },
+]
+
+/** Desktop sidebar only shows Home + Insights — chat lives in the rail. */
+const SIDEBAR_NAV: { id: NavTab; num: string; href: string }[] = [
+  { id: 'home', num: '01', href: '/' },
+  { id: 'insights', num: '02', href: '/insights' },
 ]
 
 /**
@@ -118,30 +125,25 @@ export function AppShell({ active, userId, name, children }: AppShellProps) {
 
             <div className="border-t border-dashed border-truffle-text2" />
 
-            {/* Nav items */}
+            {/* Nav items (desktop: Home + Insights only, chat is in the rail) */}
             <nav className="flex flex-col gap-1">
-              {NAV_ITEMS.map((item) => {
+              {SIDEBAR_NAV.map((item) => {
                 const tab = tabs.find((t) => t.id === item.id)!
-                const isActive = item.id === active
+                const isActive = item.id === active || (active === 'chat' && item.id === 'home')
                 return (
                   <Link
                     key={item.id}
                     href={item.href}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`flex items-center gap-2 min-h-[48px] px-2.5 rounded-lg text-[13px] font-bold tracking-[.06em] ${
+                    className={`flex items-center gap-2 h-10 px-2.5 text-[12px] font-bold tracking-[.1em] ${
                       isActive
                         ? 'bg-truffle-text text-truffle-bg'
                         : 'hover:bg-truffle-surface'
                     }`}
                   >
-                    <span className="opacity-70 text-[11px]">{item.num}</span>
+                    <span className="text-truffle-text2">{item.num}</span>
                     <span className="uppercase">{tab.label}</span>
-                    <span className="flex-1 border-b-2 border-dotted border-current mt-1.5" />
-                    {!!tab.badge && tab.badge > 0 && (
-                      <span className="min-w-5 h-5 rounded-full bg-truffle-accent text-[#302e2b] text-[11px] font-bold grid place-items-center">
-                        {tab.badge}
-                      </span>
-                    )}
+                    <span className="flex-1 min-w-2 border-b-2 border-dotted border-current opacity-35 mt-1.5" />
                     {isActive && <span>◂</span>}
                   </Link>
                 )
@@ -154,11 +156,10 @@ export function AppShell({ active, userId, name, children }: AppShellProps) {
             <button
               type="button"
               onClick={() => setShowSettings(true)}
-              className="flex items-center gap-2 min-h-[44px] px-2.5 text-[13px] font-bold tracking-[.06em] hover:bg-truffle-surface rounded-lg"
+              className="flex items-center gap-2 h-10 px-2.5 text-[12px] font-bold tracking-[.1em] hover:bg-truffle-surface"
             >
-              <span className="opacity-70 text-[11px]">⚙</span>
-              <span>{t.topBar.settingsLabel}</span>
-              <span className="flex-1 border-b-2 border-dotted border-truffle-border mt-1.5" />
+              <span>SETTINGS</span>
+              <span className="flex-1 min-w-2 border-b-2 border-dotted border-current opacity-35 mt-1.5" />
               <span className="text-[11px] text-truffle-text2">{currencyLabel}</span>
             </button>
 
@@ -179,10 +180,13 @@ export function AppShell({ active, userId, name, children }: AppShellProps) {
           </div>
 
           {/* Scissor line */}
-          <div className="flex items-center gap-2 text-truffle-text2 text-[11px]">
+          <div className="flex items-center gap-1.5 text-truffle-text2 text-[13px]">
             <span>✂</span>
-            <span className="flex-1 border-t-2 border-dashed border-truffle-border" />
+            <span className="flex-1 border-t border-dashed border-truffle-text2" />
           </div>
+
+          {/* Theme toggle strip */}
+          <ThemeToggleStrip />
         </div>
       </aside>
 
@@ -195,40 +199,45 @@ export function AppShell({ active, userId, name, children }: AppShellProps) {
             <span className="text-sm font-bold tracking-[.16em] uppercase">Truffle</span>
           </div>
 
-          <nav className="flex gap-1 h-full">
+          <nav className="flex h-full">
             {NAV_ITEMS.map((item) => {
               const tab = tabs.find((t) => t.id === item.id)!
               const isActive = item.id === active
+              const badgeText = tab.badge && tab.badge > 0 ? ` · ${tab.badge}` : ''
               return (
                 <Link
                   key={item.id}
                   href={item.href}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`relative flex items-center gap-1.5 px-4 text-[13px] font-bold tracking-[.08em] uppercase box-border ${
+                  className={`flex items-center px-4 text-[12px] font-bold tracking-[.12em] uppercase box-border ${
                     isActive
-                      ? 'text-truffle-text border-b-[3px] border-solid border-truffle-text'
-                      : 'text-truffle-text2 border-b border-dashed border-transparent'
+                      ? 'text-truffle-text'
+                      : 'text-truffle-text2'
                   }`}
                 >
-                  {tab.label}
-                  {!!tab.badge && tab.badge > 0 && (
-                    <span className="min-w-[18px] h-[18px] rounded-full bg-truffle-accent text-[#302e2b] text-[10px] font-bold grid place-items-center">
-                      {tab.badge}
-                    </span>
-                  )}
+                  <span className={`py-1.5 ${
+                    isActive
+                      ? 'border-b-[3px] border-solid border-truffle-text'
+                      : 'pb-2 border-b border-dashed border-truffle-text2'
+                  }`}>
+                    {tab.label}{badgeText}
+                  </span>
                 </Link>
               )
             })}
           </nav>
 
-          <button
-            type="button"
-            onClick={() => setShowSettings(true)}
-            aria-label={t.topBar.settingsLabel}
-            className="w-11 h-11 rounded-lg bg-truffle-card border border-truffle-border shadow-[0_4px_0_var(--t-border)] grid place-items-center text-base active:translate-y-1 active:shadow-none"
-          >
-            ⚙
-          </button>
+          <div className="flex gap-2.5 pb-1">
+            <ThemeToggle className="w-11 h-11 rounded-lg bg-truffle-card border border-truffle-border shadow-[0_4px_0_var(--t-border)] grid place-items-center text-[17px] cursor-pointer active:translate-y-1 active:shadow-none" />
+            <button
+              type="button"
+              onClick={() => setShowSettings(true)}
+              aria-label={t.topBar.settingsLabel}
+              className="w-11 h-11 rounded-lg bg-truffle-card border border-truffle-border shadow-[0_4px_0_var(--t-border)] grid place-items-center text-lg active:translate-y-1 active:shadow-none"
+            >
+              ⚙︎
+            </button>
+          </div>
         </header>
 
         {/* Mobile top bar (below md) */}
@@ -259,8 +268,8 @@ export function AppShell({ active, userId, name, children }: AppShellProps) {
           <BottomNav active={active} />
         </div>
 
-        {/* Tablet bottom voice key (md–xl, not on chat) */}
-        {showVoice && userId && (
+        {/* Tablet bottom voice key (md–xl, not on chat or home — home has the chat drawer) */}
+        {showVoice && active !== 'home' && userId && (
           <div className="hidden md:flex xl:hidden sticky bottom-0 z-[5] bg-truffle-bg border-t border-dashed border-truffle-border justify-center px-8 py-3 pb-5">
             <VoiceButton
               status={voiceStatus}
