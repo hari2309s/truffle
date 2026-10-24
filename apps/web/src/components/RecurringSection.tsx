@@ -7,6 +7,7 @@ import {
   detectRecurring,
   RECURRING_GROUPS,
   recurringTotals,
+  type RecurringGroup,
   type RecurringItem,
   type RecurringOverride,
   type RecurringOverrides,
@@ -17,6 +18,14 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { truffleEase, transitionSnappy } from '@/lib/motion'
 import { LeaderRow, Rule } from './Tally'
+
+/** Colored swatch per recurring group, matching the design spec. */
+const GROUP_SWATCH: Record<RecurringGroup, { bg: string; border: string }> = {
+  fixed:         { bg: 'var(--t-text)',        border: 'none' },
+  investing:     { bg: 'var(--t-accent)',      border: '2px solid var(--t-accent-edge)' },
+  subscriptions: { bg: 'var(--t-accent-edge)', border: 'none' },
+  other:         { bg: 'transparent',          border: '2px dashed var(--t-text2)' },
+}
 
 interface Tx {
   amount: number
@@ -193,7 +202,13 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
               aria-expanded={!isCollapsed}
               className="flex justify-between items-center text-[11px] font-bold uppercase text-truffle-text2"
             >
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-2">
+                <span
+                  className="flex-none w-3.5 h-3.5"
+                  style={{ background: GROUP_SWATCH[group].bg, border: GROUP_SWATCH[group].border, boxSizing: 'border-box' }}
+                />
+                {r.groups[group]}
+                <span className="text-truffle-text2 font-normal">x{inGroup.length}</span>
                 <motion.span
                   animate={{ rotate: isCollapsed ? -90 : 0 }}
                   transition={{ duration: 0.18, ease: truffleEase }}
@@ -201,7 +216,6 @@ export function RecurringSection({ userId, transactions, viewDate }: { userId: s
                 >
                   ▼
                 </motion.span>
-                {r.groups[group]} ({inGroup.length})
               </span>
               <span>{formatAmount(totals[group])}</span>
             </button>

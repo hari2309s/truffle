@@ -14,6 +14,7 @@ import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
 import { NoticeSlip } from './Tally'
 import { OfflineBar } from './OfflineBar'
 import { PageEnter } from './PageMotion'
+import { HomeBudgets, HomeSavingsGoals, HomeSavingsHabits } from './HomeCards'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
 import { MIC_UNAVAILABLE_ERROR, useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -194,10 +195,11 @@ export function Dashboard({ userId, name }: DashboardProps) {
                       </button>
                     </div>
 
+                    {/* Mobile-only: recent transactions */}
                     <ErrorBoundary>
                       <section
                         aria-labelledby="itemised-heading"
-                        className="slip mx-4 md:mx-0 mt-6 md:mt-0 px-4 pt-4 pb-7 flex flex-col"
+                        className="slip mx-4 mt-6 px-4 pt-4 pb-7 flex flex-col md:hidden"
                       >
                         <h2
                           id="itemised-heading"
@@ -210,10 +212,33 @@ export function Dashboard({ userId, name }: DashboardProps) {
                     </ErrorBoundary>
                   </>
                 )}
+
+                {/* Desktop/tablet: Budgets top 4 */}
+                {!isEmpty && (
+                  <div className="hidden md:block">
+                    <ErrorBoundary>
+                      <HomeBudgets userId={userId} transactions={data?.transactions ?? []} />
+                    </ErrorBoundary>
+                  </div>
+                )}
               </div>
 
-              {/* Right column (md+) */}
+              {/* Right column */}
               <div className="flex flex-col md:gap-4 xl:gap-6">
+                {!isEmpty && (
+                  <>
+                    <div className="hidden md:block">
+                      <ErrorBoundary>
+                        <HomeSavingsGoals userId={userId} />
+                      </ErrorBoundary>
+                    </div>
+                    <div className="hidden md:block">
+                      <ErrorBoundary>
+                        <HomeSavingsHabits userId={userId} />
+                      </ErrorBoundary>
+                    </div>
+                  </>
+                )}
                 <ErrorBoundary>
                   <WeeklySummary userId={userId} name={name} />
                 </ErrorBoundary>
