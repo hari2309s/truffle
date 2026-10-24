@@ -71,7 +71,7 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
     return (
       <section
         aria-label={t.dashboard.statement}
-        className="slip print-lines mx-4 mt-4 md:mx-0 md:mt-0 md:border md:border-truffle-border px-[18px] pt-[18px] pb-[30px] flex flex-col gap-2 text-sm"
+        className="slip print-lines mx-4 mt-4 md:mx-0 md:mt-0 md:border md:border-truffle-border border-t-[6px] border-truffle-accent px-[18px] pt-[18px] pb-[30px] flex flex-col gap-2 text-sm"
       >
         <div className="flex justify-between text-xs text-truffle-text2 uppercase">
           <span>{t.dashboard.statement} #0001</span>
@@ -110,10 +110,10 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
       {/* ── Mobile: receipt-style slip (unchanged) ── */}
       <section
         aria-label={t.dashboard.statement}
-        className="slip print-lines mx-4 mt-4 md:hidden px-[18px] pt-[18px] pb-[30px] flex flex-col gap-2 text-sm"
+        className="slip print-lines mx-4 mt-4 md:hidden border-t-[6px] border-truffle-accent px-[18px] pt-[18px] pb-[30px] flex flex-col gap-2 text-sm"
       >
-        <div className="flex justify-between text-xs text-truffle-text2 uppercase">
-          <span>{t.dashboard.statement}</span>
+        <div className="flex justify-between text-[11px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
+          <span>{t.dashboard.statement} · {monthName}</span>
           <span>{stamp}</span>
         </div>
         <Rule />

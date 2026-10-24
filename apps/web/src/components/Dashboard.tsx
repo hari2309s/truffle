@@ -23,8 +23,8 @@ import { MIC_UNAVAILABLE_ERROR, useVoiceRecorder } from '@/hooks/useVoiceRecorde
 import { useLanguage } from '@/contexts/LanguageContext'
 import { setChatHandoff } from '@/lib/chatHandoff'
 
-const CSVImport = dynamic(() => import('./CSVImport').then((m) => m.CSVImport))
-const ReceiptUpload = dynamic(() => import('./ReceiptUpload').then((m) => m.ReceiptUpload))
+const CSVImport = dynamic(() => import('./CSVImport').then((m) => m.CSVImport), { ssr: false })
+const ReceiptUpload = dynamic(() => import('./ReceiptUpload').then((m) => m.ReceiptUpload), { ssr: false })
 
 interface DashboardProps {
   userId: string
@@ -45,6 +45,12 @@ export function Dashboard({ userId, name }: DashboardProps) {
   const { data, isLoading } = useTransactionsQuery(userId)
   const isEmpty = !isLoading && (data?.transactions.length ?? 0) === 0
   const voice = useVoiceRecorder(userId)
+
+  // Preload heavy sheet components so first click doesn't flash
+  useEffect(() => {
+    void import('./CSVImport')
+    void import('./ReceiptUpload')
+  }, [])
 
   useEffect(() => {
     if (voice.transcript) openChatWith(router, voice.transcript)

@@ -56,35 +56,42 @@ export function useTheme() {
     return () => mq.removeEventListener('change', onChange)
   }, [theme])
 
-  /** Apply a specific theme, optionally with a radial-wipe View Transition
-   *  originating from the pointer event's target (falls back to instant). */
-  const switchTo = (next: Theme, e?: React.MouseEvent) => {
+  /** Apply a specific theme with a zigzag-paper View Transition wipe
+   *  (receipt paper "prints" the new theme top-to-bottom). Falls back to
+   *  an instant swap when the API is unavailable or motion is reduced. */
+  const switchTo = (next: Theme, _e?: React.MouseEvent) => {
     if (next === theme) return
     const commit = () => {
       setTheme(next)
       applyTheme(next)
       localStorage.setItem(STORAGE_KEY, next)
     }
-    // Try a radial clip-path wipe via the View Transitions API
     const reduce =
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     if (
       !reduce &&
-      e?.currentTarget &&
       typeof document !== 'undefined' &&
       'startViewTransition' in document
     ) {
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-      const x = rect.left + rect.width / 2
-      const y = rect.top + rect.height / 2
-      const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
+      // Build a polygon with zigzag teeth along the bottom edge, like
+      // the torn receipt paper used throughout the design system.
+      const TEETH = 40
+      const TOOTH_W = 100 / TEETH      // % of viewport width per tooth
+      const TOOTH_H = 1.2              // % of viewport height for tooth depth
+      const zigzag = (yPct: number) => {
+        const pts = [`0% 0%`, `100% 0%`, `100% ${yPct}%`]
+        for (let i = TEETH; i >= 0; i--) {
+          pts.push(`${i * TOOTH_W}% ${yPct + (i % 2 === 0 ? 0 : TOOTH_H)}%`)
+        }
+        return `polygon(${pts.join(', ')})`
+      }
       const vt = (document as any).startViewTransition(() => commit())
       vt.ready
         .then(() =>
           document.documentElement.animate(
-            { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${R}px at ${x}px ${y}px)`] },
-            { duration: 400, easing: 'ease-out', pseudoElement: '::view-transition-new(root)' }
+            { clipPath: [zigzag(-TOOTH_H), zigzag(100 + TOOTH_H)] },
+            { duration: 500, easing: 'ease-out', pseudoElement: '::view-transition-new(root)' }
           )
         )
         .catch(() => {})

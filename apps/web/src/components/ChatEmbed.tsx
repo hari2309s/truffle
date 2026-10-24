@@ -3,15 +3,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useFinancialChat, messageText, type TruffleUIMessage } from '@/hooks/useFinancialChat'
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { isToolUIPart, getToolName } from 'ai'
 import { TransactionProposalCard } from './TransactionProposalCard'
 import { GoalProposalCard } from './GoalProposalCard'
 import { HabitProposalCard } from './HabitProposalCard'
-import { LeaderRow, MINUS, Tallying, TRUFFLE_ICON } from './Tally'
-import type { VoiceButtonStatus } from './VoiceButton'
+import { LeaderRow, MINUS, Tallying } from './Tally'
+import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { supabase } from '@/lib/supabase'
@@ -284,42 +283,44 @@ function ChatEmbedInner({
         <div ref={endRef} />
       </div>
 
-      {/* Open full chat link */}
-      <Link
-        href="/chat"
-        className="text-[11px] font-bold text-truffle-accent-ink self-end flex-none"
-      >
-        Open full chat →
-      </Link>
+      {/* Bottom composer: link + text input + voice */}
+      <div className="flex-none flex flex-col gap-2 pb-1">
+        <Link
+          href="/chat"
+          className="text-[11px] font-bold text-truffle-accent-ink self-end"
+        >
+          Open full chat →
+        </Link>
 
-      {/* Composer: voice + text */}
-      <div className="flex-none grid grid-cols-[1fr_64px] gap-2 pb-1">
-        <button
-          type="button"
-          onPointerDown={voice.startRecording}
-          onPointerUp={voice.stopRecording}
-          onPointerLeave={voice.stopRecording}
-          className="h-[72px] rounded-lg bg-truffle-accent text-[#1b1a18] border border-truffle-accent-edge shadow-[0_4px_0_var(--t-accent-edge)] flex items-center justify-center gap-2.5 font-bold text-sm tracking-[.1em] cursor-pointer active:translate-y-1 active:shadow-[inset_0_3px_0_var(--t-accent-edge)] transition-transform duration-75"
+        {/* Text input row */}
+        <form
+          onSubmit={(e) => { e.preventDefault(); handleSubmit() }}
+          className="flex gap-2"
         >
-          {voice.isRecording ? (
-            <>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#1b1a18] animate-pulse" />
-              <span>LISTENING</span>
-            </>
-          ) : (
-            <>
-              <Image src={TRUFFLE_ICON} alt="" width={26} height={26} />
-              <span>HOLD · SPEAK</span>
-            </>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => {/* toggle to text mode — simplified for embed */}}
-          className="h-[72px] rounded-lg bg-truffle-card border border-truffle-border shadow-[0_4px_0_var(--t-border)] grid place-items-center text-sm font-bold active:translate-y-1 active:shadow-none"
-        >
-          Aa
-        </button>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={t.chat.typePlaceholder}
+            className="field flex-1 h-11 text-[13px]"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim()}
+            className="key key-plain key-3 w-11 h-11 text-base disabled:opacity-30"
+          >
+            →
+          </button>
+        </form>
+
+        {/* Voice hold button */}
+        <VoiceButton
+          status={voiceStatus}
+          onStart={voice.startRecording}
+          onStop={voice.stopRecording}
+          onStopSpeaking={chat.cancelSpeech}
+          className="h-14"
+        />
       </div>
     </div>
   )

@@ -48,10 +48,10 @@ const NAV_ITEMS: { id: NavTab; num: string; href: string }[] = [
   { id: 'insights', num: '03', href: '/insights' },
 ]
 
-/** Desktop sidebar only shows Home + Insights — chat lives in the rail. */
 const SIDEBAR_NAV: { id: NavTab; num: string; href: string }[] = [
   { id: 'home', num: '01', href: '/' },
-  { id: 'insights', num: '02', href: '/insights' },
+  { id: 'chat', num: '02', href: '/chat' },
+  { id: 'insights', num: '03', href: '/insights' },
 ]
 
 /**
@@ -125,11 +125,11 @@ export function AppShell({ active, userId, name, children }: AppShellProps) {
 
             <div className="border-t border-dashed border-truffle-text2" />
 
-            {/* Nav items (desktop: Home + Insights only, chat is in the rail) */}
+            {/* Nav items */}
             <nav className="flex flex-col gap-1">
               {SIDEBAR_NAV.map((item) => {
                 const tab = tabs.find((t) => t.id === item.id)!
-                const isActive = item.id === active || (active === 'chat' && item.id === 'home')
+                const isActive = item.id === active
                 return (
                   <Link
                     key={item.id}
