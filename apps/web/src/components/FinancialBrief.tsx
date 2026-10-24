@@ -42,11 +42,23 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
     return (
       <>
         {/* Mobile skeleton */}
-        <SkeletonPulse className="slip mx-4 mt-4 md:hidden px-[18px] pt-[18px] pb-[30px] flex flex-col gap-3">
-          <div className="h-3 bg-truffle-border w-1/3" />
-          <div className="h-10 bg-truffle-border w-2/3" />
-          <div className="h-3 bg-truffle-border w-full" />
-          <div className="h-3 bg-truffle-border w-full" />
+        <SkeletonPulse className="slip mx-4 mt-4 md:hidden border-t-[6px] border-truffle-accent px-[18px] pt-[18px] pb-8 flex flex-col gap-3.5">
+          <div className="flex justify-between">
+            <div className="h-3 bg-truffle-border w-24" />
+            <div className="h-3 bg-truffle-border w-16" />
+          </div>
+          <div className="h-[22px] bg-truffle-border" />
+          <div className="flex flex-col gap-2.5">
+            <div className="h-3.5 bg-truffle-border" />
+            <div className="h-3.5 bg-truffle-border" />
+            <div className="h-3.5 bg-truffle-border" />
+            <div className="h-3 bg-truffle-border w-2/3" />
+          </div>
+          <div className="h-px border-t border-dashed border-truffle-border" />
+          <div className="flex justify-between items-baseline">
+            <div className="h-4 bg-truffle-border w-28" />
+            <div className="h-8 bg-truffle-border w-32" />
+          </div>
         </SkeletonPulse>
         {/* md+ skeleton */}
         <SkeletonPulse className="slip hidden md:flex border border-truffle-border border-t-[6px] border-t-truffle-accent px-5 pt-[18px] pb-8 flex-col gap-3">
@@ -107,71 +119,108 @@ export function FinancialBrief({ userId }: FinancialBriefProps) {
 
   return (
     <>
-      {/* ── Mobile: receipt-style slip (unchanged) ── */}
+      {/* ── Mobile: insights-style statement card ── */}
       <section
         aria-label={t.dashboard.statement}
-        className="slip print-lines mx-4 mt-4 md:hidden border-t-[6px] border-truffle-accent px-[18px] pt-[18px] pb-[30px] flex flex-col gap-2 text-sm"
+        className="slip mx-4 mt-4 md:hidden border-t-[6px] border-truffle-accent px-[18px] pt-[18px] pb-8 flex flex-col gap-3.5 text-sm"
       >
+        {/* Header */}
         <div className="flex justify-between text-[11px] font-bold tracking-[.1em] text-truffle-text2 uppercase">
-          <span>{t.dashboard.statement} · {monthName}</span>
-          <span>{stamp}</span>
+          <span>{t.insights.hero.monthSoFar}</span>
+          <span>{t.insights.hero.dayOf(dayOfMonth, daysInMonth)}</span>
         </div>
-        <Rule />
-        <span className="text-xs text-truffle-text2 uppercase">
-          {statement.balanceIsAllTime ? t.dashboard.netLogged : t.dashboard.netThisMonth}
-        </span>
-        <motion.span
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: truffleEase }}
-          className="text-[44px] font-bold leading-none break-all"
-        >
-          {signed(statement.balance)}
-        </motion.span>
-        <Rule className="mt-1.5" />
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.08 }}>
-          <LeaderRow strong left={t.dashboard.incomeThisMonth} right={formatAmount(statement.incomeThisMonth)} />
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.12 }}>
-          <LeaderRow strong left={t.dashboard.spentThisMonth} right={formatAmount(statement.spentThisMonth)} />
-        </motion.div>
-        {statement.savedThisMonth !== 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.16 }}>
-            <LeaderRow strong left={t.dashboard.savedThisMonth} right={signed(statement.savedThisMonth)} />
-          </motion.div>
+
+        {/* Proportional bar + labels */}
+        {statement.incomeThisMonth > 0 && (
+          <>
+            <motion.div
+              className="flex gap-[3px] h-[22px]"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.5, ease: truffleEase, delay: 0.15 }}
+              style={{ transformOrigin: 'left' }}
+            >
+              <div className="bg-truffle-text" style={{ flex: statement.spentThisMonth }} />
+              <div
+                className="bg-truffle-accent border-2 border-truffle-accent-edge box-border"
+                style={{ flex: Math.max(statement.savedThisMonth, 0) }}
+              />
+              {statement.incomeThisMonth - statement.spentThisMonth - Math.max(statement.savedThisMonth, 0) > 0 && (
+                <div
+                  className="border-2 border-dashed border-truffle-text2 box-border"
+                  style={{ flex: statement.incomeThisMonth - statement.spentThisMonth - Math.max(statement.savedThisMonth, 0) }}
+                />
+              )}
+            </motion.div>
+            <div className="flex justify-between text-[10px] font-bold tracking-[.06em] text-truffle-text2 uppercase">
+              <span>{t.insights.hero.barSpent(Math.round((statement.spentThisMonth / statement.incomeThisMonth) * 100) + '%')}</span>
+              <span className="text-truffle-accent-ink">{t.insights.hero.barSaved(Math.round((Math.max(statement.savedThisMonth, 0) / statement.incomeThisMonth) * 100) + '%')}</span>
+              <span>{t.insights.hero.barLeft(Math.round((Math.max(statement.incomeThisMonth - statement.spentThisMonth - Math.max(statement.savedThisMonth, 0), 0) / statement.incomeThisMonth) * 100) + '%')}</span>
+            </div>
+          </>
         )}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.20 }}>
-          <LeaderRow
-            strong
-            left={t.dashboard.dailyRate}
-            right={`${formatAmount(statement.dailyRate)}${t.dashboard.perDay}`}
-          />
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.24 }}>
-          <LeaderRow
-            strong
-            left={t.dashboard.projectedSpendOn(
-              statement.monthEnd.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })
-            )}
-            right={formatAmount(statement.forecastMonthSpend)}
-          />
-        </motion.div>
-        <Rule />
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: truffleEase, delay: 0.3 }}
-          className="flex flex-col"
-        >
-          <div className="flex justify-between font-bold text-[15px] uppercase">
-            <span>{t.dashboard.projectedClose}</span>
-            <span>{signed(statement.projectedClose)}</span>
-          </div>
-          <span className="text-[11px] text-truffle-text2 uppercase">
-            {statement.savedThisMonth !== 0 ? t.dashboard.projectedCloseHowSaved : t.dashboard.projectedCloseHow}
-          </span>
-        </motion.div>
-        <p className="font-grotesk text-sm text-truffle-text2">{paceNote}</p>
+
+        {/* Income / Spent / Saved rows */}
+        <div className="flex flex-col gap-[9px]">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.08 }}>
+            <LeaderRow
+              left={t.insights.hero.income}
+              right={<b className="text-truffle-positive">↑ {formatAmount(statement.incomeThisMonth)}</b>}
+            />
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.12 }}>
+            <LeaderRow
+              left={t.insights.hero.spent}
+              right={<b>↓ {formatAmount(statement.spentThisMonth)}</b>}
+            />
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.16 }}>
+            <LeaderRow
+              left={t.insights.hero.saved}
+              right={<b className="text-truffle-accent-ink">→ {formatAmount(Math.max(statement.savedThisMonth, 0))}</b>}
+            />
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: truffleEase, delay: 0.20 }}>
+            <LeaderRow
+              className="text-xs text-truffle-text2"
+              left={t.insights.hero.dailyRate}
+              right={`${formatAmount(statement.dailyRate)}/day`}
+            />
+          </motion.div>
+
+          <div className="border-t border-dashed border-truffle-text2" />
+
+          {/* Projected close — large number */}
+          <motion.div
+            className="flex justify-between items-baseline"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: truffleEase, delay: 0.26 }}
+          >
+            <span className="text-[12px] font-bold tracking-[.1em] uppercase">
+              {t.insights.hero.projectedClose}
+            </span>
+            <span className="text-[34px] font-bold tracking-[-.02em]">
+              {statement.projectedClose >= 0 ? '+' : MINUS}{formatAmount(statement.projectedClose)}
+            </span>
+          </motion.div>
+
+          {/* Pace indicator */}
+          {statement.pace && statement.pace !== 'even' && (
+            <motion.span
+              className={`text-[11px] font-bold tracking-wide uppercase ${
+                statement.pace === 'ahead' ? 'text-truffle-positive' : 'text-truffle-warning'
+              }`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, ease: truffleEase, delay: 0.32 }}
+            >
+              {statement.pace === 'ahead'
+                ? t.insights.hero.aheadOf(formatAmount(statement.paceDelta), lastMonthName)
+                : t.insights.hero.behindVs(formatAmount(statement.paceDelta), lastMonthName)}
+            </motion.span>
+          )}
+        </div>
       </section>
 
       {/* ── md+: design-spec statement card ── */}
