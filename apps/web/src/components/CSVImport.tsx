@@ -159,7 +159,6 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       onClose={table ? handleReset : onClose}
       closeLabel={table ? c.cancel : t.common.close}
       closeGlyph={table ? '←' : '✕'}
-      wide
       footer={
         table && (
           <button
@@ -176,25 +175,35 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
 
       {!table || !columns ? (
-        <>
+        <div className="flex-1 flex flex-col p-4">
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="mx-4 mt-3 py-14 border-2 border-dashed border-truffle-border rounded-lg flex flex-col items-center gap-2 hover:border-truffle-text transition-colors"
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+            onDrop={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              const file = e.dataTransfer.files[0]
+              if (file) {
+                const fakeEvent = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>
+                handleFile(fakeEvent)
+              }
+            }}
+            className="flex-[0.8] min-h-[300px] border-2 border-dashed border-truffle-border rounded-lg flex flex-col items-center justify-center gap-2.5 hover:border-truffle-text transition-colors cursor-pointer"
           >
-            <span aria-hidden className="text-2xl">
+            <span aria-hidden className="text-3xl">
               ⇣
             </span>
             <span className="text-sm font-bold uppercase">{c.tapToSelect}</span>
             <span className="text-xs text-truffle-text2 uppercase">{c.hint}</span>
           </button>
           {flow.error && (
-            <NoticeSlip tone="negative" title={c.couldntRead} className="mx-4 mt-4">
+            <NoticeSlip tone="negative" title={c.couldntRead} className="mt-4">
               {flow.error}
               <p className="text-truffle-text2 mt-1">{c.nothingImported}</p>
             </NoticeSlip>
           )}
-        </>
+        </div>
       ) : (
         <>
           <div className="px-6 pt-3 flex flex-col gap-1.5">
