@@ -190,11 +190,10 @@ export function InsightsPage({ userId }: InsightsPageProps) {
               </div>
             </header>
 
-            {/* Four-chapter nav — mobile: pill buttons with layoutId; md+: flat tab strip */}
-            {/* Mobile pill tabs */}
+            {/* Pill tabs — same component at every breakpoint */}
             <nav
               aria-label={t.insights.sectionsLabel}
-              className="grid grid-cols-4 gap-1 px-4 pt-1 md:hidden"
+              className="grid grid-cols-4 gap-1 px-4 md:px-0 pt-1"
             >
               {CHAPTERS.map((ch) => {
                 const c = t.insights.chapters[ch]
@@ -228,37 +227,6 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                       >
                         {unreviewed}
                       </motion.span>
-                    )}
-                  </button>
-                )
-              })}
-            </nav>
-            {/* md+ flat tab strip */}
-            <nav
-              aria-label={t.insights.sectionsLabel}
-              className="hidden md:grid grid-cols-4 border-b border-dashed border-truffle-border"
-            >
-              {CHAPTERS.map((ch) => {
-                const c = t.insights.chapters[ch]
-                const isActive = active === ch
-                return (
-                  <button
-                    key={ch}
-                    type="button"
-                    onClick={() => jumpTo(ch)}
-                    aria-current={isActive ? 'location' : undefined}
-                    className={`flex items-center gap-2 min-h-[48px] border-b-[3px] border-solid box-border text-[13px] font-bold tracking-[.06em] cursor-pointer ${
-                      isActive
-                        ? 'text-truffle-text border-truffle-text'
-                        : 'text-truffle-text2 border-transparent'
-                    }`}
-                  >
-                    <span className="text-[11px] opacity-70">{c.num}</span>
-                    <span className="font-grotesk text-[15px] font-medium tracking-normal">{c.label}</span>
-                    {ch === 'review' && unreviewed > 0 && (
-                      <span className="min-w-[18px] h-[18px] rounded-full bg-truffle-accent text-[#302e2b] text-[10px] font-bold grid place-items-center">
-                        {unreviewed}
-                      </span>
                     )}
                   </button>
                 )

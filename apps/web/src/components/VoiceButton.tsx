@@ -113,7 +113,7 @@ export function VoiceButton({
       {/* Truffle talking: apricot meter fills the key, label hugs the right. */}
       {isSpeaking ? (
         <>
-          <span aria-hidden className="flex flex-1 min-w-0 w-full self-stretch">
+          <span aria-hidden className="flex items-center justify-center flex-1 min-w-0 w-full self-stretch">
             <Meter bars={18} barClassName="bg-truffle-accent" className="h-10 gap-[3px]" />
           </span>
           <span className="shrink-0 text-[11px] tracking-wider">■ STOP</span>

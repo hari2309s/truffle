@@ -793,13 +793,13 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
               />
 
               {/* Mobile: + button, voice, type toggle */}
-              <div className="grid grid-cols-[52px_1fr_64px] gap-2 md:hidden">
+              <div className="grid grid-cols-[64px_1fr_64px] gap-2 md:hidden">
                 <button
                   type="button"
                   onClick={openPicker}
                   aria-label="Attach a file"
                   aria-disabled={attach.isFull}
-                  className="key key-plain w-[52px] h-[52px] flex items-center justify-center"
+                  className="key key-plain w-16 h-[72px] flex items-center justify-center"
                   style={{ opacity: attach.isFull ? 0.45 : 1 }}
                 >
                   <span className="w-5 h-5 border-[1.5px] border-current rounded-full box-border flex items-center justify-center text-[15px] leading-none text-truffle-text2">
