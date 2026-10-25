@@ -159,6 +159,7 @@ export function CSVImport({ userId, onClose }: CSVImportProps) {
       onClose={table ? handleReset : onClose}
       closeLabel={table ? c.cancel : t.common.close}
       closeGlyph={table ? '←' : '✕'}
+      wide
       footer={
         table && (
           <button
