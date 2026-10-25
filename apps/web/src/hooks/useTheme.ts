@@ -37,13 +37,14 @@ function applyTheme(theme: Theme) {
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>('dark')
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'dark'
+    return (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? 'dark'
+  })
 
   useEffect(() => {
-    const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? 'dark'
-    setTheme(stored)
-    applyTheme(stored)
-  }, [])
+    applyTheme(theme)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // When following the OS ("system"), keep the tab color live as the OS
   // scheme flips while the app is open — CSS re-resolves --t-bg on its
