@@ -484,6 +484,39 @@
   }
 }
 
+/* Chat attachments */
+@keyframes ta-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ta-sheet {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes ta-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+@keyframes ta-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes ta-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,

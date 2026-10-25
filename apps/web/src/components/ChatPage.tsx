@@ -5,11 +5,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { isToolUIPart, getToolName } from 'ai'
 import { useFinancialChat, type TruffleUIMessage } from '@/hooks/useFinancialChat'
 import { MIC_UNAVAILABLE_ERROR, useVoiceRecorder } from '@/hooks/useVoiceRecorder'
-import { ChatBubble } from './ChatBubble'
+import { useAttachments, type ChatAttachment } from '@/hooks/useAttachments'
+import { ChatBubble, type BubbleAttachment } from './ChatBubble'
 import { GoalProposalCard } from './GoalProposalCard'
 import { TransactionProposalCard } from './TransactionProposalCard'
 import { HabitProposalCard } from './HabitProposalCard'
+import { ParsedResultCard, type ParsedResultData, type ParsedRow } from './ParsedResultCard'
 import { VoiceButton, type VoiceButtonStatus } from './VoiceButton'
+import { AttachPicker } from './AttachPicker'
+import { AttachPreviewStrip } from './AttachPreviewStrip'
+import { DropOverlay } from './DropOverlay'
 import { AppShell } from './AppShell'
 import { OfflineBar } from './OfflineBar'
 import { PageEnter } from './PageMotion'
@@ -207,6 +212,171 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
   const [typing, setTyping] = useState(false)
   const sendText = chat.sendText
 
+  // ── Attachments ──
+  const attach = useAttachments()
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [dragging, setDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const pendingPickKind = useRef<'camera' | 'photo' | 'pdf' | 'csv' | null>(null)
+
+  /** Tracks which attachments were sent with each user message. */
+  const [messageAttachments, setMessageAttachments] = useState<
+    Record<string, BubbleAttachment[]>
+  >({})
+
+  const openPicker = useCallback(() => {
+    if (attach.isFull) {
+      attach.flashToast()
+      return
+    }
+    setPickerOpen(true)
+  }, [attach])
+
+  const handlePick = useCallback(
+    (kind: 'camera' | 'photo' | 'pdf' | 'csv') => {
+      setPickerOpen(false)
+      pendingPickKind.current = kind
+      const input = fileInputRef.current
+      if (!input) return
+      if (kind === 'camera') {
+        input.accept = 'image/*'
+        input.capture = 'environment'
+      } else if (kind === 'photo') {
+        input.accept = 'image/*'
+        input.removeAttribute('capture')
+      } else if (kind === 'pdf') {
+        input.accept = '.pdf,application/pdf'
+        input.removeAttribute('capture')
+      } else {
+        input.accept = '.csv,text/csv'
+        input.removeAttribute('capture')
+      }
+      input.click()
+    },
+    []
+  )
+
+  const handleFileSelected = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (file) attach.add(file)
+      e.target.value = ''
+    },
+    [attach]
+  )
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragging(false)
+    }
+  }, [])
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setDragging(false)
+      const file = e.dataTransfer?.files?.[0]
+      if (file) attach.add(file)
+    },
+    [attach]
+  )
+
+  /** Pending bubble attachments that need to be associated with the next user message. */
+  const pendingBubbleAtts = useRef<BubbleAttachment[] | null>(null)
+  /** Parsed attachment results waiting to be rendered as cards. */
+  const [parsedResults, setParsedResults] = useState<(ParsedResultData & { _error?: boolean })[]>([])
+
+  // Associate pending attachments with the latest user message once it appears.
+  useEffect(() => {
+    if (!pendingBubbleAtts.current) return
+    const lastUser = [...chat.messages].reverse().find((m) => m.role === 'user')
+    if (lastUser && !messageAttachments[lastUser.id]) {
+      setMessageAttachments((prev) => ({
+        ...prev,
+        [lastUser.id]: pendingBubbleAtts.current!,
+      }))
+      pendingBubbleAtts.current = null
+    }
+  }, [chat.messages, messageAttachments])
+
+  /** Convert a blob URL to a data URL so it survives revocation. */
+  const blobToDataUrl = useCallback((blobUrl: string): Promise<string> => {
+    return fetch(blobUrl)
+      .then((r) => r.blob())
+      .then(
+        (blob) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+      )
+  }, [])
+
+  /** Send a text message that may have attachments. Files are uploaded to
+   *  /api/chat/attachments and the parsed result is shown as a card. */
+  const handleSendWithAttachments = useCallback(
+    async (text: string) => {
+      const currentAttachments = attach.attachments
+      const trimmed = text.trim()
+
+      // Build bubble attachments — convert blob URLs to data URLs before clearing
+      const bubbleAtts: BubbleAttachment[] = await Promise.all(
+        currentAttachments.map(async (a) => ({
+          kind: a.kind,
+          name: a.name,
+          size: a.size,
+          url: a.previewUrl ? await blobToDataUrl(a.previewUrl) : undefined,
+        }))
+      )
+
+      // Determine the text for the user message
+      const messageText = trimmed || (
+        currentAttachments.length === 1
+          ? currentAttachments[0]!.name
+          : `${currentAttachments.length} files`
+      )
+
+      // Queue bubble attachments to be associated with the next user message
+      if (bubbleAtts.length > 0) {
+        pendingBubbleAtts.current = bubbleAtts
+      }
+
+      sendText(messageText)
+
+      // If there are files, upload them for AI parsing
+      if (currentAttachments.length > 0) {
+        const formData = new FormData()
+        currentAttachments.forEach((att) => formData.append('files', att.file))
+
+        fetch('/api/chat/attachments', { method: 'POST', body: formData })
+          .then((res) => {
+            if (!res.ok) throw new Error('Upload failed')
+            return res.json()
+          })
+          .then((data: ParsedResultData) => {
+            setParsedResults((prev) => [...prev, data])
+          })
+          .catch((err) => {
+            console.error('Attachment upload failed:', err)
+            setParsedResults((prev) => [
+              ...prev,
+              { source: 'receipt' as const, sourceName: '', rows: [], _error: true } as ParsedResultData & { _error?: boolean },
+            ])
+          })
+      }
+
+      setInput('')
+      attach.clear()
+    },
+    [attach, sendText, blobToDataUrl]
+  )
+
   const voiceButtonStatus: VoiceButtonStatus = voice.isRecording
     ? 'recording'
     : voice.isTranscribing
@@ -286,7 +456,13 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
 
           {/* Messages */}
           <ErrorBoundary>
-            <main className="flex-1 overflow-y-auto min-h-0 px-4 md:px-0 pt-4 pb-4 flex flex-col gap-3.5">
+            <main
+              className="flex-1 overflow-y-auto min-h-0 px-4 md:px-0 pt-4 pb-4 flex flex-col gap-3.5 relative"
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {dragging && <DropOverlay />}
           {chat.messages.length === 0 && !initialPrompt && (
             <div className="flex flex-col gap-2 pt-4">
               <p className="font-grotesk text-[17px] leading-normal text-truffle-text2 px-1 pb-2">
@@ -422,6 +598,7 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
                       traceId={traceId}
                       reaction={reactions[message.id] ?? null}
                       onReact={(tid, score) => handleReact(tid, score, message.id)}
+                      attachments={messageAttachments[message.id]}
                     />
                   ) : null
                 })()}
@@ -474,12 +651,70 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
             </NoticeSlip>
           )}
 
+          {/* Parsed attachment results */}
+          {parsedResults.map((result, i) =>
+            result._error ? (
+              <NoticeSlip key={`parsed-err-${i}`} tone="warning" title="COULDN'T READ THIS">
+                I couldn&apos;t read this clearly. The image might be blurry or the format isn&apos;t supported.
+                <button
+                  type="button"
+                  onClick={() => {
+                    setParsedResults((prev) => prev.filter((_, idx) => idx !== i))
+                    openPicker()
+                  }}
+                  className="key key-plain h-11 text-[13px] uppercase mt-2"
+                >
+                  TRY AGAIN
+                </button>
+              </NoticeSlip>
+            ) : result.rows.length > 0 ? (
+              <ParsedResultCard
+                key={`parsed-${i}`}
+                data={result}
+                onConfirm={async (rows) => {
+                  try {
+                    const res = await fetch('/api/transactions', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        userId,
+                        transactions: rows.map((r) => ({
+                          userId,
+                          amount: r.amount,
+                          currency,
+                          description: r.description,
+                          category: r.category,
+                          date: r.date,
+                          isRecurring: false,
+                        })),
+                      }),
+                    })
+                    if (!res.ok) console.error('Transaction POST failed:', res.status)
+                    // Remove this result from the list after confirmation
+                    setParsedResults((prev) => prev.filter((_, idx) => idx !== i))
+                  } catch (err) {
+                    console.error('Failed to log parsed transactions:', err)
+                  }
+                }}
+              />
+            ) : null
+          )}
+
           <div ref={messagesEndRef} />
         </main>
       </ErrorBoundary>
 
           {/* Composer */}
           <div className="flex-shrink-0 px-4 md:px-0 pt-6 pb-2.5 flex flex-col gap-2">
+            {/* Hidden file input — triggered by the picker */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFileSelected}
+              tabIndex={-1}
+            />
+
             {voice.error && (
               <NoticeSlip
                 tone={voice.error === MIC_UNAVAILABLE_ERROR ? 'muted' : 'warning'}
@@ -507,116 +742,180 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
               </div>
             )}
 
-            {typing && (
+            {/* Relative wrapper for the popover positioning */}
+            <div className="relative flex flex-col gap-2">
+              {/* Picker (popover on md+, sheet on mobile) */}
+              {pickerOpen && (
+                <AttachPicker
+                  variant={typeof window !== 'undefined' && window.innerWidth < 768 ? 'sheet' : 'popover'}
+                  slotsLeft={attach.slotsLeft}
+                  onPick={handlePick}
+                  onClose={() => setPickerOpen(false)}
+                />
+              )}
+
+              {/* Mobile text input row (when typing) */}
+              {typing && (
+                <form
+                  id="chat-form"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const text = input.trim()
+                    if (!text && attach.attachments.length === 0) return
+                    handleSendWithAttachments(text)
+                  }}
+                  className="grid grid-cols-[1fr_52px] gap-2 md:hidden"
+                >
+                  <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={t.chat.typePlaceholder}
+                    aria-label={t.chat.typePlaceholder}
+                    autoFocus
+                    className="field h-[52px] font-grotesk text-base"
+                  />
+                  <button
+                    type="submit"
+                    disabled={chat.isLoading || (!input.trim() && attach.attachments.length === 0)}
+                    aria-label={t.chat.send}
+                    className="key key-ink h-[52px] text-lg"
+                  >
+                    ↵
+                  </button>
+                </form>
+              )}
+
+              {/* Preview strip (shown when files are attached) */}
+              <AttachPreviewStrip
+                attachments={attach.attachments}
+                error={attach.error}
+                onRemove={attach.remove}
+              />
+
+              {/* Mobile: + button, voice, type toggle */}
+              <div className="grid grid-cols-[52px_1fr_64px] gap-2 md:hidden">
+                <button
+                  type="button"
+                  onClick={openPicker}
+                  aria-label="Attach a file"
+                  aria-disabled={attach.isFull}
+                  className="key key-plain w-[52px] h-[52px] flex items-center justify-center"
+                  style={{ opacity: attach.isFull ? 0.45 : 1 }}
+                >
+                  <span className="w-5 h-5 border-[1.5px] border-current rounded-full box-border flex items-center justify-center text-[15px] leading-none text-truffle-text2">
+                    +
+                  </span>
+                </button>
+                <VoiceButton
+                  status={voiceButtonStatus}
+                  onStart={voice.startRecording}
+                  onStop={voice.stopRecording}
+                  onStopSpeaking={chat.cancelSpeech}
+                />
+                <button
+                  type="button"
+                  onClick={() => setTyping((v) => !v)}
+                  aria-pressed={typing}
+                  aria-label={t.voice.typeInstead}
+                  className={`key h-[72px] text-sm ${typing ? 'key-ink' : 'key-plain'}`}
+                >
+                  Aa
+                </button>
+              </div>
+
+              {/* Tablet: + button, input, send, voice inline */}
               <form
-                id="chat-form"
+                className="hidden md:flex xl:hidden gap-2.5 items-center border-t border-dashed border-truffle-border pt-4 mt-2"
                 onSubmit={(e) => {
                   e.preventDefault()
                   const text = input.trim()
-                  if (!text) return
-                  setInput('')
-                  sendText(text)
+                  if (!text && attach.attachments.length === 0) return
+                  handleSendWithAttachments(text)
                 }}
-                className="grid grid-cols-[1fr_64px] gap-2 md:hidden"
               >
+                <button
+                  type="button"
+                  onClick={openPicker}
+                  aria-label="Attach a file"
+                  aria-disabled={attach.isFull}
+                  className="key key-plain flex-none w-14 h-14 flex items-center justify-center"
+                  style={{ opacity: attach.isFull ? 0.45 : 1 }}
+                >
+                  <span className="w-5 h-5 border-[1.5px] border-current rounded-full box-border flex items-center justify-center text-[15px] leading-none text-truffle-text2">
+                    +
+                  </span>
+                </button>
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={t.chat.typePlaceholder}
                   aria-label={t.chat.typePlaceholder}
-                  autoFocus
-                  className="field h-[52px] font-grotesk text-base"
+                  className="field h-14 flex-1 min-w-0 font-grotesk text-base"
                 />
                 <button
                   type="submit"
-                  disabled={chat.isLoading || !input.trim()}
-                  aria-label={t.chat.send}
-                  className="key key-ink h-[52px] text-lg"
+                  className="key key-line h-14 w-14 flex-none text-base font-bold"
+                  disabled={chat.isLoading || (!input.trim() && attach.attachments.length === 0)}
+                >
+                  ↵
+                </button>
+                <VoiceButton
+                  status={voiceButtonStatus}
+                  onStart={voice.startRecording}
+                  onStop={voice.stopRecording}
+                  onStopSpeaking={chat.cancelSpeech}
+                  className="h-14 w-[180px] flex-none"
+                />
+              </form>
+
+              {/* Desktop: + button, input, send */}
+              <form
+                className="hidden xl:grid grid-cols-[56px_1fr_56px] gap-2.5 border-t border-dashed border-truffle-border pt-4 mt-2"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const text = input.trim()
+                  if (!text && attach.attachments.length === 0) return
+                  handleSendWithAttachments(text)
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={openPicker}
+                  aria-label="Attach a file"
+                  aria-disabled={attach.isFull}
+                  className="key key-plain w-14 h-14 flex items-center justify-center"
+                  style={{ opacity: attach.isFull ? 0.45 : 1 }}
+                >
+                  <span className="w-5 h-5 border-[1.5px] border-current rounded-full box-border flex items-center justify-center text-[15px] leading-none text-truffle-text2">
+                    +
+                  </span>
+                </button>
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask, log, or drop a receipt…"
+                  aria-label={t.chat.typePlaceholder}
+                  className="field h-14 font-grotesk text-base"
+                />
+                <button
+                  type="submit"
+                  className="key key-line h-14 text-base font-bold"
+                  disabled={chat.isLoading || (!input.trim() && attach.attachments.length === 0)}
                 >
                   ↵
                 </button>
               </form>
-            )}
-
-            {/* Mobile: voice + type toggle */}
-            <div className="grid grid-cols-[1fr_64px] gap-2 md:hidden">
-              <VoiceButton
-                status={voiceButtonStatus}
-                onStart={voice.startRecording}
-                onStop={voice.stopRecording}
-                onStopSpeaking={chat.cancelSpeech}
-              />
-              <button
-                type="button"
-                onClick={() => setTyping((v) => !v)}
-                aria-pressed={typing}
-                aria-label={t.voice.typeInstead}
-                className={`key h-[72px] text-sm ${typing ? 'key-ink' : 'key-plain'}`}
-              >
-                Aa
-              </button>
             </div>
 
-            {/* Tablet: input + send + voice inline */}
-            <form
-              className="hidden md:flex xl:hidden gap-2 items-center border-t border-dashed border-truffle-border pt-4 mt-2"
-              onSubmit={(e) => {
-                e.preventDefault()
-                const text = input.trim()
-                if (!text) return
-                setInput('')
-                sendText(text)
-              }}
-            >
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={t.chat.typePlaceholder}
-                aria-label={t.chat.typePlaceholder}
-                className="field h-14 flex-1 min-w-0 font-grotesk text-base"
-              />
-              <button
-                type="submit"
-                className="key key-line h-14 w-14 flex-none text-base font-bold"
-                disabled={chat.isLoading || !input.trim()}
+            {/* Toast: max 3 files */}
+            {attach.toast && (
+              <div
+                role="status"
+                className="fixed left-1/2 bottom-[170px] md:bottom-[120px] z-[35] -translate-x-1/2 bg-truffle-text text-truffle-bg px-3.5 py-2.5 rounded-lg text-xs font-bold tracking-[.04em] whitespace-nowrap print-in"
               >
-                ↵
-              </button>
-              <VoiceButton
-                status={voiceButtonStatus}
-                onStart={voice.startRecording}
-                onStop={voice.stopRecording}
-                onStopSpeaking={chat.cancelSpeech}
-                className="h-14 w-[180px] flex-none"
-              />
-            </form>
-
-            {/* Desktop: text input row */}
-            <form
-              className="hidden xl:grid grid-cols-[1fr_56px] gap-2 border-t border-dashed border-truffle-border pt-4 mt-2"
-              onSubmit={(e) => {
-                e.preventDefault()
-                const text = input.trim()
-                if (!text) return
-                setInput('')
-                sendText(text)
-              }}
-            >
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={t.chat.typePlaceholder}
-                aria-label={t.chat.typePlaceholder}
-                className="field h-14 font-grotesk text-base"
-              />
-              <button
-                type="submit"
-                className="key key-line h-14 text-base font-bold"
-                disabled={chat.isLoading || !input.trim()}
-              >
-                ↵
-              </button>
-            </form>
+                ■ Max 3 files per message
+              </div>
+            )}
           </div>
         </div>
 
@@ -638,6 +937,25 @@ export function ChatPage({ userId, name, initialMessages, initialPrompt }: ChatP
           </div>
           <span className="text-[10px] tracking-[.06em] text-truffle-text2 text-center">
             HOLD SPACE ANYWHERE · CLICK KEY TO CYCLE STATES
+          </span>
+          {attach.attachments.length > 0 && (
+            <>
+              <div className="flex gap-2 text-xs pt-1.5 border-t border-dashed border-truffle-border">
+                <span>Attached</span>
+                <span className="flex-1 min-w-[10px] border-b-2 border-dotted border-truffle-border mb-[5px]" />
+                <b>{attach.attachments.length} FILE{attach.attachments.length === 1 ? '' : 'S'}</b>
+              </div>
+              <span className="font-grotesk text-sm leading-[1.45] text-truffle-text2">
+                Files send with whatever you say next.
+              </span>
+            </>
+          )}
+          <div className="mt-auto flex items-center gap-1.5 text-truffle-text2">
+            <span className="text-[13px]">✂</span>
+            <span className="flex-1 border-t border-dashed border-truffle-text2" />
+          </div>
+          <span className="font-grotesk text-sm leading-[1.5] text-truffle-text2">
+            Drop receipts, PDF statements or CSVs anywhere in the chat. Hold SPACE to talk.
           </span>
         </aside>
       </div>

@@ -1,8 +1,16 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { PhotoLightbox } from './PhotoLightbox'
+
+export interface BubbleAttachment {
+  kind: 'photo' | 'pdf' | 'csv'
+  name: string
+  size: string
+  url?: string
+}
 
 interface ChatBubbleProps {
   role: 'user' | 'assistant'
@@ -14,6 +22,7 @@ interface ChatBubbleProps {
   traceId?: string
   reaction?: 1 | -1 | null
   onReact?: (traceId: string, score: 1 | -1) => void
+  attachments?: BubbleAttachment[]
 }
 
 /** You speak in ink; Truffle replies on a torn slip. */
@@ -26,24 +35,78 @@ export const ChatBubble = memo(function ChatBubble({
   traceId,
   reaction,
   onReact,
+  attachments,
 }: ChatBubbleProps) {
   const { t } = useLanguage()
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const time = timestamp
     ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : null
 
   if (role === 'user') {
+    const hasAttachments = attachments && attachments.length > 0
     return (
-      <motion.div
-        className="self-end max-w-[80%] bg-truffle-text text-truffle-bg rounded-lg px-3.5 py-3 font-grotesk text-base leading-[1.4]"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.24, ease: 'easeOut' }}
-        aria-label={name ? `${name}: ${content}` : undefined}
-      >
-        <p className="whitespace-pre-wrap break-words">{content}</p>
-        {time && <p className="font-mono text-[11px] opacity-70 pt-1 text-right">{time}</p>}
-      </motion.div>
+      <>
+        <motion.div
+          className={`self-end ${hasAttachments ? 'max-w-[85%]' : 'max-w-[80%]'} bg-truffle-text text-truffle-bg rounded-lg ${hasAttachments ? 'p-2 pb-3' : 'px-3.5 py-3'} font-grotesk text-base leading-[1.4]`}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.24, ease: 'easeOut' }}
+          aria-label={name ? `${name}: ${content}` : undefined}
+        >
+          {/* Photo attachment */}
+          {hasAttachments && attachments.map((att, i) => (
+            att.kind === 'photo' && att.url ? (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setLightboxSrc(att.url!)}
+                aria-label="Expand photo"
+                className="block w-[180px] max-w-full rounded-md overflow-hidden cursor-zoom-in self-end mb-1"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={att.url}
+                  alt={att.name}
+                  className="w-full max-h-[240px] object-cover"
+                />
+              </button>
+            ) : att.kind !== 'photo' ? (
+              <div
+                key={i}
+                className="rounded-md bg-truffle-bg/[.15] px-3 py-2.5 mb-1 flex items-center gap-2.5"
+              >
+                <div className="flex-none w-[18px] h-[22px] border-[1.5px] border-current rounded-sm box-border flex items-center justify-center text-[6px] font-bold opacity-80">
+                  {att.kind.toUpperCase()}
+                </div>
+                <div className="min-w-0 flex flex-col gap-0.5">
+                  <span className="font-grotesk text-sm truncate">{att.name}</span>
+                  <span className="text-[11px] tracking-[.06em] opacity-60 uppercase">
+                    {att.size}
+                  </span>
+                </div>
+              </div>
+            ) : null
+          ))}
+          {content && (
+            <p className={`whitespace-pre-wrap break-words ${hasAttachments ? 'px-1.5 pt-1' : ''}`}>
+              {content}
+            </p>
+          )}
+          {time && (
+            <p className={`font-mono text-[11px] opacity-70 pt-1 text-right ${hasAttachments ? 'px-1.5' : ''}`}>
+              {time}
+            </p>
+          )}
+        </motion.div>
+        {lightboxSrc && (
+          <PhotoLightbox
+            src={lightboxSrc}
+            alt="Attached photo"
+            onClose={() => setLightboxSrc(null)}
+          />
+        )}
+      </>
     )
   }
 
