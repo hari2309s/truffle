@@ -14,10 +14,9 @@ const MIN_INTERVAL_MS = 1500
 /**
  * One-click demo sign-in.
  *
- * Truffle only does passwordless magic-link auth, so there is no password to
- * hand a visitor. Instead we mint a one-time magic-link token for the demo
- * account with the admin API (no captcha, no email round-trip) and immediately
- * exchange it for a session on the response cookies.
+ * Rather than sharing demo credentials, we mint a one-time admin token for the
+ * demo account (no captcha, no email round-trip) and immediately exchange it
+ * for a session on the response cookies.
  *
  * Enabled only when DEMO_USER_EMAIL is set and NEXT_PUBLIC_DEMO_ENABLED === '1'.
  * The account and its data are created by `pnpm seed:demo` and refreshed nightly
@@ -75,7 +74,7 @@ export async function POST(request: Request) {
       email: demoEmail,
     })
     const tokenHash = data?.properties?.hashed_token
-    if (error || !tokenHash) throw error ?? new Error('no magic-link token returned')
+    if (error || !tokenHash) throw error ?? new Error('no admin token returned')
 
     const cookieStore = await cookies()
     const supabase = createServerClient(supabaseUrl, anonKey, {

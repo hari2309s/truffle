@@ -75,7 +75,7 @@ Talk to your money. Truffle listens, understands, and surfaces what's hiding ben
 On the sign-in screen, tap **Explore the demo →** to drop straight into a
 furnished account — eight months of transactions (slid forward to end today),
 savings goals, budgets, a saving habit, and detected anomalies. No sign-up, no
-email. The account is passwordless: the button mints a one-time magic-link token server-side
+password needed. The button mints a one-time token server-side
 ([`/api/auth/demo`](apps/web/src/app/api/auth/demo/route.ts)) and exchanges it
 for a session. A nightly GitHub Action
 ([`demo-reset.yml`](.github/workflows/demo-reset.yml)) rebuilds it so it looks
@@ -219,6 +219,9 @@ NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 CEREBRAS_API_KEY=                    # Cerebras — gpt-oss-120b (free tier)
 OPENROUTER_API_KEY=                  # OpenRouter — llama-3.3-70b-instruct:free (free tier)
 MISTRAL_API_KEY=                     # Mistral — mistral-small-latest (free tier)
+
+# Optional — Google SSO (configure in Supabase Dashboard → Auth → Providers → Google)
+# No env vars needed here — Google OAuth is configured in the Supabase dashboard
 
 # Optional — one-click demo account (see "Try it")
 DEMO_USER_EMAIL=                     # email that owns the seeded sample data
@@ -435,7 +438,7 @@ pnpm test:e2e:ui       # interactive Playwright UI
 
 | Suite | What's covered |
 |---|---|
-| `auth.spec.ts` | Auth page rendering, email form, OTP confirmation screen, expired-link error |
+| `auth.spec.ts` | Auth page rendering, email + password form, Google SSO button, sign-in/sign-up toggle, error states |
 | `navigation-guards.spec.ts` | `/chat` and `/insights` redirect to `/` when unauthenticated |
 
 ---

@@ -32,7 +32,7 @@ function readToken(params: URLSearchParams | FormData) {
   return { tokenHash, type: type as EmailOtpType }
 }
 
-/** One tap to continue: a POST, so neither a mail scanner nor a planted link signs anyone in. */
+/** One tap to confirm: a POST, so neither a mail scanner nor a planted link verifies anyone automatically. */
 function continuePage(tokenHash: string, type: string) {
   return `<!doctype html>
 <html lang="en">
@@ -40,7 +40,7 @@ function continuePage(tokenHash: string, type: string) {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex" />
-<title>Sign in to Truffle</title>
+<title>Verify your email — Truffle</title>
 <style>
   :root { --bg:#e9e5dd; --card:#fffdf8; --text:#1b1a18; --text2:#5c5851; --border:#cfc7b9; --accent:#f6bd87; }
   @media (prefers-color-scheme: dark) {
@@ -61,14 +61,14 @@ function continuePage(tokenHash: string, type: string) {
 </head>
 <body>
 <main>
-  <div class="eyebrow">Truffle · Sign in</div>
+  <div class="eyebrow">Truffle · Verify email</div>
   <hr />
-  <h1>Continue to Truffle</h1>
-  <p>Tap to finish signing in on this device.</p>
+  <h1>Verify your email</h1>
+  <p>Tap to confirm your email address and sign in.</p>
   <form method="post" action="/auth/confirm">
     <input type="hidden" name="token_hash" value="${tokenHash}" />
     <input type="hidden" name="type" value="${type}" />
-    <button type="submit">Continue →</button>
+    <button type="submit">Verify & continue →</button>
   </form>
 </main>
 </body>
@@ -76,10 +76,10 @@ function continuePage(tokenHash: string, type: string) {
 }
 
 /**
- * Email links land here. A token hash (the current template) verifies in any
- * browser, unlike PKCE — but only after the user taps Continue. A PKCE code
- * (templates still on {{ .ConfirmationURL }}) is exchanged directly; it only
- * works in the browser that asked for the link.
+ * Email verification links land here after sign-up. A token hash verifies in
+ * any browser — but only after the user taps "Verify". A PKCE code (templates
+ * still on {{ .ConfirmationURL }}) is exchanged directly; it only works in the
+ * browser that requested the sign-up.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)

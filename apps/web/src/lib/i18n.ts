@@ -4,12 +4,20 @@ export interface Translations {
   auth: {
     tagline: string
     emailPlaceholder: string
+    passwordPlaceholder: string
     invalidEmail: string
-    continueWithEmail: string
-    sending: string
+    invalidPassword: string
+    signIn: string
+    signUp: string
+    signingIn: string
+    signingUp: string
+    continueWithGoogle: string
+    orDivider: string
+    switchToSignUp: string
+    switchToSignIn: string
     footer: string
-    checkEmail: string
-    magicLinkSent: (email: string) => string
+    signUpSuccess: string
+    confirmEmail: (email: string) => string
     demoButton: string
     demoHint: string
     receiptTalk: string
@@ -681,14 +689,22 @@ export const translations: Record<Locale, Translations> = {
     auth: {
       tagline: 'Your finances, unearthed.',
       emailPlaceholder: 'your@email.com',
+      passwordPlaceholder: 'Password',
       invalidEmail: 'Enter a valid email address.',
-      continueWithEmail: 'Continue with email',
-      sending: 'Sending...',
-      footer: 'Sign in with a magic link · No password needed',
-      checkEmail: 'Check your email',
-      magicLinkSent: (email) =>
-        `We sent a magic link to ${email}. Click it to sign in — no password needed.`,
-      demoButton: 'Explore the demo →',
+      invalidPassword: 'Password must be at least 6 characters.',
+      signIn: 'Sign in',
+      signUp: 'Create account',
+      signingIn: 'Signing in\u2026',
+      signingUp: 'Creating account\u2026',
+      continueWithGoogle: 'Continue with Google',
+      orDivider: 'or',
+      switchToSignUp: "Don\u2019t have an account? Sign up",
+      switchToSignIn: 'Already have an account? Sign in',
+      footer: 'Your data stays yours',
+      signUpSuccess: 'Account created!',
+      confirmEmail: (email) =>
+        `We sent a confirmation link to ${email}. Check your inbox to verify your account.`,
+      demoButton: 'Explore the demo \u2192',
       demoHint: 'A furnished account with sample data. No sign-up.',
       receiptTalk: 'Talk to your money',
       receiptSee: 'See what’s going on',
@@ -969,7 +985,7 @@ export const translations: Record<Locale, Translations> = {
       insights: 'Insights',
     },
     home: {
-      authExpiredError: 'Sign-in link expired or already used. Please request a new one.',
+      authExpiredError: 'Sign-in failed. Please try again.',
       demoUnavailableError: 'The demo is temporarily unavailable. Please try again in a moment.',
     },
     categories: {

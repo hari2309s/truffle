@@ -331,7 +331,7 @@ export const translations: Record<Locale, LandingTranslations> = {
       steps: [
         {
           title: 'Sign up in seconds',
-          desc: 'Just your email and a magic link. No password, no bank details, ever.',
+          desc: 'Email and password, or one tap with Google. No bank details, ever.',
           meta: { label: 'Time', value: '~30 seconds · No card' },
         },
         {
@@ -453,7 +453,7 @@ export const translations: Record<Locale, LandingTranslations> = {
             items: [
               {
                 title: 'Your email address',
-                desc: 'Used to create and authenticate your account via magic link. We never store a password.',
+                desc: 'Used to create and authenticate your account. Passwords are securely hashed — we never store them in plain text.',
               },
               {
                 title: 'Transactions you enter',
@@ -561,7 +561,7 @@ export const translations: Record<Locale, LandingTranslations> = {
             heading: '3. Your account',
             items: [
               'You must be at least 18 years old to use Truffle.',
-              'You are responsible for keeping your magic link emails private and your account secure.',
+              'You are responsible for keeping your login credentials private and your account secure.',
               'You are responsible for all activity that occurs under your account.',
               'One account per person. Do not create accounts on behalf of others without their knowledge.',
             ],
@@ -750,7 +750,7 @@ export const translations: Record<Locale, LandingTranslations> = {
       steps: [
         {
           title: 'In Sekunden registriert',
-          desc: 'Nur deine E-Mail und ein Anmeldelink. Kein Passwort, niemals Bankdaten.',
+          desc: 'E-Mail und Passwort oder ein Tipp mit Google. Niemals Bankdaten.',
           meta: { label: 'Zeit', value: '~30 Sekunden · Ohne Karte' },
         },
         {
@@ -891,7 +891,7 @@ export const translations: Record<Locale, LandingTranslations> = {
             items: [
               {
                 title: 'Deine E-Mail-Adresse',
-                desc: 'Zum Anlegen deines Kontos und zur Anmeldung per Anmeldelink. Wir speichern niemals ein Passwort.',
+                desc: 'Zum Anlegen und Authentifizieren deines Kontos. Passwörter werden sicher gehasht — niemals im Klartext gespeichert.',
               },
               {
                 title: 'Von dir erfasste Buchungen',
@@ -999,7 +999,7 @@ export const translations: Record<Locale, LandingTranslations> = {
             heading: '3. Dein Konto',
             items: [
               'Du musst mindestens 18 Jahre alt sein, um Truffle zu nutzen.',
-              'Du bist dafür verantwortlich, deine Anmelde-E-Mails privat und dein Konto sicher zu halten.',
+              'Du bist dafür verantwortlich, deine Zugangsdaten privat und dein Konto sicher zu halten.',
               'Du bist für alle Aktivitäten unter deinem Konto verantwortlich.',
               'Ein Konto pro Person. Lege keine Konten für andere ohne deren Wissen an.',
             ],
