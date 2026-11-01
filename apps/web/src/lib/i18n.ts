@@ -5,8 +5,10 @@ export interface Translations {
     tagline: string
     emailPlaceholder: string
     passwordPlaceholder: string
+    confirmPasswordPlaceholder: string
     invalidEmail: string
     invalidPassword: string
+    passwordMismatch: string
     signIn: string
     signUp: string
     signingIn: string
@@ -690,8 +692,10 @@ export const translations: Record<Locale, Translations> = {
       tagline: 'Your finances, unearthed.',
       emailPlaceholder: 'your@email.com',
       passwordPlaceholder: 'Password',
+      confirmPasswordPlaceholder: 'Confirm password',
       invalidEmail: 'Enter a valid email address.',
       invalidPassword: 'Password must be at least 6 characters.',
+      passwordMismatch: 'Passwords do not match.',
       signIn: 'Sign in',
       signUp: 'Create account',
       signingIn: 'Signing in\u2026',

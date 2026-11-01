@@ -20,6 +20,7 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
   const posthog = usePostHog()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [mode, setMode] = useState<AuthMode>('sign-in')
   const [signUpDone, setSignUpDone] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -35,6 +36,10 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
     }
     if (password.length < 6) {
       setError(t.auth.invalidPassword)
+      return
+    }
+    if (mode === 'sign-up' && password !== confirmPassword) {
+      setError(t.auth.passwordMismatch)
       return
     }
     if (!captchaToken) return
@@ -186,6 +191,28 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
                   minLength={6}
                 />
 
+                {mode === 'sign-up' && (
+                  <>
+                    <label htmlFor="auth-confirm-password" className="sr-only">
+                      {t.auth.confirmPasswordPlaceholder}
+                    </label>
+                    <input
+                      id="auth-confirm-password"
+                      type="password"
+                      placeholder={t.auth.confirmPasswordPlaceholder}
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value)
+                        if (error) setError(null)
+                      }}
+                      autoComplete="new-password"
+                      className="field h-14 text-[15px] text-center"
+                      required
+                      minLength={6}
+                    />
+                  </>
+                )}
+
                 {SITE_KEY && (
                   <Turnstile
                     ref={turnstileRef}
@@ -221,6 +248,7 @@ export function AuthPage({ error: initialError = null }: { error?: string | null
                 type="button"
                 onClick={() => {
                   setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')
+                  setConfirmPassword('')
                   setError(null)
                 }}
                 className="text-xs text-truffle-text2 text-center underline underline-offset-2"
