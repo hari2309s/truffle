@@ -37,10 +37,10 @@ test.describe('Auth page', () => {
     await page.goto('/')
     // Default is sign-in
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible()
-    await expect(page.getByText("Don't have an account? Sign up")).toBeVisible()
+    await expect(page.getByText(/Don.t have an account\? Sign up/)).toBeVisible()
 
     // Switch to sign-up
-    await page.getByText("Don't have an account? Sign up").click()
+    await page.getByText(/Don.t have an account\? Sign up/).click()
     await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible()
     await expect(page.getByText('Already have an account? Sign in')).toBeVisible()
 
