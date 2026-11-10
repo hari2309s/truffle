@@ -9,7 +9,8 @@ const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY })
 
 // Groq retired the Llama 3.x chat models in 2026 — GPT-OSS 120B is the current
 // general-purpose / reasoning workhorse on GroqCloud.
-export const chatModel = groq('openai/gpt-oss-120b')
+export const CHAT_MODEL_ID = 'openai/gpt-oss-120b'
+export const chatModel = groq(CHAT_MODEL_ID)
 
 // Groq's Llama 4 Scout (the old vision model) was deprecated in 2026. Receipt /
 // statement extraction now runs on Gemini 3.7 Flash, which handles both images

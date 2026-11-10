@@ -539,6 +539,15 @@ export interface Translations {
       'unusual_amount' | 'forgotten_subscription' | 'category_spike' | 'new_merchant',
       string
     >
+    trends: {
+      title: string
+      aboveUsual: (pct: string) => string
+      vsAverage: string
+      thisMonth: string
+      usual: string
+      noTrends: string
+      askTruffle: string
+    }
   }
   savingsGoals: {
     title: string
@@ -1283,6 +1292,15 @@ export const translations: Record<Locale, Translations> = {
         forgotten_subscription: 'Forgotten subscription',
         category_spike: 'Category spike',
         new_merchant: 'New merchant',
+      },
+      trends: {
+        title: 'Spend Trends',
+        aboveUsual: (pct) => `+${pct}% vs usual`,
+        vsAverage: 'vs 3-mo avg',
+        thisMonth: 'This month',
+        usual: 'Usual',
+        noTrends: 'Spending is in line with your usual patterns',
+        askTruffle: 'Ask Truffle about this',
       },
     },
     savingsGoals: {

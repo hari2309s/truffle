@@ -27,6 +27,7 @@ import { computeStatement } from '@/lib/forecast'
 import { formatMoney, formatSignedMoney } from '@/lib/money'
 import { budgetView, spendByCategory as categorySpend } from '@/lib/budgets'
 import { detectRecurring, recurringSince, type RecurringGroup } from '@/lib/recurring'
+import { detectSpendTrends } from '@/lib/spend-trends'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -155,6 +156,14 @@ export async function POST(request: NextRequest) {
     // The recurring detector's own window, so chat and Insights find the same items.
     const historyFromStr = recurringSince(now)
 
+    // Ensure snapshot query covers at least 3 months before the current month so
+    // spend trend detection has a baseline to compare against.
+    const trendBaselineFrom = (() => {
+      const d = new Date(now.getFullYear(), now.getMonth() - 3, 1)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    })()
+    const snapshotFrom = trendBaselineFrom < dateRange.from ? trendBaselineFrom : dateRange.from
+
     const [
       { data: txRows },
       { data: snapshotRows },
@@ -178,7 +187,7 @@ export async function POST(request: NextRequest) {
         .from('monthly_snapshots')
         .select('data')
         .eq('user_id', userId)
-        .gte('month', dateRange.from)
+        .gte('month', snapshotFrom)
         .lte('month', dateRange.to)
         .order('month', { ascending: true }),
       db
@@ -312,6 +321,9 @@ export async function POST(request: NextRequest) {
     // Current-month spend per category, from the complete month (not just
     // the latest transactions), and budgets as the Insights page shows them.
     const spendByCategory = categorySpend(recentRows, currentMonth)
+    // Spend trends: compare current month to 3-month rolling average
+    const baselineSnapshots = snapshots.filter((s) => s.month < currentMonth).slice(-3)
+    const spendTrends = detectSpendTrends(spendByCategory, baselineSnapshots)
     const budgetRows = (rawBudgetRows ?? []).map((b: Record<string, unknown>) => {
       const view = budgetView(
         {
@@ -388,6 +400,7 @@ export async function POST(request: NextRequest) {
         habitRows,
         budgetRows,
         spendByCategory,
+        spendTrends,
         facts,
         currencyCode: currency,
         locale,

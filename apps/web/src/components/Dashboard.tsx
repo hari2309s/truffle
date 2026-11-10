@@ -16,6 +16,8 @@ import { OfflineBar } from './OfflineBar'
 import { PageEnter } from './PageMotion'
 import { HomeBudgets, HomeSavingsGoals, HomeSavingsHabits } from './HomeCards'
 import { RecurringSnapshot } from './RecurringSnapshot'
+import { HomeSpendTrends } from './SpendTrends'
+import { useInsightsQuery } from '@/hooks/useInsightsQuery'
 import { ChatRail } from './ChatRail'
 import { ChatDrawer } from './ChatDrawer'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
@@ -43,6 +45,7 @@ export function Dashboard({ userId, name }: DashboardProps) {
   const router = useRouter()
   const [activePanel, setActivePanel] = useState<ActivePanel>(null)
   const { data, isLoading } = useTransactionsQuery(userId)
+  const { data: insightsData } = useInsightsQuery(userId)
   const isEmpty = !isLoading && (data?.transactions.length ?? 0) === 0
   const voice = useVoiceRecorder(userId)
 
@@ -218,6 +221,9 @@ export function Dashboard({ userId, name }: DashboardProps) {
                     </ErrorBoundary>
                     <ErrorBoundary>
                       <RecurringSnapshot userId={userId} transactions={data?.transactions ?? []} />
+                    </ErrorBoundary>
+                    <ErrorBoundary>
+                      <HomeSpendTrends trends={insightsData?.trends ?? []} />
                     </ErrorBoundary>
                   </div>
                 </>

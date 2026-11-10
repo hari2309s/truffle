@@ -1,8 +1,12 @@
+import { after } from 'next/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@truffle/db'
-import type { Forecast } from '@truffle/types'
+import type { Forecast, MonthlySnapshot, SpendTrend } from '@truffle/types'
 import { currentYearMonth } from '@/lib/date'
-import { sendMonthlyReportNudge } from '@/lib/proactive-nudge'
+import { sendMonthlyReportNudge, sendSpendTrendNudge } from '@/lib/proactive-nudge'
+import { spendByCategory } from '@/lib/budgets'
+import { detectSpendTrends } from '@/lib/spend-trends'
+import { CATEGORY_EMOJI } from '@/lib/categories'
 import { requireUser } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
@@ -17,8 +21,10 @@ export async function GET(request: NextRequest) {
     // avoid re-triggering on every page load for the rest of the month.
     const dayOfMonth = new Date().getDate()
     if (dayOfMonth <= 3) {
-      void sendMonthlyReportNudge(userId).catch((e) =>
-        console.warn('Monthly report nudge failed (non-fatal):', e)
+      after(() =>
+        sendMonthlyReportNudge(userId).catch((e) =>
+          console.warn('Monthly report nudge failed (non-fatal):', e)
+        )
       )
     }
 
@@ -57,7 +63,7 @@ export async function GET(request: NextRequest) {
     // Compute balance live from current-month transactions only
     const { data: txsRaw, error: txErr } = await db
       .from('transactions')
-      .select('amount, category, date')
+      .select('amount, category, date, currency')
       .eq('user_id', userId)
       .gte('date', `${currentMonth}-01`)
       .lt('date', nextMonthStart)
@@ -71,7 +77,7 @@ export async function GET(request: NextRequest) {
     const truncated = (txsRaw?.length ?? 0) === 2000
     if (truncated) console.warn(`[insights] hit 2000-row cap for user ${userId.slice(0, 8)}…`)
 
-    const txs = (txsRaw ?? []) as { amount: number | string; category: string; date: string }[]
+    const txs = (txsRaw ?? []) as { amount: number | string; category: string; date: string; currency?: string }[]
     const transactionCount = txs.length
 
     const totalIncome = txs
@@ -113,8 +119,86 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Spend trend detection: compare current month to 3-month rolling average
+    let trends: SpendTrend[] = []
+    try {
+      const baselineMonths: string[] = []
+      for (let i = 1; i <= 3; i++) {
+        const d = new Date(year, month - i, 1)
+        baselineMonths.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+      }
+
+      const { data: snapRows } = await db
+        .from('monthly_snapshots')
+        .select('data')
+        .eq('user_id', userId)
+        .in('month', baselineMonths)
+
+      const baselines = ((snapRows ?? []) as Record<string, unknown>[])
+        .map((r) => r.data as unknown as MonthlySnapshot)
+        .filter(Boolean)
+
+      if (baselines.length >= 2) {
+        const currentSpend = spendByCategory(
+          txs as { amount: number; category: string; date: string }[],
+          currentMonth
+        )
+        trends = detectSpendTrends(currentSpend, baselines)
+
+        // Fire spend trend nudges on page load (fire-and-forget), but only for
+        // the live month — nudges about past months are not actionable.
+        const isLiveMonth = currentMonth === currentYearMonth()
+        if (isLiveMonth && trends.length > 0) {
+          const trendsCopy = trends.slice(0, 2)
+          const currencyCode = txs[0]?.currency
+          after(async () => {
+            try {
+              const now = new Date()
+              const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+              const daysRemaining = daysInMonth - now.getDate()
+
+              const { data: goalsData } = await db
+                .from('savings_goals')
+                .select('name, emoji, target_amount, saved_amount')
+                .eq('user_id', userId)
+
+              const goals = (goalsData ?? []).map((g: Record<string, unknown>) => ({
+                name: g.name as string,
+                emoji: g.emoji as string,
+                targetAmount: Number(g.target_amount),
+                savedAmount: Number(g.saved_amount),
+              }))
+
+              await Promise.all(
+                trendsCopy.map((trend) =>
+                  sendSpendTrendNudge({
+                    userId,
+                    category: trend.category,
+                    categoryEmoji:
+                      CATEGORY_EMOJI[trend.category as keyof typeof CATEGORY_EMOJI] ?? '📦',
+                    currentSpend: trend.currentSpend,
+                    averageSpend: trend.averageSpend,
+                    changePct: trend.changePct,
+                    absoluteDelta: trend.absoluteDelta,
+                    month: currentMonth,
+                    daysRemaining,
+                    currencyCode,
+                    goals,
+                  }).catch((e) => console.warn('Spend trend nudge failed (non-fatal):', e))
+                )
+              )
+            } catch (e) {
+              console.warn('Spend trend nudge after() failed:', e)
+            }
+          })
+        }
+      }
+    } catch (e) {
+      console.warn('Spend trend detection failed (non-fatal):', e)
+    }
+
     return NextResponse.json(
-      { anomalies, forecast, truncated },
+      { anomalies, forecast, trends, truncated },
       { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
     )
   } catch (error) {

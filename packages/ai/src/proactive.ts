@@ -6,7 +6,7 @@ import { reviewAnomalies } from './agents/anomalyReviewer'
 import { adviseSavingsGoals } from './agents/savingsGoalAdvisor'
 import { adviseHabit } from './agents/habitAdvisor'
 import { GraphAnnotation } from './graph'
-import { chatModel, groqProviderOptions } from './llm'
+import { CHAT_MODEL_ID, chatModel, groqProviderOptions } from './llm'
 import { langfuseSpanProcessor } from './langfuse'
 import { currentYearMonth } from './date'
 
@@ -148,6 +148,20 @@ interface MonthlyReportTrigger {
   habits: Array<{ name: string; emoji: string; streak: number }>
 }
 
+interface SpendTrendTrigger {
+  type: 'spend_trend'
+  category: string
+  categoryEmoji: string
+  currentSpend: number // positive
+  averageSpend: number // positive, 3-month rolling average
+  changePct: number
+  absoluteDelta: number
+  month: string // YYYY-MM
+  daysRemaining: number
+  currencyCode?: string // 'EUR' | 'GBP' | 'USD', defaults to EUR
+  goals: Array<{ name: string; emoji: string; targetAmount: number; savedAmount: number }>
+}
+
 type ProactiveTrigger =
   | AnomalyTrigger
   | GoalMilestoneTrigger
@@ -156,6 +170,7 @@ type ProactiveTrigger =
   | HabitCheckInTrigger
   | BudgetWarningTrigger
   | MonthlyReportTrigger
+  | SpendTrendTrigger
 
 function getNudgeKey(trigger: ProactiveTrigger): string {
   switch (trigger.type) {
@@ -173,6 +188,8 @@ function getNudgeKey(trigger: ProactiveTrigger): string {
       return `budget-warning:${trigger.category}:${trigger.month}:${trigger.percentUsed >= 100 ? '100' : '80'}`
     case 'monthly_report':
       return `monthly-report:${trigger.month}`
+    case 'spend_trend':
+      return `spend-trend:${trigger.category}:${trigger.month}`
   }
 }
 
@@ -227,7 +244,7 @@ Write 4–6 sentences in flowing prose (no bullet points). Lead with a one-line 
 
     const gen = trace.startObservation(
       'generateMonthlyReport',
-      { model: 'openai/gpt-oss-120b', input: prompt },
+      { model: CHAT_MODEL_ID, input: prompt },
       { asType: 'generation' }
     )
 
@@ -253,14 +270,90 @@ Write 4–6 sentences in flowing prose (no bullet points). Lead with a one-line 
   })
 }
 
+async function generateSpendTrendNudge(
+  trigger: SpendTrendTrigger,
+  userId?: string,
+  userName?: string
+): Promise<string | null> {
+  const catLabel = sanitize(trigger.category, 40).replace(/_/g, ' ')
+  const pctUp = trigger.changePct.toFixed(0)
+  const sym = trigger.currencyCode === 'GBP' ? '£' : trigger.currencyCode === 'USD' ? '$' : '€'
+  const cutbackPerDay =
+    trigger.daysRemaining > 0
+      ? `${sym}${Math.ceil(trigger.absoluteDelta / trigger.daysRemaining)}`
+      : null
+
+  const goalsText =
+    trigger.goals.length > 0
+      ? trigger.goals
+          .map(
+            (g) =>
+              `${sanitize(g.emoji, 10)} ${sanitize(g.name)}: ${sym}${g.savedAmount.toFixed(0)} of ${sym}${g.targetAmount.toFixed(0)}`
+          )
+          .join('; ')
+      : null
+
+  const addressee = userName ? sanitize(userName.split(' ')[0] ?? '', 50) : null
+  const prompt = `You are Truffle, a warm but direct AI finance companion. Write a proactive nudge about a spending trend.${addressee ? ` Address them by name: ${addressee}.` : ' Do not use "Hi there" — start directly.'}
+
+Data:
+- Category: ${trigger.categoryEmoji} ${catLabel}
+- This month: ${sym}${trigger.currentSpend.toFixed(0)}
+- Usual (3-month average): ${sym}${trigger.averageSpend.toFixed(0)}
+- Change: +${pctUp}% (${sym}${trigger.absoluteDelta.toFixed(0)} more than usual)
+- Days left this month: ${trigger.daysRemaining}${cutbackPerDay ? `\n- To get back on track: cut ${catLabel} by about ${cutbackPerDay}/day for the rest of the month` : ''}${goalsText ? `\n- Active savings goals: ${goalsText}` : ''}
+
+Write 2-3 sentences in a warm, honest tone:
+1. State the fact clearly — name the category, the amount, and how it compares to usual.
+2. ${goalsText ? 'Connect it to their savings goals — what does this overspend mean for reaching them?' : 'Say what this means for their month-end position.'}
+3. Give one specific, actionable suggestion (not generic advice).
+Be direct and opinionated — you're a friend who cares, not a dashboard. Do not start with "I".`
+
+  return propagateAttributes({ userId }, async () => {
+    const trace = startObservation('spend_trend_nudge', {
+      metadata: { category: trigger.category, month: trigger.month },
+      input: prompt,
+    })
+
+    const gen = trace.startObservation(
+      'generateSpendTrendNudge',
+      { model: CHAT_MODEL_ID, input: prompt },
+      { asType: 'generation' }
+    )
+
+    const { text, usage } = await generateText({
+      model: chatModel,
+      prompt,
+      maxOutputTokens: 700,
+      providerOptions: groqProviderOptions,
+    })
+
+    gen
+      .update({
+        output: text,
+        usageDetails: usage
+          ? { input: usage.inputTokens ?? 0, output: usage.outputTokens ?? 0 }
+          : undefined,
+      })
+      .end()
+    trace.update({ output: text }).end()
+    await langfuseSpanProcessor.forceFlush()
+
+    return text.trim() || null
+  })
+}
+
 export async function generateProactiveMessage(
   trigger: ProactiveTrigger,
   userId?: string,
   userName?: string
 ): Promise<string | null> {
-  // Monthly report bypasses the LangGraph pipeline — no intent routing needed
+  // Monthly report and spend trend bypass the LangGraph pipeline — no intent routing needed
   if (trigger.type === 'monthly_report') {
     return generateMonthlyReport(trigger, userId, userName)
+  }
+  if (trigger.type === 'spend_trend') {
+    return generateSpendTrendNudge(trigger, userId, userName)
   }
 
   const nudgeKey = getNudgeKey(trigger)
@@ -284,7 +377,7 @@ export async function generateProactiveMessage(
 }
 
 function buildGraphInput(
-  trigger: Exclude<ProactiveTrigger, MonthlyReportTrigger>,
+  trigger: Exclude<ProactiveTrigger, MonthlyReportTrigger | SpendTrendTrigger>,
   userName?: string
 ) {
   const nameInstruction = userName

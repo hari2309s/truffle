@@ -341,3 +341,36 @@ export async function sendBudgetNudge(params: {
 
   await writeNudge(db, userId, message, nudgeKey)
 }
+
+export async function sendSpendTrendNudge(params: {
+  userId: string
+  category: string
+  categoryEmoji: string
+  currentSpend: number
+  averageSpend: number
+  changePct: number
+  absoluteDelta: number
+  month: string
+  daysRemaining: number
+  currencyCode?: string
+  goals: Array<{ name: string; emoji: string; targetAmount: number; savedAmount: number }>
+}) {
+  const { userId, category, month } = params
+  const nudgeKey = `spend-trend:${category}:${month}`
+  const db = createServerClient()
+
+  if (await alreadySent(db, userId, nudgeKey)) return
+
+  const [{ generateProactiveMessage }, userName] = await Promise.all([
+    import('@truffle/ai'),
+    getUserName(db, userId),
+  ])
+  const message = await generateProactiveMessage(
+    { type: 'spend_trend', ...params },
+    userId,
+    userName
+  )
+  if (!message) return
+
+  await writeNudge(db, userId, message, nudgeKey)
+}

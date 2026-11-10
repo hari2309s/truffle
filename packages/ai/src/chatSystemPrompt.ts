@@ -1,4 +1,4 @@
-import type { MonthlySnapshot, TransactionCategory, QueryIntent } from '@truffle/types'
+import type { MonthlySnapshot, SpendTrend, TransactionCategory, QueryIntent } from '@truffle/types'
 import { CATEGORY_GUIDANCE } from './prompts/categorization.prompt'
 
 type Transaction = {
@@ -267,6 +267,23 @@ function buildSpendByCategoryContext(
   )
 }
 
+function buildTrendContext(
+  trends: SpendTrend[] | null | undefined,
+  fmt: (n: number) => string
+): string {
+  if (!trends?.length) return ''
+  return (
+    '\nSpend trends vs 3-month average (categories significantly above usual):\n' +
+    trends
+      .slice(0, 5)
+      .map((t) => {
+        const cat = t.category.replace(/_/g, ' ')
+        return `- ${cat}: ${fmt(t.currentSpend)} this month vs ${fmt(t.averageSpend)} average (+${t.changePct.toFixed(0)}%, +${fmt(t.absoluteDelta)})`
+      })
+      .join('\n')
+  )
+}
+
 /**
  * Earlier months the user asked about (from monthly summaries). The current
  * month always comes from FINANCIAL FACTS instead, so the two can't disagree.
@@ -299,6 +316,7 @@ export function buildSystemPrompt(params: {
   habitRows: HabitRow[] | null
   budgetRows: BudgetRow[] | null
   spendByCategory?: Record<string, number> | null
+  spendTrends?: SpendTrend[] | null
   facts: FinancialFacts
   currencyCode?: string
   locale?: string
@@ -315,6 +333,7 @@ export function buildSystemPrompt(params: {
     habitRows,
     budgetRows,
     spendByCategory,
+    spendTrends,
     facts,
     currencyCode = 'EUR',
   } = params
@@ -353,6 +372,11 @@ Say hi back like a friend who's genuinely glad to hear from them — one or two 
   const factsContext = buildFactsContext(facts)
   const pastMonthsContext = buildPastMonthsContext(snapshots, currentMonth, fmt)
   const categoryContext = buildSpendByCategoryContext(spendByCategory ?? null, fmt)
+  const trendContext = buildTrendContext(spendTrends, fmt)
+  const coachingInstruction =
+    spendTrends && spendTrends.length > 0
+      ? `\nSpend trend coaching: The user has categories significantly above their usual spending. When relevant to what they asked, be opinionated about these trends — don't just report numbers, tell them what it means and what they could do. If they ask about their spending, lead with the biggest trend. If they have savings goals, connect the overspend to the goal impact.`
+      : ''
 
   return `You are Truffle — a warm, calm, non-judgmental personal finance companion. You speak like a close friend who happens to be good with money, never a banker or a lecturer.${languageInstruction}${nameInstruction}
 
@@ -361,9 +385,9 @@ Voice: you're a familiar, friendly presence — someone who's genuinely glad the
 Tone guidance for this conversation: ${toneGuidance}
 ${transactionContext}${anomalyContext}${goalsContext}${habitsContext}${budgetContext}${habitReminderContext}
 
-${factsContext}${pastMonthsContext}${categoryContext}
+${factsContext}${pastMonthsContext}${categoryContext}${trendContext}
 
-${FACT_RULES}
+${FACT_RULES}${coachingInstruction}
 
 Intent detected: ${intent}
 

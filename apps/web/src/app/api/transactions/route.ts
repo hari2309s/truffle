@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { createServerClient } from '@truffle/db'
 import { embedTransaction, upsertTransaction } from '@truffle/ai'
-import type { Transaction, Anomaly } from '@truffle/types'
+import type { Transaction, Anomaly, MonthlySnapshot } from '@truffle/types'
 import { fetchTotals, isMissingSchema, MIGRATION_NEEDED, recomputeSnapshot } from '@/lib/server-db'
-import { sendAnomalyNudge, sendBudgetNudge } from '@/lib/proactive-nudge'
+import { sendAnomalyNudge, sendBudgetNudge, sendSpendTrendNudge } from '@/lib/proactive-nudge'
 import { CATEGORY_EMOJI } from '@/lib/categories'
-import { DEFAULT_ALERT_PCT, effectiveLimit, previousMonth } from '@/lib/budgets'
+import { DEFAULT_ALERT_PCT, effectiveLimit, previousMonth, spendByCategory } from '@/lib/budgets'
+import { detectSpendTrends } from '@/lib/spend-trends'
 import { requireUser } from '@/lib/supabase-server'
 import { sanitizeForLog } from '@/lib/log'
 import { parseNewTransactions, parseTransactionEdit } from '@/lib/transactionInput'
@@ -269,6 +270,91 @@ export async function POST(request: NextRequest) {
         }
       } catch (e) {
         console.error('Budget nudge check failed:', e)
+      }
+
+      // Spend trend detection: compare this month's category spend to 3-month
+      // rolling average and nudge for significant spikes (non-fatal).
+      try {
+        const currentMonth = new Date().toISOString().slice(0, 7)
+        const now = new Date()
+        const baselineMonths: string[] = []
+        for (let i = 1; i <= 3; i++) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+          baselineMonths.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+        }
+
+        // Parallelize the two independent reads
+        const [ymYear, ymMonth] = currentMonth.split('-').map(Number)
+        // ymMonth is 1-indexed; Date.UTC month arg is 0-indexed, so ymMonth! maps to the *next* month already
+        const nextM = new Date(Date.UTC(ymYear!, ymMonth!, 1))
+        const nextMStr = nextM.toISOString().slice(0, 10)
+
+        const [{ data: snapRows }, { data: monthTxs }] = await Promise.all([
+          db
+            .from('monthly_snapshots')
+            .select('data')
+            .eq('user_id', userId)
+            .in('month', baselineMonths),
+          db
+            .from('transactions')
+            .select('amount, category, date')
+            .eq('user_id', userId)
+            .gte('date', `${currentMonth}-01`)
+            .lt('date', nextMStr)
+            .lt('amount', '0'),
+        ])
+
+        const baselines = ((snapRows ?? []) as Record<string, unknown>[])
+          .map((r) => r.data as unknown as MonthlySnapshot)
+          .filter(Boolean)
+
+        if (baselines.length >= 2) {
+          const currentSpend = spendByCategory(
+            ((monthTxs ?? []) as { amount: number; category: string; date: string }[]),
+            currentMonth
+          )
+
+          const trends = detectSpendTrends(currentSpend, baselines).slice(0, 2)
+          if (trends.length > 0) {
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+            const daysRemaining = daysInMonth - now.getDate()
+
+            const { data: goalsData } = await db
+              .from('savings_goals')
+              .select('name, emoji, target_amount, saved_amount')
+              .eq('user_id', userId)
+
+            const goals = (goalsData ?? []).map((g: Record<string, unknown>) => ({
+              name: g.name as string,
+              emoji: g.emoji as string,
+              targetAmount: Number(g.target_amount),
+              savedAmount: Number(g.saved_amount),
+            }))
+
+            const currencyCode = txsWithIds[0]?.currency
+
+            await Promise.all(
+              trends.map((trend) =>
+                sendSpendTrendNudge({
+                  userId,
+                  category: trend.category,
+                  categoryEmoji:
+                    CATEGORY_EMOJI[trend.category as keyof typeof CATEGORY_EMOJI] ?? '📦',
+                  currentSpend: trend.currentSpend,
+                  averageSpend: trend.averageSpend,
+                  changePct: trend.changePct,
+                  absoluteDelta: trend.absoluteDelta,
+                  month: currentMonth,
+                  daysRemaining,
+                  currencyCode,
+                  goals,
+                }).catch((e) => console.error(`Spend trend nudge failed for ${trend.category}:`, e))
+              )
+            )
+          }
+        }
+      } catch (e) {
+        console.error('Spend trend check failed:', e)
       }
     })
 

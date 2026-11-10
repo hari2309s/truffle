@@ -72,6 +72,14 @@ export interface Forecast {
   generatedAt: string
 }
 
+export interface SpendTrend {
+  category: TransactionCategory
+  currentSpend: number // positive, this month
+  averageSpend: number // positive, 3-month rolling average
+  changePct: number // ((current - average) / average) * 100
+  absoluteDelta: number // current - average
+}
+
 export interface SavingsGoal {
   id: string
   userId: string

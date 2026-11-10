@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useInView } from 'framer-motion'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { setChatHandoff } from '@/lib/chatHandoff'
 import type { Anomaly, HabitWithStats, SavingsGoal, Transaction } from '@truffle/types'
 import { useTransactionsQuery } from '@/hooks/useTransactionsQuery'
+import { useInsightsQuery } from '@/hooks/useInsightsQuery'
+import { InsightsSpendTrends } from './SpendTrends'
 import { computeStatement } from '@/lib/forecast'
 import { truffleEase, transitionSnappy } from '@/lib/motion'
 import { RecurringSection } from './RecurringSection'
@@ -37,18 +39,6 @@ type Chapter = (typeof CHAPTERS)[number]
 
 const chapterId = (ch: Chapter) => `insights-${ch}`
 
-/** The route returns raw rows (snake_case); the UI works with `Anomaly`. */
-function mapAnomaly(row: Record<string, unknown>): Anomaly {
-  return {
-    id: row.id as string,
-    transactionId: (row.transaction_id ?? row.transactionId) as string,
-    type: row.type as Anomaly['type'],
-    severity: row.severity as Anomaly['severity'],
-    description: row.description as string,
-    detectedAt: (row.detected_at ?? row.detectedAt) as string,
-  }
-}
-
 /**
  * Insights — redesigned as four numbered chapters:
  *   01 Review, 02 Spending (calendar + budgets), 03 Building (goals + habits),
@@ -74,18 +64,11 @@ export function InsightsPage({ userId }: InsightsPageProps) {
   const { data: goalsData } = useGoalsQuery(userId)
   const { data: habitsData } = useHabitsQuery(userId)
 
-  const { data: anomalyData, isLoading: anomalyLoading } = useQuery({
-    queryKey: ['anomalies', userId, viewYM],
-    queryFn: async () => {
-      const res = await fetch(`/api/insights?month=${viewYM}`, { cache: 'no-store' })
-      if (!res.ok) throw new Error('Failed to fetch anomalies')
-      const json = await res.json()
-      return ((json.anomalies ?? []) as Record<string, unknown>[]).map(mapAnomaly)
-    },
-  })
+  const { data: insightsData, isLoading: insightsLoading } = useInsightsQuery(userId, viewYM)
 
   const transactions = useMemo(() => txData?.transactions ?? [], [txData])
-  const anomalies = anomalyData ?? []
+  const anomalies = insightsData?.anomalies ?? []
+  const trends = insightsData?.trends ?? []
   const goals = goalsData ?? []
   const habits = habitsData ?? []
 
@@ -445,7 +428,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
 
             {/* ── 01 Review ── */}
             <ChapterSection id="review" num="01" title={t.insights.sections.rev.heading(anomalies.length)} right={unreviewed ? t.insights.reviewToCheck(unreviewed) : t.insights.reviewAllClear}>
-              {anomalyLoading ? (
+              {insightsLoading ? (
                 <SkeletonPulse className="flex flex-col gap-2">
                   <div className="h-3.5 bg-truffle-border" />
                   <div className="h-3 bg-truffle-border w-2/3" />
@@ -472,6 +455,7 @@ export function InsightsPage({ userId }: InsightsPageProps) {
                   {t.insights.noUnusualActivity}
                 </p>
               )}
+              <InsightsSpendTrends trends={trends} />
             </ChapterSection>
 
             {/* ── 02 Spending (calendar + budgets) ── */}
@@ -709,7 +693,7 @@ function AnomalyRow({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ anomalyId: anomaly.id }),
       })
-      if (res.ok) await queryClient.invalidateQueries({ queryKey: ['anomalies', userId] })
+      if (res.ok) await queryClient.invalidateQueries({ queryKey: ['insights', userId] })
     } finally {
       setBusy(false)
     }
