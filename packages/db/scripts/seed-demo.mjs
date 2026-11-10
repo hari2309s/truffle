@@ -286,6 +286,82 @@ function firstOfMonthAgo(monthsAgo) {
 
 const daysAgo = (days) => toIsoDate(Date.now() - days * DAY_MS)
 
+/**
+ * Baseline monthly_snapshots for months -1, -2, -3.  Combined with the spike
+ * transactions added to the current month, these produce 2-3 visible spend
+ * trends in the demo (food_delivery, entertainment, shopping).
+ *
+ * Values are kept deterministic (no randomness) so nightly resets are stable.
+ */
+function buildBaselineSnapshots() {
+  const perMonth = [
+    // month -1: slightly higher food_delivery
+    { food_delivery: -40, entertainment: -55, shopping: -50 },
+    // month -2: moderate
+    { food_delivery: -30, entertainment: -50, shopping: -40 },
+    // month -3: slightly higher entertainment
+    { food_delivery: -35, entertainment: -60, shopping: -45 },
+  ]
+  const now = new Date()
+  return perMonth.map((cat, i) => {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (i + 1), 1))
+    const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+    return {
+      month,
+      data: {
+        month,
+        totalIncome: 3500,
+        totalExpenses: -2300,
+        byCategory: {
+          income: 3500,
+          housing: -850,
+          food_groceries: -340,
+          food_delivery: cat.food_delivery,
+          transport: -110,
+          utilities: -95,
+          subscriptions: -45,
+          entertainment: cat.entertainment,
+          shopping: cat.shopping,
+          health: -75,
+          savings: -550,
+          other: -60,
+        },
+        savingsRate: 0.34,
+        balance: 1200,
+        transactionCount: 44,
+      },
+    }
+  })
+}
+
+/**
+ * Extra current-month transactions that spike food_delivery, entertainment
+ * and shopping well above the 3-month baseline average so the demo shows
+ * clear spend trends.  Dates are clamped to ≤ today.
+ *
+ * food_delivery avg ~€35 → spike adds €95 → total ≥€100 (+185%)
+ * entertainment avg ~€55 → spike adds €95 → total ≥€110 (+100%)
+ * shopping      avg ~€45 → spike adds €75 → total ≥€85  (+89%)
+ */
+function buildSpikeTxs() {
+  const month = currentMonthKey()
+  const today = new Date().getUTCDate()
+  const day = (d) => `${month}-${String(Math.min(d, Math.max(today, 1))).padStart(2, '0')}`
+
+  return [
+    // food_delivery spike (+€95)
+    { amount: -32, currency: DEMO_CURRENCY, description: 'Lieferando — sushi night', category: 'food_delivery', merchant: 'Lieferando', date: day(2), is_recurring: false },
+    { amount: -28, currency: DEMO_CURRENCY, description: 'Wolt — Thai takeaway', category: 'food_delivery', merchant: 'Wolt', date: day(5), is_recurring: false },
+    { amount: -35, currency: DEMO_CURRENCY, description: 'Lieferando — pizza for friends', category: 'food_delivery', merchant: 'Lieferando', date: day(8), is_recurring: false },
+    // entertainment spike (+€95)
+    { amount: -45, currency: DEMO_CURRENCY, description: 'Berghain + drinks', category: 'entertainment', merchant: null, date: day(3), is_recurring: false },
+    { amount: -50, currency: DEMO_CURRENCY, description: 'Comedy show tickets', category: 'entertainment', merchant: 'Quatsch Comedy Club', date: day(6), is_recurring: false },
+    // shopping spike (+€75)
+    { amount: -42, currency: DEMO_CURRENCY, description: 'Zalando — winter jacket', category: 'shopping', merchant: 'Zalando', date: day(4), is_recurring: false },
+    { amount: -33, currency: DEMO_CURRENCY, description: 'Decathlon — running shoes', category: 'shopping', merchant: 'Decathlon', date: day(7), is_recurring: false },
+  ]
+}
+
 // Must match apps/web/src/lib/habits.ts getCurrentPeriod('weekly') exactly, or
 // the seeded habit_contributions won't line up with the streak/period logic in
 // the app (wrong streak count, or a past week read as "already logged").
@@ -312,11 +388,13 @@ async function applyDemoData(userId) {
   console.log('→ cleared previous demo data')
 
   const txs = ensureCurrentMonthIncome(shiftToToday(parseTransactions()))
+  const spikeTxs = buildSpikeTxs()
+  const allTxs = [...txs, ...spikeTxs]
   const { error: txErr } = await admin
     .from('transactions')
-    .insert(txs.map((t) => ({ ...t, user_id: userId })))
+    .insert(allTxs.map((t) => ({ ...t, user_id: userId })))
   if (txErr) throw new Error(`insert transactions: ${txErr.message}`)
-  console.log(`→ inserted ${txs.length} transactions`)
+  console.log(`→ inserted ${allTxs.length} transactions (${spikeTxs.length} trend spikes)`)
 
   // Each goal is backdated and its saved amount is the sum of real deposits,
   // so the detail sheet lists them and the status shows both states:
@@ -427,16 +505,19 @@ async function applyDemoData(userId) {
   const { error: habitTxErr } = await admin.from('transactions').insert(habitRows)
   if (habitTxErr) throw new Error(`insert habit entries: ${habitTxErr.message}`)
 
-  // Last, so this month's summary includes the goal deposits and habit logs.
-  const snapshot = buildSnapshot([...txs, ...depositRows, ...habitRows])
+  // Last, so this month's summary includes the goal deposits, habit logs,
+  // and spend-trend spike transactions.
+  const snapshot = buildSnapshot([...allTxs, ...depositRows, ...habitRows])
+  const baselines = buildBaselineSnapshots()
+  const snapshotRows = [
+    { user_id: userId, month: snapshot.month, data: snapshot },
+    ...baselines.map((b) => ({ user_id: userId, month: b.month, data: b.data })),
+  ]
   const { error: snapErr } = await admin
     .from('monthly_snapshots')
-    .upsert(
-      { user_id: userId, month: snapshot.month, data: snapshot },
-      { onConflict: 'user_id,month' }
-    )
-  if (snapErr) throw new Error(`upsert snapshot: ${snapErr.message}`)
-  console.log(`→ snapshot for ${snapshot.month}`)
+    .upsert(snapshotRows, { onConflict: 'user_id,month' })
+  if (snapErr) throw new Error(`upsert snapshots: ${snapErr.message}`)
+  console.log(`→ snapshots for ${snapshotRows.map((s) => s.month).join(', ')}`)
   console.log(`→ ${goals.length} goals with ${depositRows.length} deposits, habit with ${habitRows.length} logs`)
 }
 
